@@ -151,6 +151,11 @@ async def health():
 
 @app.post("/generate", response_model=GenerateResponse)
 async def generate(req: GenerateRequest):
+    if _gemini_client is None:
+        raise HTTPException(
+            status_code=503,
+            detail="Gemini API key not configured. See server console for instructions."
+        )
     if req.style not in FOOD_STYLES:
         raise HTTPException(status_code=422, detail=f"Unknown style: {req.style}")
 
@@ -186,5 +191,13 @@ async def generate(req: GenerateRequest):
 
 if __name__ == "__main__":
     init_gemini()
+    key = os.getenv("GEMINI_API_KEY", "")
+    if not key:
+        print("=" * 60)
+        print("WARNING: GEMINI_API_KEY not set!")
+        print("1. Get a free key at https://aistudio.google.com/apikey")
+        print('2. Create backend\\.env with: GEMINI_API_KEY=your-key')
+        print("3. Restart the server")
+        print("=" * 60)
     import uvicorn
     uvicorn.run(app, host="0.0.0.0", port=8000)
