@@ -17,13 +17,14 @@ The v1 publishing model is review-first handoff: the app generates note drafts, 
 ## V1 User Flow
 
 1. Add 5-20 food photos from the Android Photo Picker.
-2. Enter basic food context: dish name, restaurant name, location, taste notes, price or rating if desired, and atmosphere notes.
-3. Generate AI note variants.
-4. Review the generated title, body, hashtags, and selected photos.
-5. Edit text, reorder photos, and choose the variant to use.
-6. Tap publish handoff.
-7. The app copies text as a fallback and opens Android sharing to Xiaohongshu with the selected images and generated text.
-8. The user performs final confirmation inside Xiaohongshu.
+2. App reads EXIF data from photos (capture timestamp, GPS location) and auto-suggests date and location. User can edit or override.
+3. Enter basic food context: dish name, restaurant name, location, date/meal time, taste notes, price or rating if desired, and atmosphere notes.
+4. Generate AI note variants.
+5. Review the generated title, body, hashtags, and selected photos.
+6. Edit text, reorder photos, and choose the variant to use.
+7. Tap publish handoff.
+8. The app copies text as a fallback and opens Android sharing to Xiaohongshu with the selected images and generated text.
+9. The user performs final confirmation inside Xiaohongshu.
 
 ## Architecture
 
@@ -71,6 +72,7 @@ The backend has one main generation endpoint. It receives note type, structured 
 - `dishName`
 - `restaurantName`
 - `location`
+- `mealDate` — auto-suggested from the earliest photo's EXIF capture timestamp; user can edit
 - `tasteNotes`
 - `priceOrRating`
 - `vibeNotes`
@@ -116,7 +118,7 @@ You are a Xiaohongshu food note writer. Create authentic Chinese social-media st
 Write in Simplified Chinese unless the user asks for another language.
 
 Use only:
-- the structured details provided by the user
+- the structured details provided by the user (including date/location if provided)
 - safe visual observations from uploaded photos (color, plating, portion appearance, atmosphere shown in the image)
 
 Do NOT invent:
@@ -170,6 +172,15 @@ Food v1 supports 5-20 images per note. Later note types may need larger sets:
 The v1 review screen includes a thumbnail grid, photo reorder controls, and a selected-for-publish count. All photos are uploaded in a single batch request (parallel compression, one POST /generate).
 
 Images are compressed on-device to 1024px JPEG quality 85% before upload. The Android Photo Picker is used (no storage permissions needed — system UI component, permissionless read-only access to user-selected photos).
+
+### EXIF Data Extraction
+
+When photos are selected, the app reads EXIF metadata using Android's `ExifInterface`:
+
+- **Capture timestamp** (`TAG_DATETIME` or `TAG_DATETIME_ORIGINAL`): Used to auto-suggest the meal date. The earliest timestamp across all selected photos is used as the default.
+- **GPS coordinates** (`TAG_GPS_LATITUDE`, `TAG_GPS_LONGITUDE`): Used to auto-suggest the location. If GPS is available, the app reverse-geocodes to a neighborhood/city name. If not available, the field remains empty for manual entry.
+- Both values are suggestions only — the user can always edit or override them before generation.
+- If EXIF data is missing (screenshots, downloaded images), the fields gracefully default to empty.
 
 If Android sharing or Xiaohongshu rejects too many images, the app preserves the draft and shows a manual fallback path.
 
