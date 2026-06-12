@@ -159,6 +159,17 @@ async def generate(req: GenerateRequest):
     if req.style not in FOOD_STYLES:
         raise HTTPException(status_code=422, detail=f"Unknown style: {req.style}")
 
+    # Validate base64 images before expensive Gemini calls
+    for i, img_b64 in enumerate(req.images):
+        try:
+            base64.b64decode(img_b64, validate=True)
+        except Exception:
+            raise HTTPException(
+                status_code=422,
+                detail=f"Image {i} is not valid base64. When testing from /docs, "
+                       f"use a real base64-encoded JPEG string, not placeholder text."
+            )
+
     # Build the ordered style list: preferred first, then 2 others
     other_styles = [s for s in FOOD_STYLES if s != req.style]
     ordered_styles = [req.style] + other_styles[:2]
