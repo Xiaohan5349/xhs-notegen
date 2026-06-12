@@ -49,7 +49,7 @@ def test_generate(image_b64: str):
         "note_type": "food",
         "style": "casual_story",
         "metadata": {
-            "dish_name": "红烧肉",
+            "dish_names": "红烧肉, 糖醋里脊",
             "restaurant_name": "外婆家",
             "location": "上海",
             "meal_date": "2024-12-20",
@@ -61,7 +61,7 @@ def test_generate(image_b64: str):
     }
 
     print(f"  POST /generate (style={payload['style']})")
-    print(f"  Dish: {payload['metadata']['dish_name']}")
+    print(f"  Dishes: {payload['metadata']['dish_names']}")
 
     resp = requests.post(f"{BACKEND_URL}/generate", json=payload, timeout=180)
 
@@ -80,8 +80,8 @@ def test_generate(image_b64: str):
             body_preview = v["body"][:200].replace("\n", " ")
             print(f"  Body:     {body_preview}...")
             print()
-    elif resp.status_code == 503:
-        print(f"  ERROR: Gemini API key not configured!")
+    elif resp.status_code == 502:
+        print(f"  ERROR: Gemini API key not configured or all calls failed!")
         print(f"  Fix: Add GEMINI_API_KEY to backend\\.env")
     elif resp.status_code == 422:
         data = resp.json()

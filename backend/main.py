@@ -26,7 +26,7 @@ app = FastAPI(title="XHS Note Generator", version="1.0.0")
 # ---------------------------------------------------------------------------
 
 class FoodMetadata(BaseModel):
-    dish_name: str = Field(..., min_length=1, max_length=100)
+    dish_names: str = Field(..., min_length=1, max_length=300)
     restaurant_name: str = Field(..., min_length=1, max_length=100)
     location: Optional[str] = Field(None, max_length=200)
     meal_date: Optional[str] = Field(None, max_length=50)
@@ -151,11 +151,6 @@ async def health():
 
 @app.post("/generate", response_model=GenerateResponse)
 async def generate(req: GenerateRequest):
-    if _gemini_client is None:
-        raise HTTPException(
-            status_code=503,
-            detail="Gemini API key not configured. See server console for instructions."
-        )
     if req.style not in FOOD_STYLES:
         raise HTTPException(status_code=422, detail=f"Unknown style: {req.style}")
 

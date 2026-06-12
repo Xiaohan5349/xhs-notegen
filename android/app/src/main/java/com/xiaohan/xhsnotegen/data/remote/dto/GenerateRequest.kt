@@ -3,7 +3,7 @@ package com.xiaohan.xhsnotegen.data.remote.dto
 import com.google.gson.annotations.SerializedName
 
 data class FoodMetadataDto(
-    @SerializedName("dish_name") val dishName: String,
+    @SerializedName("dish_names") val dishNames: String,
     @SerializedName("restaurant_name") val restaurantName: String,
     @SerializedName("location") val location: String? = null,
     @SerializedName("meal_date") val mealDate: String? = null,

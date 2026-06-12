@@ -2,8 +2,9 @@ package com.xiaohan.xhsnotegen.ui.create
 
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.PickVisualMedia
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -98,7 +99,7 @@ fun CreateFormScreen(
                             .size(72.dp)
                             .clip(MaterialTheme.shapes.medium)
                             .border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium)
-                            .clickable { photoPickerLauncher.launch(PickVisualMedia.ImageOnly) },
+                            .clickable { photoPickerLauncher.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly)) },
                         color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
                     ) {
                         Box(contentAlignment = Alignment.Center) {
@@ -118,10 +119,10 @@ fun CreateFormScreen(
             Text("Food Info", style = MaterialTheme.typography.titleMedium)
 
             OutlinedTextField(
-                value = foodInfo.dishName,
-                onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(dishName = it)) },
-                label = { Text("Dish name *") },
-                singleLine = true, modifier = Modifier.fillMaxWidth(),
+                value = foodInfo.dishNames,
+                onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(dishNames = it)) },
+                label = { Text("Dish names * (e.g. 红烧肉, 糖醋里脊)") },
+                minLines = 1, modifier = Modifier.fillMaxWidth(),
             )
             OutlinedTextField(
                 value = foodInfo.restaurantName,

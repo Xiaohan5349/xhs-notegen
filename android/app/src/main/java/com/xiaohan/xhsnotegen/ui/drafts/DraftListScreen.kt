@@ -108,7 +108,7 @@ private fun DraftCard(
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    text = draft.foodInfo.dishName.ifBlank { "Untitled" },
+                    text = draft.foodInfo.dishNames.ifBlank { "Untitled" },
                     style = MaterialTheme.typography.titleMedium,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,

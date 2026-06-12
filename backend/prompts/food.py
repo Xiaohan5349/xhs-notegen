@@ -73,7 +73,7 @@ Generate exactly 1 variant in the specified style."""
 def build_food_prompt(style: StyleLabel, metadata) -> str:
     """Build the user prompt for a food note with given style and metadata."""
     parts = [
-        f"Dish: {metadata.dish_name}",
+        f"Dishes: {metadata.dish_names}",
         f"Restaurant: {metadata.restaurant_name}",
     ]
     if metadata.location:

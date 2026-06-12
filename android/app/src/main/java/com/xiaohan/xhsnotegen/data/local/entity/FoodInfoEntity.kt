@@ -19,7 +19,7 @@ import androidx.room.PrimaryKey
 data class FoodInfoEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     @ColumnInfo(name = "draft_id") val draftId: Long,
-    @ColumnInfo(name = "dish_name") val dishName: String,
+    @ColumnInfo(name = "dish_names") val dishNames: String,
     @ColumnInfo(name = "restaurant_name") val restaurantName: String,
     @ColumnInfo(name = "location") val location: String? = null,
     @ColumnInfo(name = "meal_date") val mealDate: String? = null,

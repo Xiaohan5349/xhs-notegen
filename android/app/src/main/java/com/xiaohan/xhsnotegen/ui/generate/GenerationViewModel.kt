@@ -67,7 +67,7 @@ class GenerationViewModel(application: Application) : AndroidViewModel(applicati
                     noteType = "food",
                     style = draft.styleLabel,
                     metadata = FoodMetadataDto(
-                        dishName = draft.foodInfo.dishName,
+                        dishNames = draft.foodInfo.dishNames,
                         restaurantName = draft.foodInfo.restaurantName,
                         location = draft.foodInfo.location.ifBlank { null },
                         mealDate = draft.foodInfo.mealDate.ifBlank { null },

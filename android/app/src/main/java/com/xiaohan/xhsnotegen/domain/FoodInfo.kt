@@ -1,7 +1,7 @@
 package com.xiaohan.xhsnotegen.domain
 
 data class FoodInfo(
-    val dishName: String = "",
+    val dishNames: String = "",  // one or more dishes, separated by comma/newline
     val restaurantName: String = "",
     val location: String = "",
     val mealDate: String = "",
@@ -11,5 +11,5 @@ data class FoodInfo(
     val personalNotes: String = "",
     val sponsored: Boolean = false,
 ) {
-    fun isValid(): Boolean = dishName.isNotBlank() && restaurantName.isNotBlank()
+    fun isValid(): Boolean = dishNames.isNotBlank() && restaurantName.isNotBlank()
 }

@@ -45,7 +45,7 @@ fun NoteDraft.toEntity(): NoteDraftEntity = NoteDraftEntity(
 // ---- FoodInfo ----
 
 fun FoodInfoEntity.toDomain(): FoodInfo = FoodInfo(
-    dishName = dishName,
+    dishNames = dishNames,
     restaurantName = restaurantName,
     location = location ?: "",
     mealDate = mealDate ?: "",
@@ -58,7 +58,7 @@ fun FoodInfoEntity.toDomain(): FoodInfo = FoodInfo(
 
 fun FoodInfo.toEntity(draftId: Long): FoodInfoEntity = FoodInfoEntity(
     draftId = draftId,
-    dishName = dishName,
+    dishNames = dishNames,
     restaurantName = restaurantName,
     location = location.ifBlank { null },
     mealDate = mealDate.ifBlank { null },

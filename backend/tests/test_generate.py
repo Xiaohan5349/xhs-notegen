@@ -22,7 +22,7 @@ def _valid_request(**overrides):
         "note_type": "food",
         "style": "casual_story",
         "metadata": {
-            "dish_name": "Hong Shao Rou",
+            "dish_names": "Hong Shao Rou, Tang Cu Li Ji",
             "restaurant_name": "Waipojia",
             "location": "Shanghai",
             "meal_date": "2024-03-15",
@@ -78,7 +78,7 @@ def test_generate_returns_200_with_mocked_gemini():
 def test_missing_required_fields_returns_422():
     """Missing dish_name should return 422."""
     req = _valid_request()
-    req["metadata"]["dish_name"] = ""
+    req["metadata"]["dish_names"] = ""
     response = client.post("/generate", json=req)
     assert response.status_code == 422
 
@@ -107,7 +107,7 @@ def test_missing_optional_fields_returns_200():
     """Request with only required fields should succeed."""
     req = _valid_request()
     req["metadata"] = {
-        "dish_name": "Hotpot",
+        "dish_names": "Hotpot",
         "restaurant_name": "Haidilao",
         "sponsored": False,
     }
