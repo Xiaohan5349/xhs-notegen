@@ -1,2 +1,22 @@
 .superpowers/
 
+# Android
+android/.gradle/
+android/build/
+android/app/build/
+android/app/release/
+android/local.properties
+android/*.iml
+android/.idea/
+android/app/*.iml
+
+# Backend
+backend/__pycache__/
+backend/*.pyc
+backend/.venv/
+backend/.env
+backend/*.egg-info/
+
+# OS
+.DS_Store
+Thumbs.db
