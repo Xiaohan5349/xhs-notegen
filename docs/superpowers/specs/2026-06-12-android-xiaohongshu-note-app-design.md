@@ -2,7 +2,7 @@
 
 ## Goal
 
-Build a personal Android app for creating Xiaohongshu notes from photos and basic context. The first complete note type is food. The app should be designed so travel, concert, and museum notes can be added later without rebuilding the shared draft, review, and publishing workflow.
+Build a personal Android app for creating Xiaohongshu notes from photos and basic context. The first complete note type is food. The app should be designed so other note types (e.g., travel, concert, museum, sports matches, and more) can be added later without rebuilding the shared draft, review, and publishing workflow.
 
 The v1 publishing model is review-first handoff: the app generates note drafts, the user reviews and edits one, then the app opens Xiaohongshu through Android sharing with the selected images and text. The final publish confirmation happens inside Xiaohongshu.
 
@@ -56,7 +56,7 @@ The backend has one main generation endpoint. It receives note type, structured 
 `NoteDraft`
 
 - `id`
-- `type`: `food` in v1; later `travel`, `concert`, `museum`
+- `type`: `food` in v1; open-ended — later `travel`, `concert`, `museum`, `sports_match`, or any new category
 - `status`: `draft`, `generated`, `reviewed`, `shared`
 - `photoUris`
 - `selectedPublishPhotoUris`
@@ -76,11 +76,13 @@ The backend has one main generation endpoint. It receives note type, structured 
 - `vibeNotes`
 - `personalNotes`
 
-Future note-type extensions:
+Future note-type extensions (open-ended — these are examples, not an exhaustive list):
 
 - `TravelInfo`: destination, dates, itinerary, cost, tips.
 - `ConcertInfo`: artist, venue, seat or view, setlist highlights, mood.
 - `MuseumInfo`: museum or exhibition name, city, favorite works, visit tips.
+- `SportsMatchInfo`: teams/players, sport type, venue, score, key moments, atmosphere.
+- Any other note type can be added by defining its metadata table and AI prompt template.
 
 The draft list, AI generation, review editor, and Xiaohongshu handoff are shared across note types. Only the basic-info form and AI prompt differ by type.
 
@@ -221,7 +223,7 @@ Excluded:
 - Direct Xiaohongshu API publishing.
 - Accessibility automation.
 - Public multi-user release.
-- Full travel, concert, or museum forms.
+- Non-food note types (travel, concert, museum, sports, etc. — designed for but not implemented in v1).
 - Automatic final publish confirmation inside Xiaohongshu.
 
 ## References
