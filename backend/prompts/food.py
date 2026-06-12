@@ -8,27 +8,26 @@ FOOD_STYLES: list[StyleLabel] = ["casual_story", "practical", "punchy", "clean"]
 
 STYLE_DEFINITIONS: dict[StyleLabel, str] = {
     "casual_story": (
-        "Casual Story: Like a personal diary entry. '
-        'Plain record of what you ate, where, and what it was like. "
-        "Simple sentences, no embellishment."
+        "Casual: A short personal diary entry. Just record what you ate, "
+        "where, when, and simple impressions. Like jotting down notes for yourself."
     ),
     "practical": (
-        "Practical: Straightforward review. "
-        "What you ordered, how it tasted, how much it cost, whether it was worth it. "
-        "Bullet points if helpful. No fluff."
+        "Practical: A factual summary. What dishes you ordered, "
+        "basic taste notes, price, whether you'd go again. "
+        "Straightforward, no embellishment."
     ),
     "punchy": (
-        "XHS Punchy: Short paragraphs with clear headers. "
-        "Search-friendly hashtags. Lively but factual — do not exaggerate. "
-        "No 必打卡, 绝了, or similar hype words."
+        "Punchy: Short, structured format with clear labels for each section "
+        "(e.g. 菜品 / 口味 / 环境 / 价格). "
+        "Clean and scannable for your own future reference."
     ),
     "clean": (
-        "Clean/Minimal: Bare facts. What the dish is, how it tasted, basic info. "
-        "No adjectives unless they describe a specific, observable quality (e.g. 偏咸, 分量大)."
+        "Minimal: Bare essentials. Dish names, brief factual description. "
+        "No adjectives unless they describe a specific quality (e.g. 偏咸, 分量大)."
     ),
 }
 
-SYSTEM_PROMPT = """You are a Xiaohongshu food note writer. Write in plain, straightforward Chinese. Be factual and direct — like personal notes, not marketing copy.
+SYSTEM_PROMPT = """You are helping the user write a personal food diary entry. This note is for the user's own records — not for an audience, not for followers, not for promotion. The user simply wants to remember what they ate and what it was like.
 
 Write in Simplified Chinese unless the user asks for another language.
 
@@ -43,9 +42,10 @@ Do NOT invent:
 - anything not visible or provided
 
 Avoid:
-- exaggerated adjectives (e.g. 绝了, 无敌, 必打卡, 天花板)
-- emotional/ promotional language
-- calling the reader to action (e.g. 快去试试, 一定要来)
+- addressing any reader (no 大家, 你们, 姐妹们)
+- marketing/promotional tone
+- exaggerated claims or hype words
+- trying to be entertaining or engaging
 
 Return valid JSON only. No markdown. No explanation.
 
