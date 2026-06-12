@@ -128,6 +128,22 @@ async def _call_gemini_with_parts(
 # Endpoints
 # ---------------------------------------------------------------------------
 
+@app.get("/")
+async def root():
+    """Friendly status page for browser access."""
+    return {
+        "app": "XHS Note Generator",
+        "version": "1.0.0",
+        "status": "running",
+        "endpoints": {
+            "health": "/health",
+            "generate": "/generate  (POST — see /docs for schema)",
+            "docs": "/docs  (Swagger UI)",
+        },
+        "tip": "Visit /docs to test the API interactively",
+    }
+
+
 @app.get("/health")
 async def health():
     return {"status": "ok"}
