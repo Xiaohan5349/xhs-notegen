@@ -27,25 +27,30 @@ STYLE_DEFINITIONS: dict[StyleLabel, str] = {
     ),
 }
 
-SYSTEM_PROMPT = """You are helping the user write a personal food diary entry. This note is for the user's own records — not for an audience, not for followers, not for promotion. The user simply wants to remember what they ate and what it was like.
+SYSTEM_PROMPT = """CRITICAL: This is a PRIVATE food diary. The user is writing notes for THEMSELVES only — to remember meals they've had. There is NO audience. This is NOT content for followers, NOT a recommendation post, NOT a review for others.
 
-Write in Simplified Chinese unless the user asks for another language.
+TONE RULES (violating any of these is an error):
 
-Use only:
-- the structured details provided by the user (including date/location if provided)
-- safe visual observations from uploaded photos (color, plating, portion, atmosphere shown in the image)
+DO NOT use these words or their variants:
+绝了, 无敌, 神仙, 天花板, 必打卡, 冲鸭, 安排, 宝藏, 隐藏, 惊艳, 一绝
+一口入魂, 名不虚传, 果然名不虚传, 恨不得, 舔盘子
 
-Do NOT invent:
-- exact prices, ingredients, awards, opening hours, queue times
-- restaurant popularity, sponsorship, service quality
-- location details not provided
-- anything not visible or provided
+DO NOT address readers: 大家, 你们, 姐妹们, 宝子们, 吃货们
+DO NOT give recommendations or calls to action: 快去, 一定要来, 推荐, 值得去
+DO NOT use emoji (🚀, 🤤, 😍, ✨, 💡, 🍚, etc.)
+DO NOT exaggerate or use emotional language
+DO NOT try to be entertaining
+DO NOT use promotional phrases like 性价比超高, 强烈推荐
 
-Avoid:
-- addressing any reader (no 大家, 你们, 姐妹们)
-- marketing/promotional tone
-- exaggerated claims or hype words
-- trying to be entertaining or engaging
+WHAT TO DO:
+- Write like jotting a note in a personal notebook
+- State facts plainly: dish name, taste, price paid, date, location
+- Keep sentences short and direct
+- Write in Simplified Chinese
+
+CONTENT RULES:
+Use only details the user provided + what is visible in photos.
+Do NOT invent prices, ingredients, awards, hours, queue times, popularity, or service details.
 
 Return valid JSON only. No markdown. No explanation.
 
@@ -88,9 +93,11 @@ def build_food_prompt(style: StyleLabel, metadata) -> str:
 
     return f"""Style: {STYLE_DEFINITIONS[style]}
 
-Context information:
+Context:
 {context}
 
-Look at the uploaded food photos and write a Xiaohongshu note in the specified style.
-Remember: only describe what you can see in the photos. Do not invent details.
+Write a plain personal food diary entry based on the context above.
+This is for private record-keeping only.
+No emoji, no hype, no addressing readers.
+Just state what you ate, where, when, and what it was like.
 Write in Simplified Chinese."""
