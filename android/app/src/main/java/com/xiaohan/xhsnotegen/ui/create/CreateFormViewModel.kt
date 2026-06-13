@@ -13,12 +13,14 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
+import java.io.File
 
 class CreateFormViewModel(application: Application) : AndroidViewModel(application) {
 
     private val app = application as XhsNoteGenApp
     private val draftRepo = app.draftRepository
     private val styleRepo = app.stylePrefsRepository
+    private val imagesDir = File(application.filesDir, "images").also { it.mkdirs() }
 
     private val _photoUris = MutableStateFlow<List<Uri>>(emptyList())
     val photoUris: StateFlow<List<Uri>> = _photoUris.asStateFlow()
@@ -43,16 +45,33 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun setPhotos(uris: List<Uri>) {
-        _photoUris.value = uris
         _photoCountError.value = when {
             uris.isEmpty() -> null
-            uris.size < 5 -> "Select at least 5 photos (${uris.size} selected)"
+            uris.size < 1 -> "Select at least 1 photo"
             uris.size > 20 -> "Maximum 20 photos allowed"
             else -> null
         }
 
         if (uris.isNotEmpty()) {
             viewModelScope.launch {
+                // Copy to internal storage so images survive past the Photo Picker session
+                val localUris = withContext(Dispatchers.IO) {
+                    uris.mapIndexed { index, uri ->
+                        val dest = File(imagesDir, "img_${System.currentTimeMillis()}_$index.jpg")
+                        try {
+                            getApplication<Application>().contentResolver
+                                .openInputStream(uri)?.use { input ->
+                                    dest.outputStream().use { output -> input.copyTo(output) }
+                                }
+                            Uri.fromFile(dest)
+                        } catch (e: Exception) {
+                            uri // fallback to original URI if copy fails
+                        }
+                    }
+                }
+                _photoUris.value = localUris
+
+                // Read EXIF from original URIs (still have permission)
                 val exif = withContext(Dispatchers.IO) {
                     ExifReader.aggregate(getApplication(), uris)
                 }
@@ -62,6 +81,8 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
                     mealDate = exif.captureDate ?: current.mealDate,
                 )
             }
+        } else {
+            _photoUris.value = emptyList()
         }
     }
 
@@ -71,7 +92,7 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
     suspend fun saveDraftSuspend(): Long {
         if (!_foodInfo.value.isValid()) throw IllegalStateException("Dish and restaurant name required")
         val count = _photoUris.value.size
-        if (count < 5 || count > 20) throw IllegalStateException("Select 5-20 photos")
+        if (count < 1 || count > 20) throw IllegalStateException("Select 1-20 photos")
 
         val draft = NoteDraft(
             type = NoteType.FOOD,

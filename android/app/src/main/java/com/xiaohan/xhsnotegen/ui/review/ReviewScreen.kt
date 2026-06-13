@@ -3,6 +3,7 @@ package com.xiaohan.xhsnotegen.ui.review
 import android.net.Uri
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.text.selection.SelectionContainer
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -21,6 +22,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import kotlinx.coroutines.launch
 import com.xiaohan.xhsnotegen.ui.publish.XiaohongshuSharePublisher
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -28,11 +30,15 @@ import com.xiaohan.xhsnotegen.ui.publish.XiaohongshuSharePublisher
 fun ReviewScreen(
     draftId: Long,
     onNavigateBack: () -> Unit,
+    onNavigateToLogin: () -> Unit = {},
     viewModel: ReviewViewModel = viewModel(),
 ) {
     val draft by viewModel.draft.collectAsState()
     val selectedIndex by viewModel.selectedVariantIndex.collectAsState()
     val context = LocalContext.current
+    val snackbarHostState = remember { SnackbarHostState() }
+    val scope = rememberCoroutineScope()
+    var isPublishing by remember { mutableStateOf(false) }
 
     LaunchedEffect(draftId) { viewModel.load(draftId) }
 
@@ -46,13 +52,17 @@ fun ReviewScreen(
                     }
                 },
                 actions = {
-                    TextButton(onClick = { viewModel.saveChanges() }) { Text("Save") }
+                    TextButton(onClick = {
+                        viewModel.saveChanges()
+                        scope.launch { snackbarHostState.showSnackbar("Saved") }
+                    }) { Text("Save") }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.surface,
                 ),
             )
         },
+        snackbarHost = { SnackbarHost(snackbarHostState) },
     ) { padding ->
         draft?.let { d ->
             val variants = d.variants
@@ -71,7 +81,37 @@ fun ReviewScreen(
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
             ) {
-                Text("Variants", style = MaterialTheme.typography.titleMedium)
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("Variants", style = MaterialTheme.typography.titleMedium)
+                    val isRegenerating by viewModel.isRegenerating.collectAsState()
+                    TextButton(
+                        onClick = { viewModel.regenerateAllStyles() },
+                        enabled = !isRegenerating,
+                    ) {
+                        if (isRegenerating) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(14.dp), strokeWidth = 2.dp,
+                            )
+                            Spacer(Modifier.width(4.dp))
+                            Text("Regenerating...")
+                        } else {
+                            Text("🔄 Regenerate All")
+                        }
+                    }
+                }
+
+                val regenerateError by viewModel.regenerateError.collectAsState()
+                if (regenerateError != null) {
+                    SelectionContainer {
+                        Text(regenerateError!!, color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall)
+                    }
+                }
+
                 ScrollableTabRow(selectedTabIndex = selectedIndex) {
                     variants.forEachIndexed { index, variant ->
                         Tab(
@@ -110,9 +150,14 @@ fun ReviewScreen(
                 OutlinedTextField(
                     value = v.hashtags.joinToString(" "),
                     onValueChange = { text ->
-                        viewModel.updateVariantHashtags(text.split(" ").filter { it.startsWith("#") })
+                        viewModel.updateVariantHashtags(
+                            text.trim().split("\\s+".toRegex()).filter { it.isNotBlank() }
+                        )
                     },
-                    label = { Text("Hashtags") }, singleLine = true, modifier = Modifier.fillMaxWidth(),
+                    label = { Text("Hashtags (space-separated)") },
+                    singleLine = false,
+                    minLines = 1,
+                    modifier = Modifier.fillMaxWidth(),
                 )
 
                 Text("Photos (tap to toggle publish)", style = MaterialTheme.typography.titleMedium)
@@ -155,12 +200,53 @@ fun ReviewScreen(
                 Button(
                     onClick = {
                         viewModel.saveChanges()
-                        XiaohongshuSharePublisher.publish(context, d)
+                        isPublishing = true
+                        scope.launch {
+                            val result = XiaohongshuSharePublisher.publish(context, d)
+                            isPublishing = false
+                            when (result) {
+                                is XiaohongshuSharePublisher.PublishResult.Success -> {
+                                    viewModel.markShared()
+                                    snackbarHostState.showSnackbar("Published! ${result.shareLink}")
+                                }
+                                is XiaohongshuSharePublisher.PublishResult.NeedsLogin -> {
+                                    onNavigateToLogin()
+                                }
+                                is XiaohongshuSharePublisher.PublishResult.Handoff -> {
+                                    val snackbarResult = snackbarHostState.showSnackbar(
+                                        message = "已准备好：文字已复制，照片已保存。发布完成后可标记",
+                                        actionLabel = "标记已发布",
+                                        duration = SnackbarDuration.Long,
+                                    )
+                                    if (snackbarResult == SnackbarResult.ActionPerformed) {
+                                        viewModel.markShared()
+                                        snackbarHostState.showSnackbar("已标记为已发布")
+                                    }
+                                }
+                                is XiaohongshuSharePublisher.PublishResult.Error -> {
+                                    snackbarHostState.showSnackbar(
+                                        message = result.message,
+                                        duration = SnackbarDuration.Long,
+                                    )
+                                }
+                            }
+                        }
                     },
                     modifier = Modifier.fillMaxWidth().height(52.dp),
+                    enabled = !isPublishing,
                     colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
                 ) {
-                    Text("📤 Share to Xiaohongshu")
+                    if (isPublishing) {
+                        CircularProgressIndicator(
+                            modifier = Modifier.size(20.dp),
+                            strokeWidth = 2.dp,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        Text("Publishing...")
+                    } else {
+                        Text("Share to Xiaohongshu")
+                    }
                 }
             }
         }

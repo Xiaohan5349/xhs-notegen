@@ -56,7 +56,7 @@ object ExifReader {
             val parser = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US)
             parser.timeZone = TimeZone.getTimeZone("UTC")
             val date: Date = parser.parse(raw) ?: return null
-            val formatter = SimpleDateFormat("yyyy-MM-dd", Locale.US)
+            val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
             formatter.format(date)
         } catch (e: Exception) {
             null

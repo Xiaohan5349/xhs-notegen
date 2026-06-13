@@ -76,7 +76,7 @@ fun CreateFormScreen(
             // ---- Photo Section ----
             Text("Photos", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Select 5-20 food photos",
+                "Select 1-20 food photos",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -207,7 +207,7 @@ fun CreateFormScreen(
                     }
                 },
                 modifier = Modifier.fillMaxWidth().height(52.dp),
-                enabled = foodInfo.isValid() && photos.size in 5..20 && !isSaving,
+                enabled = foodInfo.isValid() && photos.size in 1..20 && !isSaving,
                 colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {
                 if (isSaving) {

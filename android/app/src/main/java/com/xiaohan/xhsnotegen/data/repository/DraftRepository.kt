@@ -62,4 +62,33 @@ class DraftRepository(private val db: AppDatabase) {
     suspend fun delete(draft: NoteDraft) {
         draftDao.delete(draft.toEntity())
     }
+
+    suspend fun deleteById(id: Long) {
+        draftDao.deleteById(id)
+    }
+
+    suspend fun getAll(): List<NoteDraft> {
+        val drafts = draftDao.getAll()
+        return drafts.map { entity ->
+            val foodEntity = foodDao.getByDraftId(entity.id)
+            entity.toDomain(foodEntity?.toDomain())
+        }
+    }
+
+    suspend fun getAllByStatus(status: NoteStatus): List<NoteDraft> {
+        val drafts = draftDao.getAllByStatus(status.key)
+        return drafts.map { entity ->
+            val foodEntity = foodDao.getByDraftId(entity.id)
+            entity.toDomain(foodEntity?.toDomain())
+        }
+    }
+
+    suspend fun insertAll(drafts: List<NoteDraft>) {
+        drafts.forEach { draft ->
+            // Clear the ID so Room auto-generates new ones (import scenario)
+            val newDraft = draft.copy(id = 0)
+            val draftId = draftDao.insert(newDraft.toEntity())
+            foodDao.insert(newDraft.foodInfo.toEntity(draftId))
+        }
+    }
 }

@@ -5,11 +5,12 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.xiaohan.xhsnotegen.XhsNoteGenApp
-import com.xiaohan.xhsnotegen.data.remote.RetrofitClient
-import com.xiaohan.xhsnotegen.data.remote.dto.*
+import com.xiaohan.xhsnotegen.domain.NoteStyle
 import com.xiaohan.xhsnotegen.domain.NoteVariant
 import com.xiaohan.xhsnotegen.util.ImageCompressor
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -39,6 +40,14 @@ class GenerationViewModel(application: Application) : AndroidViewModel(applicati
                 val draft = draftRepo.getById(draftId)
                     ?: throw IllegalStateException("Draft not found")
 
+                // Check API key
+                val apiKey = GeminiClient.getApiKey(getApplication())
+                if (apiKey.isNullOrBlank()) {
+                    throw IllegalStateException(
+                        "Gemini API key not set. Get a free key at https://aistudio.google.com/apikey"
+                    )
+                }
+
                 // Step 1: Compress images
                 _state.value = GenerationState(isCompressing = true, progress = "Compressing photos...")
                 val photos = draft.photoUris.map { Uri.parse(it) }
@@ -57,32 +66,48 @@ class GenerationViewModel(application: Application) : AndroidViewModel(applicati
                     }
                 }
 
-                // Step 2: Call backend
+                // Step 2: Generate 3 variants in parallel via Gemini
                 _state.value = GenerationState(
                     isCompressing = false, isGenerating = true,
                     progress = "Generating note variants...",
                 )
 
-                val request = GenerateRequestDto(
-                    noteType = "food",
-                    style = draft.styleLabel,
-                    metadata = FoodMetadataDto(
-                        dishNames = draft.foodInfo.dishNames,
-                        restaurantName = draft.foodInfo.restaurantName,
-                        location = draft.foodInfo.location.ifBlank { null },
-                        mealDate = draft.foodInfo.mealDate.ifBlank { null },
-                        tasteNotes = draft.foodInfo.tasteNotes.ifBlank { null },
-                        priceOrRating = draft.foodInfo.priceOrRating.ifBlank { null },
-                        vibeNotes = draft.foodInfo.vibeNotes.ifBlank { null },
-                        personalNotes = draft.foodInfo.personalNotes.ifBlank { null },
-                    ),
-                    images = compressedImages,
-                )
+                val preferredStyle = NoteStyle.fromKey(draft.styleLabel)
+                val otherStyles = NoteStyle.entries
+                    .filter { it != preferredStyle }
+                    .take(3)  // all 4 styles
 
-                val response = withContext(Dispatchers.IO) {
-                    RetrofitClient.getApi().generate(request)
+                val userPrompt = FoodPrompts.buildUserPrompt(preferredStyle, draft.foodInfo)
+
+                // Parallel Gemini calls — 3 styles
+                val results = listOf(preferredStyle) + otherStyles
+                val variants = results.map { style ->
+                    viewModelScope.async(Dispatchers.IO) {
+                        runCatching {
+                            val prompt = FoodPrompts.buildUserPrompt(style, draft.foodInfo)
+                            val generated = GeminiClient.generateFoodNote(
+                                getApplication(),
+                                FoodPrompts.SYSTEM_PROMPT,
+                                prompt,
+                                compressedImages,
+                            )
+                            val v = generated.firstOrNull()
+                            if (v != null) {
+                                NoteVariant(
+                                    styleLabel = v.styleLabel,
+                                    title = v.title,
+                                    body = v.body,
+                                    hashtags = v.hashtags,
+                                    warnings = v.warnings,
+                                )
+                            } else null
+                        }
+                    }
+                }.awaitAll().mapNotNull { it.getOrNull() }
+
+                if (variants.isEmpty()) {
+                    throw IllegalStateException("All Gemini calls failed")
                 }
-                val variants = response.toDomain()
 
                 // Step 3: Save results
                 draftRepo.saveGeneratedVariants(draftId, variants)

@@ -16,4 +16,7 @@ interface FoodInfoDao {
 
     @Query("DELETE FROM food_info WHERE draft_id = :draftId")
     suspend fun deleteByDraftId(draftId: Long)
+
+    @Query("SELECT * FROM food_info")
+    suspend fun getAll(): List<FoodInfoEntity>
 }

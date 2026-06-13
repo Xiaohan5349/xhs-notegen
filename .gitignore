@@ -20,6 +20,9 @@ backend/.env
 backend/*.egg-info/
 backend/.pytest_cache/
 
+# Captured browser traffic can contain session cookies and signatures.
+*.har
+
 # OS
 .DS_Store
 Thumbs.db
