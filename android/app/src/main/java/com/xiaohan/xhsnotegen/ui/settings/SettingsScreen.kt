@@ -27,8 +27,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.xiaohan.xhsnotegen.ai.AiProvider
 import com.xiaohan.xhsnotegen.ai.AiSettings
+import com.xiaohan.xhsnotegen.ai.PromptStore
 import com.xiaohan.xhsnotegen.ui.components.SectionCard
 import com.xiaohan.xhsnotegen.ui.components.softFieldColors
 import com.xiaohan.xhsnotegen.ui.publish.XhsAuthStore
@@ -44,6 +46,7 @@ import com.xiaohan.xhsnotegen.ui.theme.DarkMode
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onLogin: () -> Unit,
+    onEditPrompt: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -70,7 +73,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             AppearanceSection()
-            AiSection()
+            AiSection(onEditPrompt)
             AccountSection(onLogin)
             Spacer(Modifier.height(16.dp))
         }
@@ -178,7 +181,7 @@ private fun Color.luminance(): Float = 0.2126f * red + 0.7152f * green + 0.0722f
 
 @OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
 @Composable
-private fun AiSection() {
+private fun AiSection(onEditPrompt: () -> Unit) {
     val context = LocalContext.current
     var provider by remember { mutableStateOf(AiSettings.provider(context)) }
     // Re-read per provider so each keeps its own key and model.
@@ -312,6 +315,32 @@ private fun AiSection() {
                 Text("This model can't see images, so notes are written from your text only.",
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+        }
+
+        // Entry to the prompt editor; "Customized" reminds you when you've changed it.
+        var customized by remember { mutableStateOf(PromptStore.isCustomized(context)) }
+        LifecycleResumeEffect(Unit) {
+            customized = PromptStore.isCustomized(context) // refresh after returning from the editor
+            onPauseOrDispose {}
+        }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.colorScheme.surfaceContainer)
+                .clickable(onClick = onEditPrompt)
+                .padding(horizontal = 16.dp, vertical = 14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Icon(Icons.Outlined.EditNote, null, tint = MaterialTheme.colorScheme.primary)
+            Column(Modifier.weight(1f)) {
+                Text("Writing prompt", style = MaterialTheme.typography.titleSmall)
+                Text(if (customized) "Customized" else "Default — tap to view or edit",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = if (customized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

@@ -23,7 +23,8 @@ import java.util.Locale
  */
 object FoodPrompts {
 
-    val SYSTEM_PROMPT = """
+    /** The editable part of the system prompt (Settings → Writing prompt). */
+    val DEFAULT_SYSTEM_PROMPT = """
 你在帮我写我自己的美食日记。写好后我会发到小红书，但它首先是我的日记：写给自己看，顺便给刷到的人看看。写出来要像我本人吃完饭拿手机随手打的字，不能让人一眼看出是AI写的。
 
 ## 真人随手记是什么样的
@@ -69,15 +70,25 @@ object FoodPrompts {
 下班太累，在公司楼下随便吃了碗牛肉粉。
 汤比上次淡，牛肉还是那么几片。
 不过热乎乎的，吃完人活过来了。
+""".trimIndent()
 
+    /**
+     * Output format, always appended and never user-editable: the app parses
+     * this JSON, and DeepSeek's JSON mode requires the word "JSON" and an example.
+     */
+    val OUTPUT_RULES = """
 ## 输出
 只返回JSON，不要任何其他文字。要求的每个风格各写一篇，style 字段填风格的 key。几篇之间要真的不一样：角度、长短、开头都换，不要只替换几个词。
 格式：
 {"variants":[{"style":"casual_story","title":"标题","body":"正文","hashtags":["标签"],"warnings":[]}]}
 """.trimIndent()
 
-    /** Per-style instructions, in Chinese to match the system prompt. */
-    fun styleInstruction(style: NoteStyle): String = when (style) {
+    /** Final system prompt: the user's (or default) instructions + the fixed output rules. */
+    fun systemPrompt(instructions: String = DEFAULT_SYSTEM_PROMPT): String =
+        instructions.trim() + "\n\n" + OUTPUT_RULES
+
+    /** Default per-style instructions, in Chinese to match the system prompt. */
+    fun defaultStyleInstruction(style: NoteStyle): String = when (style) {
         NoteStyle.CASUAL_STORY ->
             "随手记：像给朋友发消息那样讲这顿饭——怎么来的、和谁、印象最深的一两件事。80到200字，分成几小段。"
         NoteStyle.PRACTICAL ->
@@ -95,6 +106,7 @@ object FoodPrompts {
         photoCount: Int = 0,
         /** The note has photos but the model can't see images (text-only model). */
         photosHidden: Boolean = false,
+        styleInstruction: (NoteStyle) -> String = ::defaultStyleInstruction,
     ): String = buildString {
         if (voiceSamples.isNotEmpty()) {
             appendLine("## 我以前写的几篇（学我的语气和用词习惯，不要抄内容）")

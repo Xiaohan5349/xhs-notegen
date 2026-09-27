@@ -46,4 +46,23 @@ class FoodPromptsTest {
         assertTrue(prompt.contains("排了很久，还行"))
         assertTrue(prompt.contains("「3.15 周日 晚上」"))
     }
+
+    @Test
+    fun `custom instructions never lose the fixed output rules`() {
+        val sys = FoodPrompts.systemPrompt("只写一句话。")
+        assertTrue(sys.startsWith("只写一句话。"))
+        assertTrue(sys.contains("\"variants\""))
+        assertTrue(sys.contains("JSON"))
+        assertFalse(FoodPrompts.DEFAULT_SYSTEM_PROMPT.contains("## 输出"))
+    }
+
+    @Test
+    fun `custom style instructions reach the user prompt`() {
+        val prompt = FoodPrompts.buildUserPrompt(
+            FoodInfo(dishNames = "面", restaurantName = "店"),
+            styles = listOf(NoteStyle.CLEAN),
+            styleInstruction = { "只写三句" },
+        )
+        assertTrue(prompt.contains("- clean：只写三句"))
+    }
 }

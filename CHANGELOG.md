@@ -8,6 +8,7 @@
 - Nine color themes and a System / Light / Dark switch, applied instantly and remembered:
   classic Tomato, Matcha, Blueberry, Sakura, Sesame, Latte (beige); anime-inspired Summer Sky (clouds by day, stars and moon by night), City Pop (80s retro sunset) and Matsuri (seigaiha wave pattern) — all artwork is original and drawn in code
 - Full Settings screen (replaces the bottom sheet); changes save immediately
+- Editable writing prompt (Settings → AI writing → Writing prompt): main instructions and each style's instructions, with per-section and full reset; the JSON output format stays fixed and is appended automatically
 
 ### Changed
 - Default Gemini model is now `gemini-3.8-flash` — `gemini-2.5-flash` is limited to past users and unavailable to new API keys; Gemini 3 requests drop the deprecated `temperature` and use `thinkingLevel: low`

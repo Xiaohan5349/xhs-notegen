@@ -15,6 +15,7 @@ import com.xiaohan.xhsnotegen.ui.drafts.DraftListScreen
 import com.xiaohan.xhsnotegen.ui.generate.GeneratingScreen
 import com.xiaohan.xhsnotegen.ui.publish.XhsLoginScreen
 import com.xiaohan.xhsnotegen.ui.review.ReviewScreen
+import com.xiaohan.xhsnotegen.ui.settings.PromptEditorScreen
 import com.xiaohan.xhsnotegen.ui.settings.SettingsScreen
 
 object Routes {
@@ -24,6 +25,7 @@ object Routes {
     const val REVIEW = "review/{draftId}"
     const val XHS_LOGIN = "xhs_login"
     const val SETTINGS = "settings"
+    const val PROMPT_EDITOR = "prompt_editor"
 
     fun generating(draftId: Long) = "generating/$draftId"
     fun review(draftId: Long) = "review/$draftId"
@@ -54,7 +56,12 @@ fun AppNavigation(navController: NavHostController) {
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onLogin = { navController.navigate(Routes.XHS_LOGIN) },
+                onEditPrompt = { navController.navigate(Routes.PROMPT_EDITOR) },
             )
+        }
+
+        composable(Routes.PROMPT_EDITOR) {
+            PromptEditorScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Routes.CREATE_FORM) {

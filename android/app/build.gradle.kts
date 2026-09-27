@@ -31,7 +31,7 @@ android {
         applicationId = "com.xiaohan.xhsnotegen"
         minSdk = 29
         targetSdk = 35
-        versionCode = 1
+        versionCode = 3
         versionName = "1.2.0"
     }
 
@@ -81,7 +81,7 @@ dependencies {
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
     // NOTE: okhttp must be declared explicitly — it used to arrive transitively
-    // via Retrofit, and GeminiClient/XhsApiClient use it directly.
+    // via Retrofit, and AiWriter/XhsApiClient use it directly.
     implementation(libs.okhttp)
     implementation(libs.coil.compose)
     implementation(libs.coroutines.android)
