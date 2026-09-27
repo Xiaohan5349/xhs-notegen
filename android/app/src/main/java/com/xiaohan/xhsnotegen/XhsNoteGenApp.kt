@@ -1,6 +1,8 @@
 package com.xiaohan.xhsnotegen
 
 import android.app.Application
+import android.content.pm.ApplicationInfo
+import android.webkit.WebView
 import com.xiaohan.xhsnotegen.data.local.AppDatabase
 import com.xiaohan.xhsnotegen.data.repository.DraftRepository
 import com.xiaohan.xhsnotegen.data.repository.StylePreferencesRepository
@@ -34,5 +36,9 @@ class XhsNoteGenApp : Application() {
         stylePrefsRepository = StylePreferencesRepository(database)
         XhsAuthStore.init(this)
         AppearanceStore.init(this)
+        // Debug builds only: lets chrome://inspect on a computer debug the XHS login page.
+        if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
+            WebView.setWebContentsDebuggingEnabled(true)
+        }
     }
 }

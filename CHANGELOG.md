@@ -10,6 +10,10 @@
 - Full Settings screen (replaces the bottom sheet); changes save immediately
 - Editable writing prompt (Settings → AI writing → Writing prompt): main instructions and each style's instructions, with per-section and full reset; the JSON output format stays fixed and is appended automatically
 
+### Fixed
+- XHS login: the login page now uses the phone's real browser identity (the hard-coded "Chrome/149" user agent contradicted the engine version, which XHS security checks can flag), drops the embedded-WebView "wv" marker, supports popups and JS dialogs, accepts third-party cookies, and shows real loading progress
+- XHS login: new "save QR" button — when XHS asks to scan a QR code (QR login or extra verification), save it and scan it in the XHS app from the album (扫一扫 → 相册)
+
 ### Changed
 - Default Gemini model is now `gemini-3.8-flash` — `gemini-2.5-flash` is limited to past users and unavailable to new API keys; Gemini 3 requests drop the deprecated `temperature` and use `thinkingLevel: low`
 - Structured output uses each provider's native JSON-schema support and steps down to JSON mode / prompt-only if a server rejects it
