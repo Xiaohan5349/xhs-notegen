@@ -32,14 +32,16 @@ bash gradlew assembleDebug testDebugUnitTest
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Windows:
+Windows (PowerShell):
 
-```bat
+```powershell
 cd android
-set JAVA_HOME=C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot
-gradlew assembleDebug testDebugUnitTest
+$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot"
+.\gradlew.bat assembleDebug testDebugUnitTest
 adb install -r app\build\outputs\apk\debug\app-debug.apk
 ```
+
+(CMD: same steps with `set JAVA_HOME=...` and `gradlew.bat`.)
 
 Release builds are signed with the keystore in `.wsl-tools/keystore/` (gitignored) using passwords from `local.properties`.
 Room schemas are exported to `android/app/schemas/` — commit them, and add a `Migration` for every schema change (there is no destructive fallback).
