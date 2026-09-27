@@ -10,7 +10,14 @@ How to build an APK and get it onto an Android phone.
 | Build to share / keep on your phone | `gradlew assembleRelease` | `app/build/outputs/apk/release/app-release.apk` (~3 MB) |
 | Run unit tests | `gradlew testDebugUnitTest` | `app/build/reports/tests/` |
 
-On macOS / Linux use `bash gradlew …` (or `chmod +x gradlew` once). On Windows use `gradlew …`.
+On macOS / Linux use `bash gradlew …` (or `chmod +x gradlew` once).
+
+**Windows (PowerShell)** — from `android/`, point `JAVA_HOME` at your JDK 17+ install once per session, then call the `.bat` wrapper:
+
+```powershell
+$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot"   # adjust to your JDK path
+.\gradlew.bat assembleDebug        # or .gradlew.bat assembleRelease / .\gradlew.bat testDebugUnitTest
+```
 
 > ⚠️ **Read [Signing & updates](#signing--updates-read-this-before-installing) before installing** — installing a build signed with a different key than the one on your phone can cost you all your notes.
 
@@ -110,7 +117,7 @@ If you must switch keys:
 |---|---|
 | `permission denied: ./gradlew` | Run `bash gradlew …` or `chmod +x gradlew` |
 | `SDK location not found` | Set `ANDROID_HOME` or `sdk.dir` in `android/local.properties` |
-| `Unsupported class file major version` / Java errors | Use JDK 17+ (`JAVA_HOME`) |
+| `Unsupported class file major version` / Java errors | Use JDK 17+: PowerShell `$env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot"` |
 | Release build: keystore / password error | See [One-time setup](#one-time-setup) |
 | Phone: "App not installed" | Signature mismatch — see [Signing & updates](#signing--updates-read-this-before-installing) |
 | Phone: "There was a problem parsing the package" | Phone is older than Android 10, or the file was corrupted/renamed in transfer |
