@@ -2,6 +2,8 @@ package com.xiaohan.xhsnotegen.ui.generate
 
 import android.content.Context
 import android.net.Uri
+import com.xiaohan.xhsnotegen.ai.AiSettings
+import com.xiaohan.xhsnotegen.ai.AiWriter
 import com.xiaohan.xhsnotegen.data.repository.DraftRepository
 import com.xiaohan.xhsnotegen.domain.NoteDraft
 import com.xiaohan.xhsnotegen.domain.NoteStyle
@@ -22,8 +24,11 @@ object NoteGenerator {
         styles: List<NoteStyle>,
         onPhase: (Phase) -> Unit = {},
     ): List<NoteVariant> {
+        val config = AiSettings.current(context)
+        config.problem()?.let { throw IllegalStateException(it) }
+
         onPhase(Phase.PREPARING_PHOTOS)
-        val images = withContext(Dispatchers.IO) {
+        val images = if (!config.vision) emptyList() else withContext(Dispatchers.IO) {
             // An unreadable photo just gives the model less to look at; only
             // fail when there is nothing left to show it.
             draft.photoUris.mapNotNull { uri ->
@@ -32,14 +37,20 @@ object NoteGenerator {
                 }.getOrNull()
             }
         }
-        if (images.isEmpty()) throw IllegalStateException("None of this note's photos could be read.")
+        if (config.vision && images.isEmpty() && draft.photoUris.isNotEmpty()) {
+            throw IllegalStateException("None of this note's photos could be read.")
+        }
 
         onPhase(Phase.WRITING)
         val voiceSamples = repo.getVoiceSamples(excludeId = draft.id)
-        return GeminiClient.generateVariants(
-            context = context,
+        return AiWriter.generateVariants(
+            config = config,
             systemPrompt = FoodPrompts.SYSTEM_PROMPT,
-            userPrompt = FoodPrompts.buildUserPrompt(draft.foodInfo, styles, voiceSamples, images.size),
+            userPrompt = FoodPrompts.buildUserPrompt(
+                draft.foodInfo, styles, voiceSamples,
+                photoCount = images.size,
+                photosHidden = !config.vision && draft.photoUris.isNotEmpty(),
+            ),
             imagesBase64 = images,
             styles = styles,
         )

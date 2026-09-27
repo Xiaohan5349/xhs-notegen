@@ -98,6 +98,9 @@ data class DraftDto(
     }
 }
 
+/** Top-level shape of a model's answer: {"variants":[...]} */
+class VariantsResponse(val variants: List<VariantDto?>? = null)
+
 data class ExportData(
     val version: Int = 1,
     val exportedAt: Long = System.currentTimeMillis(),

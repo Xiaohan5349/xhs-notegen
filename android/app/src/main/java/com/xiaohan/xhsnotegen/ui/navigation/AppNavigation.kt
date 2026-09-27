@@ -15,6 +15,7 @@ import com.xiaohan.xhsnotegen.ui.drafts.DraftListScreen
 import com.xiaohan.xhsnotegen.ui.generate.GeneratingScreen
 import com.xiaohan.xhsnotegen.ui.publish.XhsLoginScreen
 import com.xiaohan.xhsnotegen.ui.review.ReviewScreen
+import com.xiaohan.xhsnotegen.ui.settings.SettingsScreen
 
 object Routes {
     const val DRAFT_LIST = "drafts"
@@ -22,6 +23,7 @@ object Routes {
     const val GENERATING = "generating/{draftId}"
     const val REVIEW = "review/{draftId}"
     const val XHS_LOGIN = "xhs_login"
+    const val SETTINGS = "settings"
 
     fun generating(draftId: Long) = "generating/$draftId"
     fun review(draftId: Long) = "review/$draftId"
@@ -44,7 +46,14 @@ fun AppNavigation(navController: NavHostController) {
             DraftListScreen(
                 onCreateClick = { navController.navigate(Routes.CREATE_FORM) },
                 onDraftClick = { draftId -> navController.navigate(Routes.review(draftId)) },
-                onNavigateToLogin = { navController.navigate(Routes.XHS_LOGIN) },
+                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+            )
+        }
+
+        composable(Routes.SETTINGS) {
+            SettingsScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onLogin = { navController.navigate(Routes.XHS_LOGIN) },
             )
         }
 

@@ -290,7 +290,7 @@ private fun PhotoStrip(
                     Text(
                         "Cover",
                         style = MaterialTheme.typography.labelSmall,
-                        color = Color.White,
+                        color = MaterialTheme.colorScheme.onPrimary,
                         modifier = Modifier
                             .align(Alignment.BottomStart)
                             .padding(6.dp)

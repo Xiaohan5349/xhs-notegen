@@ -5,6 +5,7 @@ import com.xiaohan.xhsnotegen.data.local.AppDatabase
 import com.xiaohan.xhsnotegen.data.repository.DraftRepository
 import com.xiaohan.xhsnotegen.data.repository.StylePreferencesRepository
 import com.xiaohan.xhsnotegen.ui.publish.XhsAuthStore
+import com.xiaohan.xhsnotegen.ui.theme.AppearanceStore
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -32,5 +33,6 @@ class XhsNoteGenApp : Application() {
         draftRepository = DraftRepository(database)
         stylePrefsRepository = StylePreferencesRepository(database)
         XhsAuthStore.init(this)
+        AppearanceStore.init(this)
     }
 }

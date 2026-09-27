@@ -1,22 +1,32 @@
 # XHS NoteGen
 
-Standalone Android app that generates Xiaohongshu food notes from photos using Gemini AI and publishes directly to XHS via the Creator API. No backend server required — everything runs on your phone.
+Standalone Android app that generates Xiaohongshu food notes from photos using AI (Gemini, ChatGPT, Claude, DeepSeek or any OpenAI-compatible model) and publishes directly to XHS via the Creator API. No backend server required — everything runs on your phone.
 
 ## Features
 
 - **Photo picker** (1-20 photos) with EXIF auto-fill (date, time, GPS location); pick a cover, add or remove photos
-- **AI generation** via Google Gemini — 4 note styles in Chinese (Casual Story, Practical, Punchy, Minimal), written in one request
+- **AI generation** — pick Gemini, ChatGPT, Claude, DeepSeek or a custom OpenAI-compatible model; 4 note styles in Chinese (Casual Story, Practical, Punchy, Minimal), written in one request
 - **Sounds like you** — prompts are tuned against typical "AI voice" tells, keep your own words, and learn from notes you've already reviewed or posted
 - **Review & edit** — switch styles, edit title (with the 20-character XHS limit), body and tags, rewrite one style or all four
 - **Publishing** straight to Xiaohongshu via the Creator API, or a guided manual handoff (text copied, photos saved in order, XHS opened)
 - **Food diary** — photo-feed home with filters (Drafts / Ready / Posted), import/export JSON backups
-- **Warm "food journal" design** with light and dark themes
+- **Themes** — six classic palettes (Tomato, Matcha, Blueberry, Sakura, Sesame, Latte) and three anime-inspired ones with drawn backdrops (Summer Sky, City Pop, Matsuri), each with System / Light / Dark mode
 
 ## Setup
 
 1. Install the APK on your Android device (Android 10+, minSdk 29)
-2. Open Settings (account icon, top right) → paste your Gemini API key from [aistudio.google.com/apikey](https://aistudio.google.com/apikey). The model defaults to `gemini-2.5-flash`; any Gemini model id that accepts images can be entered there.
-3. In the same sheet, Log in to Xiaohongshu → log in on creator.xiaohongshu.com → tap Done
+2. Open Settings (account icon, top right) → **AI writing** → pick a provider and model, paste that provider's API key:
+
+   | Provider | Built-in models (Sept 2026) | Key from |
+   |---|---|---|
+   | Gemini | `gemini-3.8-flash` (default), `gemini-3.5-flash-lite`, `gemini-3.1-pro-preview` | aistudio.google.com/apikey |
+   | ChatGPT | `gpt-6-luna` (default), `gpt-6-sol`, `gpt-6-astra` | platform.openai.com/api-keys |
+   | Claude | `claude-sonnet-5` (default), `claude-haiku-4-5`, `claude-opus-5-5` | platform.claude.com |
+   | DeepSeek | `deepseek-flash` (sees photos), `deepseek-v4-pro` (text only) | platform.deepseek.com/api_keys |
+   | Custom | any OpenAI-compatible endpoint (Qwen, Kimi, Doubao, OpenRouter, local…) | your provider |
+
+   Any newer model id can be typed into "Other model", so new releases don't need an app update. Text-only models get your notes without the photos.
+3. In Settings → Xiaohongshu, log in → log in on creator.xiaohongshu.com → tap Done
 
 ## Build
 

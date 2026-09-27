@@ -4,19 +4,19 @@ import com.xiaohan.xhsnotegen.data.json.JsonCodec
 import com.xiaohan.xhsnotegen.data.json.normalizeHashtags
 import com.xiaohan.xhsnotegen.domain.NoteStatus
 import com.xiaohan.xhsnotegen.domain.NoteStyle
-import com.xiaohan.xhsnotegen.ui.generate.GeminiClient
+import com.xiaohan.xhsnotegen.ai.AiWriter
 import org.junit.Assert.*
 import org.junit.Test
 
 class ParsingTest {
 
     @Test
-    fun `gemini answer is matched to requested styles by key, not position`() {
+    fun `model answer is matched to requested styles by key, not position`() {
         val json = """{"variants":[
             {"style":"clean","title":"极简","body":"b1","hashtags":["#上海美食"," 面 "],"warnings":[]},
             {"style":"casual_story","title":"随手","body":"b2","hashtags":[]}
         ]}"""
-        val variants = GeminiClient.parseVariants(json, listOf(NoteStyle.CASUAL_STORY, NoteStyle.CLEAN))
+        val variants = AiWriter.parseVariants(json, listOf(NoteStyle.CASUAL_STORY, NoteStyle.CLEAN))
         assertEquals(listOf("casual_story", "clean"), variants.map { it.styleLabel })
         assertEquals("随手", variants[0].title)
         assertEquals(listOf("上海美食", "面"), variants[1].hashtags)
@@ -25,7 +25,7 @@ class ParsingTest {
     @Test
     fun `missing fields never become nulls in non-null properties`() {
         // No warnings / hashtags keys at all — used to crash the review screen.
-        val v = GeminiClient.parseVariants("""{"variants":[{"style":"practical","title":"t","body":"b"}]}""",
+        val v = AiWriter.parseVariants("""{"variants":[{"style":"practical","title":"t","body":"b"}]}""",
             listOf(NoteStyle.PRACTICAL)).single()
         assertEquals(emptyList<String>(), v.warnings)
         assertEquals(emptyList<String>(), v.hashtags)
@@ -33,7 +33,7 @@ class ParsingTest {
 
     @Test
     fun `code fences are tolerated`() {
-        val v = GeminiClient.parseVariants("```json\n{\"variants\":[{\"style\":\"punchy\",\"title\":\"t\",\"body\":\"b\"}]}\n```",
+        val v = AiWriter.parseVariants("```json\n{\"variants\":[{\"style\":\"punchy\",\"title\":\"t\",\"body\":\"b\"}]}\n```",
             listOf(NoteStyle.PUNCHY))
         assertEquals(1, v.size)
     }

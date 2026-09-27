@@ -71,7 +71,9 @@ object FoodPrompts {
 不过热乎乎的，吃完人活过来了。
 
 ## 输出
-只返回JSON。要求的每个风格各写一篇，style 字段填风格的 key。几篇之间要真的不一样：角度、长短、开头都换，不要只替换几个词。
+只返回JSON，不要任何其他文字。要求的每个风格各写一篇，style 字段填风格的 key。几篇之间要真的不一样：角度、长短、开头都换，不要只替换几个词。
+格式：
+{"variants":[{"style":"casual_story","title":"标题","body":"正文","hashtags":["标签"],"warnings":[]}]}
 """.trimIndent()
 
     /** Per-style instructions, in Chinese to match the system prompt. */
@@ -91,6 +93,8 @@ object FoodPrompts {
         styles: List<NoteStyle>,
         voiceSamples: List<String> = emptyList(),
         photoCount: Int = 0,
+        /** The note has photos but the model can't see images (text-only model). */
+        photosHidden: Boolean = false,
     ): String = buildString {
         if (voiceSamples.isNotEmpty()) {
             appendLine("## 我以前写的几篇（学我的语气和用词习惯，不要抄内容）")
@@ -113,6 +117,7 @@ object FoodPrompts {
         if (foodInfo.vibeNotes.isNotBlank()) appendLine("环境（我的原话）：${foodInfo.vibeNotes.trim()}")
         if (foodInfo.personalNotes.isNotBlank()) appendLine("其他想说的（我的原话）：${foodInfo.personalNotes.trim()}")
         if (photoCount > 0) appendLine("照片：$photoCount 张，附在后面。")
+        if (photosHidden) appendLine("这次看不到照片，只根据上面的文字写，不要描述或猜测照片内容。")
         appendLine()
 
         appendLine("## 要写的风格（每个写一篇）")

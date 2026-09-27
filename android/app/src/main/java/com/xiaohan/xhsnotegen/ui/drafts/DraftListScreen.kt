@@ -20,6 +20,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.style.TextOverflow
@@ -31,14 +32,16 @@ import com.xiaohan.xhsnotegen.domain.NoteStatus
 import com.xiaohan.xhsnotegen.ui.components.EmptyState
 import com.xiaohan.xhsnotegen.ui.components.StatusPill
 import com.xiaohan.xhsnotegen.ui.publish.XhsAuthStore
-import com.xiaohan.xhsnotegen.ui.settings.SettingsSheet
+import com.xiaohan.xhsnotegen.ui.theme.Backdrop
+import com.xiaohan.xhsnotegen.ui.theme.LocalAppTheme
+import com.xiaohan.xhsnotegen.ui.theme.ThemeBackdrop
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DraftListScreen(
     onCreateClick: () -> Unit,
     onDraftClick: (Long) -> Unit,
-    onNavigateToLogin: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     viewModel: DraftListViewModel = viewModel(),
 ) {
     val state by viewModel.state.collectAsState()
@@ -46,7 +49,6 @@ fun DraftListScreen(
     val snackbarHostState = remember { SnackbarHostState() }
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val gridState = rememberLazyStaggeredGridState()
-    var showSettings by remember { mutableStateOf(false) }
     var showMenu by remember { mutableStateOf(false) }
 
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
@@ -60,131 +62,138 @@ fun DraftListScreen(
         viewModel.messages.collect { snackbarHostState.showSnackbar(it) }
     }
 
-    if (showSettings) {
-        SettingsSheet(onDismiss = { showSettings = false }, onLogin = onNavigateToLogin)
-    }
-
     val total = state.counts[DraftFilter.ALL] ?: 0
     val ready = state.counts[DraftFilter.READY] ?: 0
 
-    Scaffold(
-        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-        topBar = {
-            LargeTopAppBar(
-                title = {
-                    Column {
-                        Text("Food diary", maxLines = 1)
-                        if (total > 0 && scrollBehavior.state.collapsedFraction < 0.5f) {
-                            Text(
-                                buildString {
-                                    append("$total ${if (total == 1) "note" else "notes"}")
-                                    if (ready > 0) append(" · $ready ready to post")
-                                },
-                                style = MaterialTheme.typography.bodyMedium,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            )
-                        }
-                    }
-                },
-                actions = {
-                    IconButton(onClick = { showSettings = true }) {
-                        BadgedBox(badge = {
-                            if (loggedIn) Badge(containerColor = MaterialTheme.colorScheme.secondary)
-                        }) {
-                            Icon(Icons.Outlined.AccountCircle,
-                                contentDescription = if (loggedIn) "Xiaohongshu connected" else "Account")
-                        }
-                    }
-                    Box {
-                        IconButton(onClick = { showMenu = true }) {
-                            Icon(Icons.Outlined.MoreVert, contentDescription = "More")
-                        }
-                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                            DropdownMenuItem(
-                                text = { Text("Settings") },
-                                leadingIcon = { Icon(Icons.Outlined.Settings, null) },
-                                onClick = { showMenu = false; showSettings = true },
-                            )
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text("Import backup") },
-                                leadingIcon = { Icon(Icons.Outlined.FileOpen, null) },
-                                onClick = { showMenu = false; importLauncher.launch(arrayOf("application/json")) },
-                            )
-                            DropdownMenuItem(
-                                text = { Text("Export backup") },
-                                leadingIcon = { Icon(Icons.Outlined.SaveAlt, null) },
-                                onClick = { showMenu = false; exportLauncher.launch("xhs_notes_backup.json") },
-                            )
-                        }
-                    }
-                },
-                scrollBehavior = scrollBehavior,
-                colors = TopAppBarDefaults.largeTopAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.background,
-                    scrolledContainerColor = MaterialTheme.colorScheme.background,
-                ),
-            )
-        },
-        floatingActionButton = {
-            // The empty state has its own call to action; one is enough.
-            if (total > 0) ExtendedFloatingActionButton(
-                onClick = onCreateClick,
-                expanded = !gridState.canScrollBackward,
-                icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                text = { Text("New note") },
-                containerColor = MaterialTheme.colorScheme.primary,
-                contentColor = MaterialTheme.colorScheme.onPrimary,
-            )
-        },
-        snackbarHost = { SnackbarHost(snackbarHostState) },
-        containerColor = MaterialTheme.colorScheme.background,
-    ) { padding ->
-        LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Fixed(2),
-            state = gridState,
-            modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 96.dp),
-            verticalItemSpacing = 12.dp,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            if (total > 0) {
-                item(span = StaggeredGridItemSpan.FullLine, key = "filters") {
-                    FilterRow(state.filter, state.counts, viewModel::setFilter)
-                }
-            }
+    val hasBackdrop = LocalAppTheme.current.backdrop != Backdrop.NONE
 
-            if (state.loaded && state.drafts.isEmpty()) {
-                item(span = StaggeredGridItemSpan.FullLine, key = "empty") {
-                    if (total == 0) {
-                        EmptyState(
-                            icon = Icons.Outlined.RamenDining,
-                            title = "Your food diary is empty",
-                            body = "Snap a meal, jot down a few words, and get a note that sounds like you.",
-                            action = {
-                                Button(onClick = onCreateClick) {
-                                    Icon(Icons.Filled.Add, null, Modifier.size(18.dp))
-                                    Spacer(Modifier.width(8.dp))
-                                    Text("Write your first note")
-                                }
-                            },
-                        )
-                    } else {
-                        EmptyState(
-                            icon = Icons.Outlined.FilterList,
-                            title = "Nothing here yet",
-                            body = "No notes match “${state.filter.label}”.",
-                        )
-                    }
-                }
-            }
-
-            items(state.drafts, key = { it.id }) { draft ->
-                NoteCard(
-                    draft = draft,
-                    onClick = { onDraftClick(draft.id) },
-                    onDelete = { viewModel.deleteDraft(draft) },
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+        // Anime-inspired themes paint art behind the header; it fades as the header collapses.
+        ThemeBackdrop(
+            Modifier
+                .fillMaxWidth()
+                .height(320.dp)
+                .graphicsLayer { alpha = 1f - scrollBehavior.state.collapsedFraction },
+        )
+        Scaffold(
+            modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+            topBar = {
+                LargeTopAppBar(
+                    title = {
+                        Column {
+                            Text("Food diary", maxLines = 1)
+                            if (total > 0 && scrollBehavior.state.collapsedFraction < 0.5f) {
+                                Text(
+                                    buildString {
+                                        append("$total ${if (total == 1) "note" else "notes"}")
+                                        if (ready > 0) append(" · $ready ready to post")
+                                    },
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    },
+                    actions = {
+                        IconButton(onClick = onOpenSettings) {
+                            BadgedBox(badge = {
+                                if (loggedIn) Badge(containerColor = MaterialTheme.colorScheme.secondary)
+                            }) {
+                                Icon(Icons.Outlined.AccountCircle,
+                                    contentDescription = if (loggedIn) "Xiaohongshu connected" else "Account")
+                            }
+                        }
+                        Box {
+                            IconButton(onClick = { showMenu = true }) {
+                                Icon(Icons.Outlined.MoreVert, contentDescription = "More")
+                            }
+                            DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+                                DropdownMenuItem(
+                                    text = { Text("Settings") },
+                                    leadingIcon = { Icon(Icons.Outlined.Settings, null) },
+                                    onClick = { showMenu = false; onOpenSettings() },
+                                )
+                                HorizontalDivider()
+                                DropdownMenuItem(
+                                    text = { Text("Import backup") },
+                                    leadingIcon = { Icon(Icons.Outlined.FileOpen, null) },
+                                    onClick = { showMenu = false; importLauncher.launch(arrayOf("application/json")) },
+                                )
+                                DropdownMenuItem(
+                                    text = { Text("Export backup") },
+                                    leadingIcon = { Icon(Icons.Outlined.SaveAlt, null) },
+                                    onClick = { showMenu = false; exportLauncher.launch("xhs_notes_backup.json") },
+                                )
+                            }
+                        }
+                    },
+                    scrollBehavior = scrollBehavior,
+                    colors = TopAppBarDefaults.largeTopAppBarColors(
+                        containerColor = if (hasBackdrop) Color.Transparent else MaterialTheme.colorScheme.background,
+                        scrolledContainerColor = MaterialTheme.colorScheme.background,
+                    ),
                 )
+            },
+            floatingActionButton = {
+                // The empty state has its own call to action; one is enough.
+                if (total > 0) ExtendedFloatingActionButton(
+                    onClick = onCreateClick,
+                    expanded = !gridState.canScrollBackward,
+                    icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                    text = { Text("New note") },
+                    containerColor = MaterialTheme.colorScheme.primary,
+                    contentColor = MaterialTheme.colorScheme.onPrimary,
+                )
+            },
+            snackbarHost = { SnackbarHost(snackbarHostState) },
+            containerColor = Color.Transparent,
+        ) { padding ->
+            LazyVerticalStaggeredGrid(
+                columns = StaggeredGridCells.Fixed(2),
+                state = gridState,
+                modifier = Modifier.fillMaxSize().padding(padding),
+                contentPadding = PaddingValues(start = 12.dp, end = 12.dp, bottom = 96.dp),
+                verticalItemSpacing = 12.dp,
+                horizontalArrangement = Arrangement.spacedBy(12.dp),
+            ) {
+                if (total > 0) {
+                    item(span = StaggeredGridItemSpan.FullLine, key = "filters") {
+                        FilterRow(state.filter, state.counts, viewModel::setFilter)
+                    }
+                }
+
+                if (state.loaded && state.drafts.isEmpty()) {
+                    item(span = StaggeredGridItemSpan.FullLine, key = "empty") {
+                        if (total == 0) {
+                            EmptyState(
+                                icon = Icons.Outlined.RamenDining,
+                                title = "Your food diary is empty",
+                                body = "Snap a meal, jot down a few words, and get a note that sounds like you.",
+                                action = {
+                                    Button(onClick = onCreateClick) {
+                                        Icon(Icons.Filled.Add, null, Modifier.size(18.dp))
+                                        Spacer(Modifier.width(8.dp))
+                                        Text("Write your first note")
+                                    }
+                                },
+                            )
+                        } else {
+                            EmptyState(
+                                icon = Icons.Outlined.FilterList,
+                                title = "Nothing here yet",
+                                body = "No notes match “${state.filter.label}”.",
+                            )
+                        }
+                    }
+                }
+
+                items(state.drafts, key = { it.id }) { draft ->
+                    NoteCard(
+                        draft = draft,
+                        onClick = { onDraftClick(draft.id) },
+                        onDelete = { viewModel.deleteDraft(draft) },
+                    )
+                }
             }
         }
     }
@@ -210,6 +219,8 @@ private fun FilterRow(
                 label = { Text(if (count > 0) "${filter.label}  $count" else filter.label) },
                 shape = CircleShape,
                 colors = FilterChipDefaults.filterChipColors(
+                    // Solid so chips stay legible over a theme backdrop.
+                    containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
                     selectedContainerColor = MaterialTheme.colorScheme.onSurface,
                     selectedLabelColor = MaterialTheme.colorScheme.surface,
                 ),

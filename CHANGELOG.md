@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- Multiple AI providers: Gemini, ChatGPT (OpenAI), Claude, DeepSeek, and Custom (any OpenAI-compatible API) — each with its own key, built-in model list (verified Sept 2026) and a free-text model id for newer models
+- Text-only models are supported: notes are written from the text without sending photos
+- Nine color themes and a System / Light / Dark switch, applied instantly and remembered:
+  classic Tomato, Matcha, Blueberry, Sakura, Sesame, Latte (beige); anime-inspired Summer Sky (clouds by day, stars and moon by night), City Pop (80s retro sunset) and Matsuri (seigaiha wave pattern) — all artwork is original and drawn in code
+- Full Settings screen (replaces the bottom sheet); changes save immediately
+
+### Changed
+- Default Gemini model is now `gemini-3.8-flash` — `gemini-2.5-flash` is limited to past users and unavailable to new API keys; Gemini 3 requests drop the deprecated `temperature` and use `thinkingLevel: low`
+- Structured output uses each provider's native JSON-schema support and steps down to JSON mode / prompt-only if a server rejects it
+- Longer read timeout for AI calls (reasoning models answer in one response)
+
 ## v1.1.0 — 2026-09-27
 
 ### Fixed
