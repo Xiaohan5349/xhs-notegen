@@ -1,43 +1,78 @@
 package com.xiaohan.xhsnotegen.ui.theme
 
-import android.app.Activity
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
 
-private val DarkColorScheme = darkColorScheme(
-    primary = NeonRed,
-    onPrimary = TextPrimary,
-    primaryContainer = DarkCard,
-    secondary = NeonCyan,
-    tertiary = NeonPurple,
-    background = DarkBg,
-    surface = DarkSurface,
-    surfaceVariant = DarkCard,
-    onBackground = TextPrimary,
-    onSurface = TextPrimary,
-    onSurfaceVariant = TextSecondary,
-    outline = DarkBorder,
+private val LightColors = lightColorScheme(
+    primary = Tomato, onPrimary = Color.White,
+    primaryContainer = TomatoContainer, onPrimaryContainer = TomatoDeep,
+    secondary = Herb, onSecondary = Color.White,
+    secondaryContainer = HerbContainer, onSecondaryContainer = HerbDeep,
+    tertiary = Honey, onTertiary = Color.White,
+    tertiaryContainer = HoneyContainer, onTertiaryContainer = HoneyDeep,
+    background = Paper, onBackground = Ink,
+    surface = Paper, onSurface = Ink,
+    surfaceVariant = PaperHigh, onSurfaceVariant = InkSoft,
+    surfaceContainerLowest = PaperLowest,
+    surfaceContainerLow = PaperLow,
+    surfaceContainer = PaperMid,
+    surfaceContainerHigh = PaperHigh,
+    surfaceContainerHighest = PaperHighest,
+    inverseSurface = Ink, inverseOnSurface = Paper, inversePrimary = TomatoLight,
+    outline = Rule, outlineVariant = RuleSoft,
+    error = Chili, onError = Color.White,
+    errorContainer = ChiliContainer, onErrorContainer = TomatoDeep,
+    scrim = Color.Black,
 )
 
-@Composable
-fun XhsNoteGenTheme(content: @Composable () -> Unit) {
-    val colorScheme = DarkColorScheme
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = DarkBg.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
-        }
-    }
+private val DarkColors = darkColorScheme(
+    primary = TomatoLight, onPrimary = TomatoDeep,
+    primaryContainer = TomatoNightContainer, onPrimaryContainer = TomatoContainer,
+    secondary = HerbLight, onSecondary = HerbDeep,
+    secondaryContainer = HerbNightContainer, onSecondaryContainer = HerbContainer,
+    tertiary = HoneyLight, onTertiary = HoneyDeep,
+    tertiaryContainer = HoneyNightContainer, onTertiaryContainer = HoneyContainer,
+    background = Night, onBackground = Cream,
+    surface = Night, onSurface = Cream,
+    surfaceVariant = NightHigh, onSurfaceVariant = CreamSoft,
+    surfaceContainerLowest = NightLowest,
+    surfaceContainerLow = NightLow,
+    surfaceContainer = NightMid,
+    surfaceContainerHigh = NightHigh,
+    surfaceContainerHighest = NightHighest,
+    inverseSurface = Cream, inverseOnSurface = Night, inversePrimary = Tomato,
+    outline = NightRule, outlineVariant = NightRuleSoft,
+    error = ChiliLight, onError = TomatoDeep,
+    errorContainer = ChiliNightContainer, onErrorContainer = ChiliContainer,
+    scrim = Color.Black,
+)
 
+val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(32.dp),
+)
+
+/**
+ * Follows the system light/dark setting. Dynamic (wallpaper) color is off on
+ * purpose — the warm palette is the app's identity. System bar icons are
+ * handled by enableEdgeToEdge() in MainActivity.
+ */
+@Composable
+fun XhsNoteGenTheme(
+    darkTheme: Boolean = isSystemInDarkTheme(),
+    content: @Composable () -> Unit,
+) {
     MaterialTheme(
-        colorScheme = colorScheme,
+        colorScheme = if (darkTheme) DarkColors else LightColors,
         typography = AppTypography,
+        shapes = AppShapes,
         content = content,
     )
 }

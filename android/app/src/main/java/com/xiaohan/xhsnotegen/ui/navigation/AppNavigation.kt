@@ -1,5 +1,9 @@
 package com.xiaohan.xhsnotegen.ui.navigation
 
+import androidx.compose.animation.AnimatedContentTransitionScope.SlideDirection
+import androidx.compose.animation.core.tween
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
 import androidx.compose.runtime.Composable
 import androidx.navigation.NavHostController
 import androidx.navigation.NavType
@@ -23,15 +27,23 @@ object Routes {
     fun review(draftId: Long) = "review/$draftId"
 }
 
+private const val NAV_MS = 320
+
 @Composable
 fun AppNavigation(navController: NavHostController) {
-    NavHost(navController = navController, startDestination = Routes.DRAFT_LIST) {
+    NavHost(
+        navController = navController,
+        startDestination = Routes.DRAFT_LIST,
+        // A short slide-and-fade: forward pushes in from the right, back reverses it.
+        enterTransition = { slideIntoContainer(SlideDirection.Start, tween(NAV_MS), initialOffset = { it / 5 }) + fadeIn(tween(NAV_MS)) },
+        exitTransition = { fadeOut(tween(NAV_MS / 2)) },
+        popEnterTransition = { fadeIn(tween(NAV_MS)) },
+        popExitTransition = { slideOutOfContainer(SlideDirection.End, tween(NAV_MS), targetOffset = { it / 5 }) + fadeOut(tween(NAV_MS)) },
+    ) {
         composable(Routes.DRAFT_LIST) {
             DraftListScreen(
                 onCreateClick = { navController.navigate(Routes.CREATE_FORM) },
-                onDraftClick = { draftId ->
-                    navController.navigate(Routes.review(draftId))
-                },
+                onDraftClick = { draftId -> navController.navigate(Routes.review(draftId)) },
                 onNavigateToLogin = { navController.navigate(Routes.XHS_LOGIN) },
             )
         }

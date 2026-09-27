@@ -1,9 +1,7 @@
 package com.xiaohan.xhsnotegen.ui.publish
 
-import android.graphics.BitmapFactory
-import android.util.Base64
-import com.google.gson.GsonBuilder
 import com.xiaohan.xhsnotegen.util.HttpClientFactory
+import com.xiaohan.xhsnotegen.util.ImageCompressor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
@@ -13,22 +11,25 @@ import okhttp3.RequestBody.Companion.toRequestBody
 /**
  * Direct XHS Creator API client running on Android.
  * API calls originate from the phone → same IP as cookies → no 406.
- * x-s signing uses the Python backend's real xhs library.
+ * x-s signing is done on-device by [XhsSigner].
  */
 object XhsApiClient {
 
     private val client = HttpClientFactory.shared
 
-    // serializeNulls matches Python json.dumps (None -> null) — keeps "video_info": null
-    // in the request body, and must match XhsSigner's serialization byte-for-byte.
-    private val gson = GsonBuilder().serializeNulls().create()
+    // Same instance the signature is computed with — the body must be byte-identical.
+    private val gson = XhsSigner.gson
 
     data class PublishResult(
         val success: Boolean,
         val noteId: String = "",
         val shareLink: String = "",
         val error: String = "",
+        /** The server said the session is gone — the user must log in again. */
+        val authExpired: Boolean = false,
     )
+
+    private class ApiFailure(message: String, val authExpired: Boolean = false) : Exception(message)
 
     /**
      * Publish a note to XHS. Calls are made from the device (same IP as cookies).
@@ -38,139 +39,130 @@ object XhsApiClient {
         title: String,
         body: String,
         hashtags: List<String>,
-        imagesBase64: List<String>,
+        images: List<ImageCompressor.Compressed>,
     ): PublishResult = withContext(Dispatchers.IO) {
         try {
             val a1 = extractA1(cookies)
-
-            // Step 1: Get upload permits
-            val permitUri = "/api/media/v1/upload/web/permit"
-            val permitParams = mapOf(
-                "biz_name" to "spectrum", "scene" to "image",
-                "file_count" to imagesBase64.size.toString(),
-                "version" to "1", "source" to "web",
-            )
-            val permitQuery = permitParams.entries.joinToString("&") { "${it.key}=${it.value}" }
-            val permitHeaders = getSignedHeaders("$permitUri?$permitQuery", null, a1)
-
-            val permitResp = client.newCall(Request.Builder()
-                .url("https://creator.xiaohongshu.com$permitUri?$permitQuery")
-                .apply { permitHeaders.forEach { (k, v) -> addHeader(k, v) } }
-                .addHeader("Cookie", cookies)
-                .get().build()
-            ).execute()
-
-            val permitBody = permitResp.body?.string() ?: ""
-
-            if (permitResp.code != 200) {
-                return@withContext PublishResult(false, error = "Permit ${permitResp.code}: $permitBody")
-            }
-            val permitData = gson.fromJson(permitBody, Map::class.java)
-            val code = (permitData["code"] as? Double)?.toInt() ?: -1
-            if (code != 0) {
-                return@withContext PublishResult(false, error = "Permit code=$code")
-            }
-
-            @Suppress("UNCHECKED_CAST")
-            val permitsRaw = (permitData["data"] as Map<String, Any>)["uploadTempPermits"] as List<Map<String, Any>>
-            // Flatten: each permit entry can have multiple file_ids
-            val fileEntries = mutableListOf<Pair<String, String>>() // fileId -> uploadAddr
-            val fileTokens = mutableMapOf<String, String>() // fileId -> token
-            for (entry in permitsRaw) {
-                val token = entry["token"] as String
-                val addr = entry["uploadAddr"] as String
-                @Suppress("UNCHECKED_CAST")
-                val fids = entry["fileIds"] as List<String>
-                for (fid in fids) {
-                    fileEntries.add(fid to addr)
-                    fileTokens[fid] = token
-                }
-            }
-
-            if (fileEntries.size < imagesBase64.size) {
-                return@withContext PublishResult(false,
-                    error = "Only got ${fileEntries.size} permits for ${imagesBase64.size} images")
-            }
-
-            // Step 2: Upload images
-            val imageMetas = mutableListOf<Map<String, Any>>()
-            for ((i, imgB64) in imagesBase64.withIndex()) {
-                val (fileId, addr) = fileEntries[i]
-                val token = fileTokens[fileId]!!
-                val uploadUrl = "https://$addr/$fileId"
-
-                val imgBytes = Base64.decode(imgB64, Base64.NO_WRAP)
-                // Real dimensions of the compressed image (bounds-only decode).
-                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
-                BitmapFactory.decodeByteArray(imgBytes, 0, imgBytes.size, bounds)
-                // .use{} closes the response body so the connection can be reused —
-                // without it every image upload leaks a pooled connection.
-                client.newCall(Request.Builder()
-                    .url(uploadUrl)
-                    .put(imgBytes.toRequestBody("image/jpeg".toMediaType()))
-                    .addHeader("x-cos-security-token", token)
-                    .addHeader("Origin", "https://creator.xiaohongshu.com")
-                    .build()
-                ).execute().use { uploadResp ->
-                    if (uploadResp.code !in listOf(200, 204)) {
-                        return@withContext PublishResult(false,
-                            error = "Upload ${i+1} HTTP ${uploadResp.code}")
-                    }
-                }
-
-                imageMetas.add(mapOf(
-                    "file_id" to fileId, "width" to bounds.outWidth, "height" to bounds.outHeight,
+            val fileIds = uploadImages(cookies, a1, images)
+            val imageMetas = images.mapIndexed { i, img ->
+                mapOf(
+                    "file_id" to fileIds[i], "width" to img.width, "height" to img.height,
                     "metadata" to mapOf("source" to -1),
                     "stickers" to mapOf("version" to 2, "floating" to emptyList<String>()),
-                    "extra_info_json" to """{"mimeType":"image/jpeg","image_metadata":{"bg_color":"","origin_size":${imgBytes.size}}}""",
-                ))
+                    "extra_info_json" to """{"mimeType":"image/jpeg","image_metadata":{"bg_color":"","origin_size":${img.bytes.size}}}""",
+                )
             }
-
-            // Step 3: Create note
-            val noteBody = buildNoteBody(title, body, hashtags, imageMetas)
-            val noteUri = "/web_api/sns/v2/note"
-            val noteHeaders = getSignedHeaders(noteUri, noteBody, a1)
-
-            val noteResp = client.newCall(Request.Builder()
-                .url("https://edith.xiaohongshu.com$noteUri")
-                .apply { noteHeaders.forEach { (k, v) -> addHeader(k, v) } }
-                .addHeader("Cookie", cookies)
-                .addHeader("Content-Type", "application/json")
-                .post(gson.toJson(noteBody).toRequestBody("application/json".toMediaType()))
-                .build()
-            ).execute()
-
-            val noteRespBody = noteResp.body?.string() ?: ""
-
-            if (noteResp.code != 200) {
-                return@withContext PublishResult(false, error = "Note ${noteResp.code}: $noteRespBody")
-            }
-
-            @Suppress("UNCHECKED_CAST")
-            val noteData = gson.fromJson(noteRespBody, Map::class.java)
-            val success = noteData["success"] as? Boolean ?: false
-            if (success) {
-                @Suppress("UNCHECKED_CAST")
-                val data = noteData["data"] as Map<String, Any>
-                val noteId = data["id"] as? String ?: ""
-                val link = (noteData["share_link"] as? String)
-                    ?: "https://www.xiaohongshu.com/discovery/item/$noteId"
-                return@withContext PublishResult(true, noteId, link)
-            } else {
-                return@withContext PublishResult(false, error = "Note failed: ${noteData["msg"]}")
-            }
+            createNote(cookies, a1, buildNoteBody(title, body, hashtags, imageMetas))
+        } catch (e: ApiFailure) {
+            PublishResult(false, error = e.message.orEmpty(), authExpired = e.authExpired)
         } catch (e: Exception) {
-            return@withContext PublishResult(false, error = e.message ?: "Unknown error")
+            PublishResult(false, error = e.message ?: e.javaClass.simpleName)
         }
+    }
+
+    /** Step 1 + 2: get upload permits, PUT each image. Returns file ids in image order. */
+    private fun uploadImages(cookies: String, a1: String, images: List<ImageCompressor.Compressed>): List<String> {
+        val permitUri = "/api/media/v1/upload/web/permit"
+        val permitQuery = listOf(
+            "biz_name" to "spectrum", "scene" to "image",
+            "file_count" to images.size.toString(),
+            "version" to "1", "source" to "web",
+        ).joinToString("&") { "${it.first}=${it.second}" }
+        val permitHeaders = getSignedHeaders("$permitUri?$permitQuery", null, a1)
+
+        val permitData = client.newCall(Request.Builder()
+            .url("https://creator.xiaohongshu.com$permitUri?$permitQuery")
+            .apply { permitHeaders.forEach { (k, v) -> addHeader(k, v) } }
+            .addHeader("Cookie", cookies)
+            .get().build()
+        ).execute().use { resp ->
+            val raw = resp.body?.string().orEmpty()
+            checkResponse("Upload permit", resp.code, raw)
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        val permits = ((permitData["data"] as? Map<String, Any?>)?.get("uploadTempPermits") as? List<Map<String, Any?>>)
+            ?: throw ApiFailure("Upload permit: unexpected response")
+
+        // Flatten: each permit entry can carry several file ids.
+        val slots = permits.flatMap { entry ->
+            val token = entry["token"] as? String ?: ""
+            val addr = entry["uploadAddr"] as? String ?: ""
+            @Suppress("UNCHECKED_CAST")
+            (entry["fileIds"] as? List<String>).orEmpty().map { Triple(it, addr, token) }
+        }
+        if (slots.size < images.size) {
+            throw ApiFailure("Only got ${slots.size} upload slots for ${images.size} photos")
+        }
+
+        return images.mapIndexed { i, img ->
+            val (fileId, addr, token) = slots[i]
+            client.newCall(Request.Builder()
+                .url("https://$addr/$fileId")
+                .put(img.bytes.toRequestBody("image/jpeg".toMediaType()))
+                .addHeader("x-cos-security-token", token)
+                .addHeader("Origin", "https://creator.xiaohongshu.com")
+                .build()
+            ).execute().use { resp ->
+                if (resp.code !in listOf(200, 204)) throw ApiFailure("Photo ${i + 1} upload failed (HTTP ${resp.code})")
+            }
+            fileId
+        }
+    }
+
+    /** Step 3: create the note. */
+    private fun createNote(cookies: String, a1: String, noteBody: Map<String, Any?>): PublishResult {
+        val noteUri = "/web_api/sns/v2/note"
+        val noteHeaders = getSignedHeaders(noteUri, noteBody, a1)
+
+        val noteData = client.newCall(Request.Builder()
+            .url("https://edith.xiaohongshu.com$noteUri")
+            .apply { noteHeaders.forEach { (k, v) -> addHeader(k, v) } }
+            .addHeader("Cookie", cookies)
+            .post(gson.toJson(noteBody).toRequestBody("application/json".toMediaType()))
+            .build()
+        ).execute().use { resp ->
+            val raw = resp.body?.string().orEmpty()
+            checkResponse("Create note", resp.code, raw)
+        }
+
+        @Suppress("UNCHECKED_CAST")
+        val data = noteData["data"] as? Map<String, Any?>
+        val noteId = data?.get("id") as? String ?: ""
+        val link = (data?.get("share_link") as? String)
+            ?: (noteData["share_link"] as? String)
+            ?: "https://www.xiaohongshu.com/discovery/item/$noteId"
+        return PublishResult(true, noteId, link)
+    }
+
+    /**
+     * Parses an XHS JSON envelope and throws [ApiFailure] on failure,
+     * flagging login problems so the UI can ask for a fresh login.
+     */
+    private fun checkResponse(step: String, httpCode: Int, raw: String): Map<String, Any?> {
+        @Suppress("UNCHECKED_CAST")
+        val json = runCatching { gson.fromJson(raw, Map::class.java) as Map<String, Any?> }.getOrNull()
+        val code = (json?.get("code") as? Number)?.toInt()
+        val msg = json?.get("msg") as? String ?: ""
+        val success = json?.get("success") as? Boolean
+
+        val authExpired = httpCode == 401 || httpCode == 403 ||
+            code == -100 || code == -101 || msg.contains("登录")
+        if (authExpired) throw ApiFailure("$step: XHS login has expired", authExpired = true)
+        if (httpCode != 200 || json == null) throw ApiFailure("$step failed (HTTP $httpCode) ${raw.take(120)}")
+        if (success == false || (code != null && code != 0)) {
+            throw ApiFailure("$step failed: ${msg.ifBlank { "code $code" }}")
+        }
+        return json
     }
 
     /** Generate x-s headers locally — no backend needed. */
     private fun getSignedHeaders(uri: String, data: Map<String, Any?>?, a1: String): Map<String, String> {
         val sig = XhsSigner.sign(uri, data, a1 = a1)
         return mapOf(
-            "x-s" to sig["x-s"]!!,
-            "x-t" to sig["x-t"]!!,
-            "x-s-common" to sig["x-s-common"]!!,
+            "x-s" to sig.getValue("x-s"),
+            "x-t" to sig.getValue("x-t"),
+            "x-s-common" to sig.getValue("x-s-common"),
             "User-Agent" to "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 Chrome/149.0.0.0 Safari/537.36",
             "Origin" to "https://creator.xiaohongshu.com",
             "Referer" to "https://creator.xiaohongshu.com/",
@@ -186,16 +178,11 @@ object XhsApiClient {
             ?.getOrNull(1) ?: ""
     }
 
-    @Suppress("UNCHECKED_CAST")
     private fun buildNoteBody(
         title: String, body: String, hashtags: List<String>,
         images: List<Map<String, Any>>,
     ): Map<String, Any?> {
-        fun jsonStr(vararg pairs: Pair<String, Any?>): String {
-            val map = mutableMapOf<String, Any?>()
-            for ((k, v) in pairs) map[k] = v
-            return gson.toJson(map)
-        }
+        fun jsonStr(vararg pairs: Pair<String, Any?>): String = gson.toJson(mapOf(*pairs))
 
         return mapOf(
             "common" to mapOf(
@@ -205,7 +192,7 @@ object XhsApiClient {
                     "extraInfo" to jsonStr("subType" to "official", "systemId" to "web"),
                 ),
                 "title" to title,
-                "desc" to "$body\n${hashtags.joinToString(" ") { "#$it" }}",
+                "desc" to if (hashtags.isEmpty()) body else "$body\n${hashtags.joinToString(" ") { "#$it" }}",
                 "ats" to emptyList<String>(),
                 "hash_tag" to hashtags.map { mapOf("id" to "", "name" to it) },
                 "business_binds" to jsonStr(

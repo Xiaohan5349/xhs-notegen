@@ -29,7 +29,7 @@ android {
 
     defaultConfig {
         applicationId = "com.xiaohan.xhsnotegen"
-        minSdk = 28
+        minSdk = 29
         targetSdk = 35
         versionCode = 1
         versionName = "1.0.0"
@@ -60,6 +60,11 @@ android {
     }
 }
 
+ksp {
+    // Exported schemas let Room verify migrations; commit app/schemas/.
+    arg("room.schemaLocation", "$projectDir/schemas")
+}
+
 dependencies {
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.activity.compose)
@@ -83,4 +88,5 @@ dependencies {
     implementation(libs.gson)
     implementation(libs.androidx.exifinterface)
     debugImplementation(libs.compose.ui.tooling)
+    testImplementation(libs.junit)
 }

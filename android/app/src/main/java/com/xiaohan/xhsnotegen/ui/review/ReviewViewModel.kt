@@ -1,178 +1,227 @@
 package com.xiaohan.xhsnotegen.ui.review
 
 import android.app.Application
-import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.xiaohan.xhsnotegen.XhsNoteGenApp
+import com.xiaohan.xhsnotegen.data.json.normalizeHashtags
 import com.xiaohan.xhsnotegen.domain.NoteDraft
 import com.xiaohan.xhsnotegen.domain.NoteStatus
 import com.xiaohan.xhsnotegen.domain.NoteStyle
 import com.xiaohan.xhsnotegen.domain.NoteVariant
-import com.xiaohan.xhsnotegen.ui.generate.FoodPrompts
-import com.xiaohan.xhsnotegen.ui.generate.GeminiClient
-import com.xiaohan.xhsnotegen.util.ImageCompressor
-import kotlinx.coroutines.Dispatchers
+import com.xiaohan.xhsnotegen.ui.generate.NoteGenerator
+import com.xiaohan.xhsnotegen.ui.publish.XiaohongshuSharePublisher
+import com.xiaohan.xhsnotegen.ui.publish.XiaohongshuSharePublisher.PublishResult
+import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
-import kotlinx.coroutines.async
-import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
+
+sealed interface ReviewEvent {
+    data class Message(val text: String) : ReviewEvent
+    data class Published(val link: String) : ReviewEvent
+    data class HandedOff(val reason: String?, val openedXhs: Boolean) : ReviewEvent
+    data class NeedsLogin(val expired: Boolean) : ReviewEvent
+}
+
+/** What the AI is currently doing on this screen, if anything. */
+enum class AiTask { NONE, REGENERATE_ALL, REWRITE_ONE }
 
 class ReviewViewModel(application: Application) : AndroidViewModel(application) {
 
-    private val repo = (application as XhsNoteGenApp).draftRepository
+    private val app = application as XhsNoteGenApp
+    private val repo = app.draftRepository
 
     private val _draft = MutableStateFlow<NoteDraft?>(null)
     val draft: StateFlow<NoteDraft?> = _draft.asStateFlow()
 
-    private val _selectedVariantIndex = MutableStateFlow(0)
-    val selectedVariantIndex: StateFlow<Int> = _selectedVariantIndex.asStateFlow()
+    private val _aiTask = MutableStateFlow(AiTask.NONE)
+    val aiTask: StateFlow<AiTask> = _aiTask.asStateFlow()
 
-    private val _isRegenerating = MutableStateFlow(false)
-    val isRegenerating: StateFlow<Boolean> = _isRegenerating.asStateFlow()
+    private val _isPublishing = MutableStateFlow(false)
+    val isPublishing: StateFlow<Boolean> = _isPublishing.asStateFlow()
 
-    private val _regenerateError = MutableStateFlow<String?>(null)
-    val regenerateError: StateFlow<String?> = _regenerateError.asStateFlow()
+    private val _events = Channel<ReviewEvent>(Channel.BUFFERED)
+    val events: Flow<ReviewEvent> = _events.receiveAsFlow()
 
+    private var loadedId: Long? = null
     private var saveJob: Job? = null
+    private var hasPendingSave = false
+    private val writeLock = Mutex()
 
-    /**
-     * Debounced persistence for editor edits: typing should not hit the DB on
-     * every keystroke, but edits must survive leaving the screen without Save.
-     */
-    private fun persistDraft(draft: NoteDraft) {
+    fun load(draftId: Long) {
+        if (loadedId == draftId) return // survives rotation without clobbering in-memory edits
+        loadedId = draftId
+        viewModelScope.launch {
+            val d = repo.getById(draftId) ?: return@launch
+            // Make "publish all photos" explicit so the UI and the publisher agree.
+            _draft.value = d.copy(
+                selectedPublishPhotoUris = d.publishPhotoUris,
+                selectedVariantIndex = d.selectedVariantIndex.coerceIn(0, (d.variants.size - 1).coerceAtLeast(0)),
+            )
+        }
+    }
+
+    // ---- Editing ----
+    //
+    // Every change goes through mutate(): the in-memory draft is the single
+    // source of truth, and persistence always writes the latest copy. (Before,
+    // Save wrote a status the in-memory copy never saw, so the next keystroke
+    // silently reverted "Ready" back to "Generated".)
+
+    private fun mutate(debounce: Boolean = true, transform: (NoteDraft) -> NoteDraft) {
+        val current = _draft.value ?: return
+        _draft.value = transform(current)
+        if (debounce) schedulePersist() else persistNow()
+    }
+
+    private fun schedulePersist() {
+        hasPendingSave = true
         saveJob?.cancel()
         saveJob = viewModelScope.launch {
             delay(500)
-            repo.update(draft)
+            persistNow()
         }
     }
 
-    fun load(draftId: Long) {
-        viewModelScope.launch {
-            val d = repo.getById(draftId)
-            _draft.value = d
-            _selectedVariantIndex.value = d?.selectedVariantIndex ?: 0
+    private fun persistNow() {
+        saveJob?.cancel()
+        hasPendingSave = false
+        if (_draft.value == null) return
+        // Application scope: a write must not be cancelled just because the user
+        // left the screen. Serialized, and always writes the *latest* state, so
+        // two quick writes can never land out of order.
+        app.applicationScope.launch {
+            writeLock.withLock { _draft.value?.let { repo.update(it) } }
         }
     }
 
-    fun selectVariant(index: Int) {
-        _selectedVariantIndex.value = index
-        _draft.value?.let { draft ->
-            val updated = draft.copy(selectedVariantIndex = index)
-            _draft.value = updated
-            viewModelScope.launch { repo.update(updated) }
-        }
+    fun selectVariant(index: Int) = mutate(debounce = false) {
+        it.copy(selectedVariantIndex = index.coerceIn(0, (it.variants.size - 1).coerceAtLeast(0)))
     }
 
-    fun updateVariantTitle(text: String) {
-        val index = _selectedVariantIndex.value
-        _draft.value?.let { draft ->
-            val variants = draft.variants.toMutableList()
-            if (index in variants.indices) variants[index] = variants[index].copy(title = text)
-            _draft.value = draft.copy(variants = variants)
-            persistDraft(draft.copy(variants = variants))
+    private fun updateSelectedVariant(transform: (NoteVariant) -> NoteVariant) =
+        mutate { d ->
+            val i = d.selectedVariantIndex
+            if (i !in d.variants.indices) d
+            else d.copy(variants = d.variants.toMutableList().also { it[i] = transform(it[i]) })
         }
+
+    fun updateTitle(text: String) = updateSelectedVariant { it.copy(title = text) }
+    fun updateBody(text: String) = updateSelectedVariant { it.copy(body = text) }
+
+    fun addHashtags(raw: String) = updateSelectedVariant { v ->
+        v.copy(hashtags = normalizeHashtags(v.hashtags + raw))
     }
 
-    fun updateVariantBody(text: String) {
-        val index = _selectedVariantIndex.value
-        _draft.value?.let { draft ->
-            val variants = draft.variants.toMutableList()
-            if (index in variants.indices) variants[index] = variants[index].copy(body = text)
-            _draft.value = draft.copy(variants = variants)
-            persistDraft(draft.copy(variants = variants))
-        }
-    }
+    fun removeHashtag(tag: String) = updateSelectedVariant { v -> v.copy(hashtags = v.hashtags - tag) }
 
-    fun updateVariantHashtags(hashtags: List<String>) {
-        val index = _selectedVariantIndex.value
-        _draft.value?.let { draft ->
-            val variants = draft.variants.toMutableList()
-            if (index in variants.indices) variants[index] = variants[index].copy(hashtags = hashtags)
-            _draft.value = draft.copy(variants = variants)
-            persistDraft(draft.copy(variants = variants))
+    /** Toggles a photo in or out of the post. Selection order = publish order (first is the cover). */
+    fun togglePublishPhoto(uri: String) {
+        val d = _draft.value ?: return
+        val selected = d.selectedPublishPhotoUris
+        if (uri in selected && selected.size == 1) {
+            _events.trySend(ReviewEvent.Message("A post needs at least one photo"))
+            return
         }
-    }
-
-    fun togglePublishPhoto(index: Int) {
-        _draft.value?.let { draft ->
-            val uri = draft.photoUris.getOrNull(index) ?: return
-            val selected = draft.selectedPublishPhotoUris.toMutableList()
-            if (uri in selected) selected.remove(uri) else selected.add(uri)
-            _draft.value = draft.copy(selectedPublishPhotoUris = selected)
-            persistDraft(draft.copy(selectedPublishPhotoUris = selected))
-        }
+        mutate { it.copy(selectedPublishPhotoUris = if (uri in selected) selected - uri else selected + uri) }
     }
 
     fun saveChanges() {
-        _draft.value?.let { draft ->
-            viewModelScope.launch {
-                repo.update(draft.copy(status = NoteStatus.REVIEWED))
-            }
+        mutate(debounce = false) {
+            if (it.status == NoteStatus.SHARED) it else it.copy(status = NoteStatus.REVIEWED)
+        }
+        _events.trySend(ReviewEvent.Message("Saved — marked as ready to post"))
+    }
+
+    fun markShared() = mutate(debounce = false) { it.copy(status = NoteStatus.SHARED) }
+
+    // ---- AI ----
+
+    /** Rewrites every style. Replaces all variants, including manual edits. */
+    fun regenerateAll() {
+        val d = _draft.value ?: return
+        runAi(AiTask.REGENERATE_ALL, NoteStyle.orderedFrom(d.preferredStyle)) { current, variants ->
+            current.copy(variants = variants, selectedVariantIndex = 0)
         }
     }
 
-    fun markShared() {
-        _draft.value?.let { draft ->
-            _draft.value = draft.copy(status = NoteStatus.SHARED)
-            viewModelScope.launch {
-                repo.update(draft.copy(status = NoteStatus.SHARED))
-            }
+    /** Rewrites only the style currently shown. */
+    fun rewriteCurrent() {
+        val d = _draft.value ?: return
+        val index = d.selectedVariantIndex
+        val style = d.selectedVariant?.let { NoteStyle.fromLabel(it.styleLabel) } ?: return
+        runAi(AiTask.REWRITE_ONE, listOf(style)) { current, variants ->
+            val fresh = variants.firstOrNull() ?: return@runAi current
+            if (index !in current.variants.indices) current
+            else current.copy(variants = current.variants.toMutableList().also { it[index] = fresh })
         }
     }
 
-    fun regenerateAllStyles() {
-        val draft = _draft.value ?: return
-        _isRegenerating.value = true
-        _regenerateError.value = null
-
+    private fun runAi(
+        task: AiTask,
+        styles: List<NoteStyle>,
+        merge: (NoteDraft, List<NoteVariant>) -> NoteDraft,
+    ) {
+        if (_aiTask.value != AiTask.NONE) return
+        val snapshot = _draft.value ?: return
+        _aiTask.value = task
         viewModelScope.launch {
             try {
-                // Compress images
-                val photos = draft.photoUris.map { Uri.parse(it) }
-                val compressedImages = withContext(Dispatchers.IO) {
-                    photos.map { uri ->
-                        val result = ImageCompressor.compress(getApplication(), uri)
-                        if (!result.success) throw IllegalStateException("Compress failed: ${result.error}")
-                        result.base64
-                    }
+                val variants = NoteGenerator.generate(getApplication(), repo, snapshot, styles)
+                // Merge into the *current* draft so photo toggles made meanwhile survive.
+                mutate(debounce = false) { current ->
+                    val merged = merge(current, variants)
+                    if (merged.status == NoteStatus.DRAFT) merged.copy(status = NoteStatus.GENERATED) else merged
                 }
-
-                // Generate all 4 styles in parallel
-                val results = NoteStyle.entries.map { style ->
-                    async(Dispatchers.IO) {
-                        style to runCatching {
-                            val prompt = FoodPrompts.buildUserPrompt(style, draft.foodInfo)
-                            val generated = GeminiClient.generateFoodNote(
-                                getApplication(), FoodPrompts.SYSTEM_PROMPT, prompt, compressedImages
-                            )
-                            generated.firstOrNull()?.let {
-                                NoteVariant(it.styleLabel, it.title, it.body, it.hashtags, it.warnings)
-                            }
-                        }
-                    }
-                }.awaitAll()
-
-                val errors = results.mapNotNull { (style, result) ->
-                    result.exceptionOrNull()?.let { "${style.displayName}: ${it.message}" }
-                }
-                if (errors.isNotEmpty() && results.none { it.second.isSuccess }) {
-                    throw IllegalStateException(errors.joinToString("\n"))
-                }
-                val variants = results.mapNotNull { it.second.getOrNull() }
-
-                repo.saveGeneratedVariants(draft.id, variants)
-                _draft.value = draft.copy(variants = variants, selectedVariantIndex = 0)
-                _selectedVariantIndex.value = 0
+            } catch (e: CancellationException) {
+                throw e
             } catch (e: Exception) {
-                _regenerateError.value = e.message ?: "Regenerate failed"
+                _events.trySend(ReviewEvent.Message(e.message ?: "Couldn't generate"))
             } finally {
-                _isRegenerating.value = false
+                _aiTask.value = AiTask.NONE
             }
         }
+    }
+
+    // ---- Publishing ----
+    //
+    // Runs in viewModelScope rather than the screen's composition scope, so
+    // rotating the phone mid-upload no longer cancels a half-finished publish.
+
+    fun publish() = runPublish { XiaohongshuSharePublisher.publish(getApplication(), it) }
+
+    fun publishManually() = runPublish { XiaohongshuSharePublisher.handoff(getApplication(), it) }
+
+    private fun runPublish(block: suspend (NoteDraft) -> PublishResult) {
+        if (_isPublishing.value) return
+        val d = _draft.value ?: return
+        if (hasPendingSave) persistNow()
+        _isPublishing.value = true
+        viewModelScope.launch {
+            try {
+                when (val result = block(d)) {
+                    is PublishResult.Success -> {
+                        markShared()
+                        _events.send(ReviewEvent.Published(result.shareLink))
+                    }
+                    is PublishResult.Handoff -> _events.send(ReviewEvent.HandedOff(result.reason, result.openedXhs))
+                    is PublishResult.NeedsLogin -> _events.send(ReviewEvent.NeedsLogin(result.expired))
+                    is PublishResult.Error -> _events.send(ReviewEvent.Message(result.message))
+                }
+            } finally {
+                _isPublishing.value = false
+            }
+        }
+    }
+
+    override fun onCleared() {
+        // The debounce window may still hold the user's last keystrokes.
+        if (hasPendingSave) persistNow()
+        super.onCleared()
     }
 }

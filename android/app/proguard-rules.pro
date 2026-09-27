@@ -9,11 +9,9 @@
 # -- Gson: app models are (de)serialized reflectively; field names are the
 #    wire contract with both Gemini and the local Room JSON columns.
 -keep class com.xiaohan.xhsnotegen.domain.** { *; }
+-keep class com.xiaohan.xhsnotegen.data.json.** { *; }
 -keep class com.xiaohan.xhsnotegen.ui.generate.GeminiClient { *; }
 -keep class com.xiaohan.xhsnotegen.ui.generate.GeminiClient$* { *; }
--keep class com.xiaohan.xhsnotegen.ui.drafts.ExportData { *; }
--keep class com.xiaohan.xhsnotegen.ui.drafts.ImportResult { *; }
--keep class com.xiaohan.xhsnotegen.ui.drafts.ExportResult { *; }
 -keepclassmembers,allowobfuscation class * {
     @com.google.gson.annotations.SerializedName <fields>;
 }

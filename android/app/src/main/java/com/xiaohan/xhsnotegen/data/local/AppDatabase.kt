@@ -14,7 +14,7 @@ import com.xiaohan.xhsnotegen.data.local.entity.*
         StylePreferenceEntity::class,
     ],
     version = 1,
-    exportSchema = false,
+    exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun noteDraftDao(): NoteDraftDao
@@ -31,7 +31,9 @@ abstract class AppDatabase : RoomDatabase() {
                     AppDatabase::class.java,
                     "xhs_notegen.db"
                 )
-                .fallbackToDestructiveMigration()
+                // No destructive fallback: a schema change without a Migration
+                // must fail loudly in testing instead of silently wiping every
+                // user's drafts in production.
                 .build().also { INSTANCE = it }
             }
     }

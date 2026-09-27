@@ -1,7 +1,8 @@
 package com.xiaohan.xhsnotegen.data.repository
 
-import com.google.gson.Gson
+import androidx.room.withTransaction
 import com.xiaohan.xhsnotegen.data.local.AppDatabase
+import com.xiaohan.xhsnotegen.data.local.entity.NoteDraftEntity
 import com.xiaohan.xhsnotegen.data.local.toDomain
 import com.xiaohan.xhsnotegen.data.local.toEntity
 import com.xiaohan.xhsnotegen.domain.*
@@ -14,99 +15,65 @@ class DraftRepository(private val db: AppDatabase) {
     private val draftDao = db.noteDraftDao()
     private val foodDao = db.foodInfoDao()
 
+    /** Maps a row to the domain model; a row with corrupted JSON is skipped, not fatal. */
+    private suspend fun NoteDraftEntity.toDomainOrNull(): NoteDraft? = try {
+        toDomain(foodDao.getByDraftId(id)?.toDomain())
+    } catch (e: Exception) {
+        null
+    }
+
     fun getAllFlow(): Flow<List<NoteDraft>> = draftDao.getAllFlow().map { entities ->
-        entities.mapNotNull { entity ->
-            try {
-                val foodEntity = foodDao.getByDraftId(entity.id)
-                entity.toDomain(foodEntity?.toDomain())
-            } catch (e: Exception) {
-                // A row with corrupted JSON must not crash the whole list.
-                null
-            }
-        }
+        entities.mapNotNull { it.toDomainOrNull() }
     }
 
-    fun getByIdFlow(id: Long): Flow<NoteDraft?> = draftDao.getByIdFlow(id).map { entity ->
-        entity?.let {
-            try {
-                val foodEntity = foodDao.getByDraftId(it.id)
-                it.toDomain(foodEntity?.toDomain())
-            } catch (e: Exception) {
-                null
-            }
-        }
-    }
+    suspend fun getById(id: Long): NoteDraft? = draftDao.getById(id)?.toDomainOrNull()
 
-    suspend fun getById(id: Long): NoteDraft? {
-        val entity = draftDao.getById(id) ?: return null
-        val foodEntity = foodDao.getByDraftId(id)
-        return entity.toDomain(foodEntity?.toDomain())
-    }
+    suspend fun getAll(): List<NoteDraft> = draftDao.getAll().mapNotNull { it.toDomainOrNull() }
 
-    suspend fun insert(draft: NoteDraft): Long {
+    suspend fun insert(draft: NoteDraft): Long = db.withTransaction {
         val draftId = draftDao.insert(draft.toEntity())
         foodDao.insert(draft.foodInfo.toEntity(draftId))
-        return draftId
+        draftId
     }
 
-    suspend fun update(draft: NoteDraft) {
+    suspend fun update(draft: NoteDraft) = db.withTransaction {
         draftDao.update(draft.copy(updatedAt = System.currentTimeMillis()).toEntity())
         foodDao.deleteByDraftId(draft.id)
         foodDao.insert(draft.foodInfo.toEntity(draft.id))
     }
 
-    suspend fun updateStatus(id: Long, status: NoteStatus) {
-        draftDao.updateStatus(id, status.key)
-    }
-
-    suspend fun saveGeneratedVariants(draftId: Long, variants: List<NoteVariant>) {
-        val entity = draftDao.getById(draftId) ?: return
-        val updated = entity.copy(
-            variantsJson = Gson().toJson(variants),
-            status = NoteStatus.GENERATED.key,
-            updatedAt = System.currentTimeMillis(),
-        )
-        draftDao.update(updated)
-    }
-
-    suspend fun delete(draft: NoteDraft) {
-        draftDao.delete(draft.toEntity())
-    }
-
     suspend fun deleteById(id: Long) {
-        val entity = draftDao.getById(id)
+        val draft = getById(id)
         draftDao.deleteById(id)
         // Draft deletion must also remove the local photo copies in filesDir/images/,
         // otherwise deleted drafts leave unmanaged (and private) image files behind.
-        entity?.let { ImageCleanup.deleteLocalFiles(it.toDomain().photoUris) }
+        draft?.let { ImageCleanup.deleteLocalFiles(it.photoUris) }
     }
 
-    suspend fun getAll(): List<NoteDraft> {
-        val drafts = draftDao.getAll()
-        return drafts.mapNotNull { entity ->
-            try {
-                val foodEntity = foodDao.getByDraftId(entity.id)
-                entity.toDomain(foodEntity?.toDomain())
-            } catch (e: Exception) { null }
-        }
-    }
-
-    suspend fun getAllByStatus(status: NoteStatus): List<NoteDraft> {
-        val drafts = draftDao.getAllByStatus(status.key)
-        return drafts.mapNotNull { entity ->
-            try {
-                val foodEntity = foodDao.getByDraftId(entity.id)
-                entity.toDomain(foodEntity?.toDomain())
-            } catch (e: Exception) { null }
-        }
-    }
-
-    suspend fun insertAll(drafts: List<NoteDraft>) {
+    /** Import: all-or-nothing, and every draft gets a fresh auto-generated id. */
+    suspend fun insertAll(drafts: List<NoteDraft>) = db.withTransaction {
         drafts.forEach { draft ->
-            // Clear the ID so Room auto-generates new ones (import scenario)
             val newDraft = draft.copy(id = 0)
             val draftId = draftDao.insert(newDraft.toEntity())
             foodDao.insert(newDraft.foodInfo.toEntity(draftId))
         }
     }
+
+    /**
+     * Notes the user has already reviewed or posted, newest first. Their
+     * (user-edited) text is the best example of the user's own voice, so it is
+     * fed back to the model as a style reference.
+     */
+    suspend fun getVoiceSamples(excludeId: Long, limit: Int = 3): List<String> =
+        draftDao.getAll()
+            .asSequence()
+            .filter { it.id != excludeId }
+            .filter { it.status == NoteStatus.SHARED.key || it.status == NoteStatus.REVIEWED.key }
+            .mapNotNull { entity ->
+                runCatching { entity.toDomain() }.getOrNull()?.selectedVariant
+                    ?.let { v -> listOf(v.title, v.body).filter { it.isNotBlank() }.joinToString("\n") }
+                    ?.takeIf { it.length >= 20 }
+            }
+            .take(limit)
+            .toList()
 }

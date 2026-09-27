@@ -5,29 +5,41 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
+import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.*
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.text.input.KeyboardCapitalization
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
-import com.xiaohan.xhsnotegen.domain.FoodInfo
 import com.xiaohan.xhsnotegen.domain.NoteStyle
+import com.xiaohan.xhsnotegen.ui.components.SectionCard
+import com.xiaohan.xhsnotegen.ui.components.SoftTextField
+import com.xiaohan.xhsnotegen.ui.components.dashedBorder
 import kotlinx.coroutines.launch
 
-@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun CreateFormScreen(
     onNavigateBack: () -> Unit,
@@ -37,190 +49,323 @@ fun CreateFormScreen(
     val photos by viewModel.photoUris.collectAsState()
     val foodInfo by viewModel.foodInfo.collectAsState()
     val selectedStyle by viewModel.selectedStyle.collectAsState()
-    val photoCountError by viewModel.photoCountError.collectAsState()
+    val photoMessage by viewModel.photoMessage.collectAsState()
+    val isImporting by viewModel.isImporting.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val scope = rememberCoroutineScope()
-
-    var styleExpanded by remember { mutableStateOf(false) }
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
-    val photoPickerLauncher = rememberLauncherForActivityResult(
-        contract = ActivityResultContracts.PickMultipleVisualMedia(maxItems = 20),
-    ) { uris: List<Uri> ->
-        if (uris.isNotEmpty()) viewModel.setPhotos(uris)
+    val picker = rememberLauncherForActivityResult(
+        ActivityResultContracts.PickMultipleVisualMedia(maxItems = CreateFormViewModel.MAX_PHOTOS),
+    ) { uris -> viewModel.addPhotos(uris) }
+    val pickPhotos = { picker.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly)) }
+
+    val missing = buildList {
+        if (photos.isEmpty()) add("a photo")
+        if (foodInfo.dishNames.isBlank()) add("what you ate")
+        if (foodInfo.restaurantName.isBlank()) add("where")
     }
+    val canGenerate = missing.isEmpty() && !isSaving && !isImporting
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New Food Note") },
+                title = { Text("New note") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.Default.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
                     }
                 },
-                colors = TopAppBarDefaults.topAppBarColors(
-                    containerColor = MaterialTheme.colorScheme.surface,
-                ),
+                colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
             )
         },
+        bottomBar = {
+            Surface(color = MaterialTheme.colorScheme.background) {
+                Column(
+                    // No imePadding here: while typing, the keyboard covers this bar
+                    // instead of the bar eating half of the remaining screen.
+                    Modifier.fillMaxWidth().navigationBarsPadding()
+                        .padding(horizontal = 20.dp, vertical = 12.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                    verticalArrangement = Arrangement.spacedBy(8.dp),
+                ) {
+                    val hint = errorMessage ?: if (missing.isNotEmpty()) "Add ${missing.joinToString(", ")} to continue" else null
+                    if (hint != null) {
+                        Text(hint, style = MaterialTheme.typography.bodySmall,
+                            color = if (errorMessage != null) MaterialTheme.colorScheme.error
+                                    else MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                    Button(
+                        onClick = {
+                            scope.launch {
+                                try {
+                                    errorMessage = null
+                                    viewModel.saveDraftSuspend()?.let(onDraftSaved)
+                                } catch (e: Exception) {
+                                    errorMessage = e.message ?: "Couldn't save the note"
+                                }
+                            }
+                        },
+                        enabled = canGenerate,
+                        modifier = Modifier.fillMaxWidth().height(56.dp),
+                        shape = CircleShape,
+                    ) {
+                        if (isSaving) {
+                            CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp,
+                                color = MaterialTheme.colorScheme.onPrimary)
+                        } else {
+                            Icon(Icons.Filled.AutoAwesome, null, Modifier.size(20.dp))
+                            Spacer(Modifier.width(10.dp))
+                            Text("Write my note", style = MaterialTheme.typography.titleMedium)
+                        }
+                    }
+                }
+            }
+        },
+        containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         Column(
-            modifier = Modifier
+            Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .consumeWindowInsets(padding)
+                .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+                .padding(horizontal = 16.dp, vertical = 8.dp),
+            verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
-            // ---- Photo Section ----
-            Text("Photos", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Select 1-20 food photos",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-
-            LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                items(photos) { uri ->
-                    AsyncImage(
-                        model = uri,
-                        contentDescription = null,
-                        contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(MaterialTheme.shapes.medium)
-                            .border(1.dp, MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium),
-                    )
-                }
-                item {
-                    Surface(
-                        modifier = Modifier
-                            .size(72.dp)
-                            .clip(MaterialTheme.shapes.medium)
-                            .border(2.dp, MaterialTheme.colorScheme.primary, MaterialTheme.shapes.medium)
-                            .clickable { photoPickerLauncher.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly)) },
-                        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f),
-                    ) {
-                        Box(contentAlignment = Alignment.Center) {
-                            Icon(Icons.Default.Add, contentDescription = "Add photos",
-                                tint = MaterialTheme.colorScheme.primary)
-                        }
-                    }
-                }
-            }
-
-            if (photoCountError != null) {
-                Text(photoCountError!!, style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error)
-            }
-
-            // ---- Food Info Section ----
-            Text("Food Info", style = MaterialTheme.typography.titleMedium)
-
-            OutlinedTextField(
-                value = foodInfo.dishNames,
-                onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(dishNames = it)) },
-                label = { Text("Dish names * (e.g. 红烧肉, 糖醋里脊)") },
-                minLines = 1, modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = foodInfo.restaurantName,
-                onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(restaurantName = it)) },
-                label = { Text("Restaurant name *") },
-                singleLine = true, modifier = Modifier.fillMaxWidth(),
-            )
-
-            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                OutlinedTextField(
-                    value = foodInfo.location,
-                    onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(location = it)) },
-                    label = { Text("Location") }, singleLine = true,
-                    modifier = Modifier.weight(1f),
-                )
-                OutlinedTextField(
-                    value = foodInfo.mealDate,
-                    onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(mealDate = it)) },
-                    label = { Text("Date") }, singleLine = true,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-
-            OutlinedTextField(
-                value = foodInfo.tasteNotes,
-                onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(tasteNotes = it)) },
-                label = { Text("Taste notes") }, minLines = 2,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = foodInfo.priceOrRating,
-                onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(priceOrRating = it)) },
-                label = { Text("Price or rating") }, singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = foodInfo.vibeNotes,
-                onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(vibeNotes = it)) },
-                label = { Text("Atmosphere / vibe") }, minLines = 2,
-                modifier = Modifier.fillMaxWidth(),
-            )
-            OutlinedTextField(
-                value = foodInfo.personalNotes,
-                onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(personalNotes = it)) },
-                label = { Text("Personal notes (optional)") }, minLines = 2,
-                modifier = Modifier.fillMaxWidth(),
-            )
-
-            // ---- Style Section ----
-            Text("Style", style = MaterialTheme.typography.titleMedium)
-
-            ExposedDropdownMenuBox(expanded = styleExpanded, onExpandedChange = { styleExpanded = it }) {
-                OutlinedTextField(
-                    value = selectedStyle.displayName, onValueChange = {}, readOnly = true,
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = styleExpanded) },
-                    modifier = Modifier.fillMaxWidth().menuAnchor(),
-                )
-                ExposedDropdownMenu(expanded = styleExpanded, onDismissRequest = { styleExpanded = false }) {
-                    NoteStyle.entries.forEach { style ->
-                        DropdownMenuItem(
-                            text = { Text(style.displayName) },
-                            onClick = { viewModel.setStyle(style); styleExpanded = false },
-                        )
-                    }
-                }
-            }
-
-            errorMessage?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodySmall)
-            }
-
-            // ---- Generate Button ----
-            Button(
-                onClick = {
-                    scope.launch {
-                        try {
-                            val draftId = viewModel.saveDraftSuspend()
-                            onDraftSaved(draftId)
-                        } catch (e: Exception) {
-                            errorMessage = e.message ?: "Failed to save draft"
-                        }
+            // ---- Photos ----
+            SectionCard(
+                title = "Photos",
+                subtitle = if (photos.isEmpty()) "Date and place are filled in from the photos"
+                           else "Tap a photo to make it the cover",
+                trailing = {
+                    if (photos.isNotEmpty()) {
+                        Text("${photos.size}/${CreateFormViewModel.MAX_PHOTOS}",
+                            style = MaterialTheme.typography.labelLarge,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
-                modifier = Modifier.fillMaxWidth().height(52.dp),
-                enabled = foodInfo.isValid() && photos.size in 1..20 && !isSaving,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary),
             ) {
-                if (isSaving) {
-                    CircularProgressIndicator(
-                        modifier = Modifier.size(20.dp),
-                        color = MaterialTheme.colorScheme.onPrimary, strokeWidth = 2.dp,
-                    )
+                if (photos.isEmpty() && !isImporting) {
+                    BigAddPhotos(onClick = pickPhotos)
                 } else {
-                    Text("✨ Generate Note")
+                    PhotoStrip(
+                        photos = photos,
+                        importing = isImporting,
+                        canAddMore = photos.size < CreateFormViewModel.MAX_PHOTOS,
+                        onAdd = pickPhotos,
+                        onRemove = viewModel::removePhoto,
+                        onMakeCover = viewModel::makeCover,
+                    )
+                }
+                photoMessage?.let {
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
                 }
             }
 
-            Spacer(Modifier.height(16.dp))
+            // ---- Facts ----
+            SectionCard(title = "The meal") {
+                SoftTextField(
+                    value = foodInfo.dishNames,
+                    onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(dishNames = it)) },
+                    label = "What did you eat", required = true,
+                    placeholder = "红烧肉, 糖醋里脊",
+                    leadingIcon = Icons.Outlined.RestaurantMenu,
+                )
+                SoftTextField(
+                    value = foodInfo.restaurantName,
+                    onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(restaurantName = it)) },
+                    label = "Where", required = true, singleLine = true,
+                    placeholder = "Restaurant name",
+                    leadingIcon = Icons.Outlined.Storefront,
+                    keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
+                )
+                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                    SoftTextField(
+                        value = foodInfo.location,
+                        onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(location = it)) },
+                        label = "Area", singleLine = true, placeholder = "City / area",
+                        leadingIcon = Icons.Outlined.Place,
+                        modifier = Modifier.weight(1f),
+                    )
+                    SoftTextField(
+                        value = foodInfo.mealDate,
+                        onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(mealDate = it)) },
+                        label = "When", singleLine = true, placeholder = "yyyy-MM-dd",
+                        leadingIcon = Icons.Outlined.CalendarToday,
+                        modifier = Modifier.weight(1f),
+                    )
+                }
+            }
+
+            // ---- The human part ----
+            SectionCard(
+                title = "In your own words",
+                subtitle = "Optional, but this is what makes it sound like you — your phrasing is kept almost as-is.",
+            ) {
+                SoftTextField(
+                    value = foodInfo.tasteNotes,
+                    onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(tasteNotes = it)) },
+                    label = "How was it", minLines = 2, placeholder = "汤有点咸，但面很筋道",
+                )
+                SoftTextField(
+                    value = foodInfo.priceOrRating,
+                    onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(priceOrRating = it)) },
+                    label = "Price or rating", singleLine = true, placeholder = "两个人150",
+                )
+                SoftTextField(
+                    value = foodInfo.vibeNotes,
+                    onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(vibeNotes = it)) },
+                    label = "The place", minLines = 2, placeholder = "排了40分钟，店里很吵",
+                )
+                SoftTextField(
+                    value = foodInfo.personalNotes,
+                    onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(personalNotes = it)) },
+                    label = "Anything else", minLines = 2, placeholder = "和谁、为什么来、下次想点什么",
+                )
+            }
+
+            // ---- Style ----
+            SectionCard(title = "Favorite style", subtitle = "All four get written — this one shows first") {
+                NoteStyle.entries.chunked(2).forEach { row ->
+                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                        row.forEach { style ->
+                            StyleOption(
+                                style = style,
+                                selected = style == selectedStyle,
+                                onClick = { viewModel.setStyle(style) },
+                                modifier = Modifier.weight(1f),
+                            )
+                        }
+                    }
+                }
+            }
+            Spacer(Modifier.height(8.dp))
+        }
+    }
+}
+
+@Composable
+private fun BigAddPhotos(onClick: () -> Unit) {
+    Column(
+        Modifier
+            .fillMaxWidth()
+            .height(160.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
+            .dashedBorder(MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), 16.dp)
+            .clickable(onClick = onClick),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Icon(Icons.Outlined.AddPhotoAlternate, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary)
+        Spacer(Modifier.height(8.dp))
+        Text("Add photos", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Text("Up to ${CreateFormViewModel.MAX_PHOTOS}", style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun PhotoStrip(
+    photos: List<Uri>,
+    importing: Boolean,
+    canAddMore: Boolean,
+    onAdd: () -> Unit,
+    onRemove: (Uri) -> Unit,
+    onMakeCover: (Uri) -> Unit,
+) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        itemsIndexed(photos, key = { _, uri -> uri.toString() }) { index, uri ->
+            Box(
+                Modifier
+                    .size(width = 96.dp, height = 128.dp)
+                    .clip(MaterialTheme.shapes.medium)
+                    .clickable { onMakeCover(uri) }
+            ) {
+                AsyncImage(model = uri, contentDescription = null, contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh))
+                if (index == 0) {
+                    Text(
+                        "Cover",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = Color.White,
+                        modifier = Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(6.dp)
+                            .clip(CircleShape)
+                            .background(MaterialTheme.colorScheme.primary)
+                            .padding(horizontal = 8.dp, vertical = 2.dp),
+                    )
+                }
+                Box(
+                    Modifier
+                        .align(Alignment.TopEnd)
+                        .padding(4.dp)
+                        .size(24.dp)
+                        .clip(CircleShape)
+                        .background(Color.Black.copy(alpha = 0.5f))
+                        .clickable { onRemove(uri) },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(Icons.Filled.Close, contentDescription = "Remove photo", tint = Color.White,
+                        modifier = Modifier.size(14.dp))
+                }
+            }
+        }
+        if (importing || canAddMore) {
+            item(key = "add") {
+                Box(
+                    Modifier
+                        .size(width = 96.dp, height = 128.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .dashedBorder(MaterialTheme.colorScheme.outline, 16.dp)
+                        .clickable(enabled = !importing, onClick = onAdd),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    if (importing) {
+                        CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
+                    } else {
+                        Icon(Icons.Outlined.Add, contentDescription = "Add photos",
+                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun StyleOption(
+    style: NoteStyle,
+    selected: Boolean,
+    onClick: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    val c = MaterialTheme.colorScheme
+    Box(
+        modifier
+            .heightIn(min = 84.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .background(if (selected) c.primaryContainer else c.surfaceContainer)
+            .border(
+                width = if (selected) 1.5.dp else 0.dp,
+                color = if (selected) c.primary else Color.Transparent,
+                shape = MaterialTheme.shapes.medium,
+            )
+            .clickable(onClick = onClick)
+            .padding(14.dp),
+    ) {
+        Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(end = 18.dp)) {
+            Text(style.displayName, style = MaterialTheme.typography.titleSmall,
+                color = if (selected) c.onPrimaryContainer else c.onSurface)
+            Text(style.blurb, style = MaterialTheme.typography.bodySmall,
+                color = if (selected) c.onPrimaryContainer.copy(alpha = 0.8f) else c.onSurfaceVariant)
+        }
+        if (selected) {
+            Icon(Icons.Filled.CheckCircle, null, tint = c.primary,
+                modifier = Modifier.align(Alignment.TopEnd).size(18.dp))
         }
     }
 }

@@ -5,6 +5,7 @@ data class NoteDraft(
     val type: NoteType = NoteType.FOOD,
     val status: NoteStatus = NoteStatus.DRAFT,
     val photoUris: List<String> = emptyList(),
+    /** Photos to publish, in publish order (first = cover). Empty means "all" (legacy drafts). */
     val selectedPublishPhotoUris: List<String> = emptyList(),
     val title: String = "",
     val body: String = "",
@@ -15,4 +16,14 @@ data class NoteDraft(
     val createdAt: Long = System.currentTimeMillis(),
     val updatedAt: Long = System.currentTimeMillis(),
     val foodInfo: FoodInfo = FoodInfo(),
-)
+) {
+    val selectedVariant: NoteVariant?
+        get() = variants.getOrNull(selectedVariantIndex)
+
+    /** The photos that will actually be published, in order. */
+    val publishPhotoUris: List<String>
+        get() = selectedPublishPhotoUris.filter { it in photoUris }.ifEmpty { photoUris }
+
+    val preferredStyle: NoteStyle
+        get() = NoteStyle.fromLabel(styleLabel)
+}
