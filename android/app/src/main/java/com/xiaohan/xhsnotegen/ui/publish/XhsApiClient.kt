@@ -102,17 +102,19 @@ object XhsApiClient {
                 val uploadUrl = "https://$addr/$fileId"
 
                 val imgBytes = Base64.decode(imgB64, Base64.NO_WRAP)
-                val uploadResp = client.newCall(Request.Builder()
+                // .use{} closes the response body so the connection can be reused —
+                // without it every image upload leaks a pooled connection.
+                client.newCall(Request.Builder()
                     .url(uploadUrl)
                     .put(imgBytes.toRequestBody("image/jpeg".toMediaType()))
                     .addHeader("x-cos-security-token", token)
                     .addHeader("Origin", "https://creator.xiaohongshu.com")
                     .build()
-                ).execute()
-
-                if (uploadResp.code !in listOf(200, 204)) {
-                    return@withContext PublishResult(false,
-                        error = "Upload ${i+1} HTTP ${uploadResp.code}")
+                ).execute().use { uploadResp ->
+                    if (uploadResp.code !in listOf(200, 204)) {
+                        return@withContext PublishResult(false,
+                            error = "Upload ${i+1} HTTP ${uploadResp.code}")
+                    }
                 }
 
                 imageMetas.add(mapOf(

@@ -10,6 +10,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import android.widget.Toast
 import com.xiaohan.xhsnotegen.domain.NoteDraft
+import com.xiaohan.xhsnotegen.util.ImageCleanup
 import com.xiaohan.xhsnotegen.util.ImageCompressor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -74,13 +75,16 @@ object XiaohongshuSharePublisher {
                     imagesBase64 = imagesBase64,
                 )
                 if (result.success) {
-                    deleteLocalImages(context, draft)
+                    deleteLocalImages(draft)
                     return PublishResult.Success(result.shareLink)
                 }
-                // Show the error from the API
-                return PublishResult.Error(result.error.ifBlank { "Publish failed" })
+                // Direct publish failed (expired signature, risk control, transient
+                // network error...). Fall back to manual handoff so the note can
+                // still be posted from the XHS app — as documented in README/CHANGELOG.
+                return handoffToXhs(context, draft, imagesBase64)
             } catch (e: Exception) {
-                return PublishResult.Error("Publish error: ${e.message}")
+                // Unexpected error (network, encoding, ...) — same fallback.
+                return handoffToXhs(context, draft, imagesBase64)
             }
         } else {
             return PublishResult.NeedsLogin
@@ -180,16 +184,11 @@ object XiaohongshuSharePublisher {
     }
 
     /** Delete local image copies after successful publish. XHS has them now. */
-    private fun deleteLocalImages(context: Context, draft: NoteDraft) {
-        val allUris = draft.photoUris + draft.selectedPublishPhotoUris
-        for (uriStr in allUris) {
-            try {
-                val uri = Uri.parse(uriStr)
-                if (uri.scheme == "file") {
-                    File(uri.path ?: continue).delete()
-                }
-            } catch (_: Exception) { }
-        }
+    private fun deleteLocalImages(draft: NoteDraft) {
+        // Only delete what was actually published — mirrors publish()'s urisToShare.
+        // Deleting photoUris wholesale would wipe unselected photos too.
+        val publishedUris = draft.selectedPublishPhotoUris.ifEmpty { draft.photoUris }
+        ImageCleanup.deleteLocalFiles(publishedUris)
         // Also clean the Pictures/XHSNoteGen handoff directory
         try {
             val galleryDir = File(

@@ -5,6 +5,7 @@ import com.xiaohan.xhsnotegen.data.local.AppDatabase
 import com.xiaohan.xhsnotegen.data.local.toDomain
 import com.xiaohan.xhsnotegen.data.local.toEntity
 import com.xiaohan.xhsnotegen.domain.*
+import com.xiaohan.xhsnotegen.util.ImageCleanup
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.map
 
@@ -64,7 +65,11 @@ class DraftRepository(private val db: AppDatabase) {
     }
 
     suspend fun deleteById(id: Long) {
+        val entity = draftDao.getById(id)
         draftDao.deleteById(id)
+        // Draft deletion must also remove the local photo copies in filesDir/images/,
+        // otherwise deleted drafts leave unmanaged (and private) image files behind.
+        entity?.let { ImageCleanup.deleteLocalFiles(it.toDomain().photoUris) }
     }
 
     suspend fun getAll(): List<NoteDraft> {

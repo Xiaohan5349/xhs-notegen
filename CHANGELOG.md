@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased
+
+### Fixed
+- Publishing now deletes only the photos that were actually published; unselected photos are preserved
+- Deleting a draft now also removes its local photo copies from app storage
+- Direct-publish failures now fall back to manual handoff (clipboard + gallery save + open XHS app), as documented for v1.0
+- Upload response bodies are closed, preventing pooled-connection leaks
+
 ## v1.0 — 2026-06-13
 
 ### Added
