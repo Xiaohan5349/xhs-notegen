@@ -1,3 +1,5 @@
+import java.util.Properties
+
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.android)
@@ -8,6 +10,22 @@ plugins {
 android {
     namespace = "com.xiaohan.xhsnotegen"
     compileSdk = 35
+
+    signingConfigs {
+        create("release") {
+            // Keystore lives in .wsl-tools/keystore/ (gitignored, shared by the
+            // WSL and Windows checkouts of this repo); passwords come from the
+            // gitignored local.properties — never hardcode them here.
+            val secrets = Properties().apply {
+                val lp = rootProject.file("local.properties")
+                if (lp.exists()) lp.inputStream().use { load(it) }
+            }
+            storeFile = file("../../.wsl-tools/keystore/xhs-release.jks")
+            storePassword = secrets.getProperty("RELEASE_STORE_PASSWORD")
+            keyPassword = secrets.getProperty("RELEASE_KEY_PASSWORD")
+            keyAlias = "xhs"
+        }
+    }
 
     defaultConfig {
         applicationId = "com.xiaohan.xhsnotegen"
@@ -24,6 +42,7 @@ android {
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro",
             )
+            signingConfig = signingConfigs.getByName("release")
         }
     }
 

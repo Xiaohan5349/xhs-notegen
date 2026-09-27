@@ -12,6 +12,7 @@
 - Release builds now ship ProGuard keep rules for Gson/Room/OkHttp — R8 no longer risks breaking AI response parsing at runtime
 - Removed unused dependencies (Retrofit, converter-gson, logging-interceptor); OkHttp is now declared explicitly
 - GeminiClient and XhsApiClient share one OkHttpClient (single connection pool, one tuning point)
+- Release builds are signed with a local keystore (config reads passwords from gitignored local.properties; keystore and passwords never enter git)
 
 ## v1.0 — 2026-06-13
 
