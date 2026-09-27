@@ -20,7 +20,10 @@ android {
     buildTypes {
         release {
             isMinifyEnabled = true
-            proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"))
+            proguardFiles(
+                getDefaultProguardFile("proguard-android-optimize.txt"),
+                "proguard-rules.pro",
+            )
         }
     }
 
@@ -53,9 +56,9 @@ dependencies {
     implementation(libs.room.runtime)
     implementation(libs.room.ktx)
     ksp(libs.room.compiler)
-    implementation(libs.retrofit)
-    implementation(libs.retrofit.converter.gson)
-    implementation(libs.okhttp.logging)
+    // NOTE: okhttp must be declared explicitly — it used to arrive transitively
+    // via Retrofit, and GeminiClient/XhsApiClient use it directly.
+    implementation(libs.okhttp)
     implementation(libs.coil.compose)
     implementation(libs.coroutines.android)
     implementation(libs.gson)

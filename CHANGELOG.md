@@ -8,6 +8,11 @@
 - Direct-publish failures now fall back to manual handoff (clipboard + gallery save + open XHS app), as documented for v1.0
 - Upload response bodies are closed, preventing pooled-connection leaks
 
+### Changed
+- Release builds now ship ProGuard keep rules for Gson/Room/OkHttp — R8 no longer risks breaking AI response parsing at runtime
+- Removed unused dependencies (Retrofit, converter-gson, logging-interceptor); OkHttp is now declared explicitly
+- GeminiClient and XhsApiClient share one OkHttpClient (single connection pool, one tuning point)
+
 ## v1.0 — 2026-06-13
 
 ### Added

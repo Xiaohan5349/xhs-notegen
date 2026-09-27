@@ -3,13 +3,12 @@ package com.xiaohan.xhsnotegen.ui.generate
 import android.content.Context
 import com.google.gson.Gson
 import com.google.gson.annotations.SerializedName
+import com.xiaohan.xhsnotegen.util.HttpClientFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.util.concurrent.TimeUnit
 
 /**
  * Direct Gemini REST API client. No backend needed.
@@ -22,11 +21,7 @@ object GeminiClient {
     private const val PREFS_NAME = "gemini_config"
     private const val KEY_API_KEY = "api_key"
 
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(120, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
-        .writeTimeout(120, TimeUnit.SECONDS)
-        .build()
+    private val client = HttpClientFactory.shared
 
     private val gson = Gson()
 

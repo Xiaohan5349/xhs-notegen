@@ -2,13 +2,12 @@ package com.xiaohan.xhsnotegen.ui.publish
 
 import android.util.Base64
 import com.google.gson.Gson
+import com.xiaohan.xhsnotegen.util.HttpClientFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 import okhttp3.MediaType.Companion.toMediaType
-import okhttp3.OkHttpClient
 import okhttp3.Request
 import okhttp3.RequestBody.Companion.toRequestBody
-import java.util.concurrent.TimeUnit
 
 /**
  * Direct XHS Creator API client running on Android.
@@ -17,11 +16,7 @@ import java.util.concurrent.TimeUnit
  */
 object XhsApiClient {
 
-    private val client = OkHttpClient.Builder()
-        .connectTimeout(120, TimeUnit.SECONDS)
-        .readTimeout(120, TimeUnit.SECONDS)
-        .writeTimeout(120, TimeUnit.SECONDS)
-        .build()
+    private val client = HttpClientFactory.shared
 
     private val gson = Gson()
 
