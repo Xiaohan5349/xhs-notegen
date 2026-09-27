@@ -21,15 +21,6 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
     private val _filterTab = MutableStateFlow(0)
     val filterTab: StateFlow<Int> = _filterTab.asStateFlow()
 
-    val filterStatus: StateFlow<NoteStatus?> = _filterTab.map { tab ->
-        when (tab) {
-            1 -> NoteStatus.DRAFT   // used as key — filter logic below catches DRAFT+GENERATED
-            2 -> NoteStatus.REVIEWED
-            3 -> NoteStatus.SHARED
-            else -> null
-        }
-    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), null)
-
     val drafts: StateFlow<List<NoteDraft>> = combine(
         repo.getAllFlow(),
         _filterTab,

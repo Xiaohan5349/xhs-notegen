@@ -15,16 +15,25 @@ class DraftRepository(private val db: AppDatabase) {
     private val foodDao = db.foodInfoDao()
 
     fun getAllFlow(): Flow<List<NoteDraft>> = draftDao.getAllFlow().map { entities ->
-        entities.map { entity ->
-            val foodEntity = foodDao.getByDraftId(entity.id)
-            entity.toDomain(foodEntity?.toDomain())
+        entities.mapNotNull { entity ->
+            try {
+                val foodEntity = foodDao.getByDraftId(entity.id)
+                entity.toDomain(foodEntity?.toDomain())
+            } catch (e: Exception) {
+                // A row with corrupted JSON must not crash the whole list.
+                null
+            }
         }
     }
 
     fun getByIdFlow(id: Long): Flow<NoteDraft?> = draftDao.getByIdFlow(id).map { entity ->
         entity?.let {
-            val foodEntity = foodDao.getByDraftId(it.id)
-            it.toDomain(foodEntity?.toDomain())
+            try {
+                val foodEntity = foodDao.getByDraftId(it.id)
+                it.toDomain(foodEntity?.toDomain())
+            } catch (e: Exception) {
+                null
+            }
         }
     }
 
@@ -74,17 +83,21 @@ class DraftRepository(private val db: AppDatabase) {
 
     suspend fun getAll(): List<NoteDraft> {
         val drafts = draftDao.getAll()
-        return drafts.map { entity ->
-            val foodEntity = foodDao.getByDraftId(entity.id)
-            entity.toDomain(foodEntity?.toDomain())
+        return drafts.mapNotNull { entity ->
+            try {
+                val foodEntity = foodDao.getByDraftId(entity.id)
+                entity.toDomain(foodEntity?.toDomain())
+            } catch (e: Exception) { null }
         }
     }
 
     suspend fun getAllByStatus(status: NoteStatus): List<NoteDraft> {
         val drafts = draftDao.getAllByStatus(status.key)
-        return drafts.map { entity ->
-            val foodEntity = foodDao.getByDraftId(entity.id)
-            entity.toDomain(foodEntity?.toDomain())
+        return drafts.mapNotNull { entity ->
+            try {
+                val foodEntity = foodDao.getByDraftId(entity.id)
+                entity.toDomain(foodEntity?.toDomain())
+            } catch (e: Exception) { null }
         }
     }
 

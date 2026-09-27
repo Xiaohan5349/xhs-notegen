@@ -66,7 +66,7 @@ class GenerationViewModel(application: Application) : AndroidViewModel(applicati
                     }
                 }
 
-                // Step 2: Generate 3 variants in parallel via Gemini
+                // Step 2: Generate 4 style variants in parallel via Gemini
                 _state.value = GenerationState(
                     isCompressing = false, isGenerating = true,
                     progress = "Generating note variants...",
@@ -75,7 +75,7 @@ class GenerationViewModel(application: Application) : AndroidViewModel(applicati
                 val preferredStyle = NoteStyle.fromKey(draft.styleLabel)
                 val otherStyles = NoteStyle.entries
                     .filter { it != preferredStyle }
-                    .take(3)  // all 4 styles
+                    .take(3)  // preferred + 3 others = all 4 styles
 
                 val userPrompt = FoodPrompts.buildUserPrompt(preferredStyle, draft.foodInfo)
 

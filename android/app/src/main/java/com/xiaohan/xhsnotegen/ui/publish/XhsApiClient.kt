@@ -1,7 +1,8 @@
 package com.xiaohan.xhsnotegen.ui.publish
 
+import android.graphics.BitmapFactory
 import android.util.Base64
-import com.google.gson.Gson
+import com.google.gson.GsonBuilder
 import com.xiaohan.xhsnotegen.util.HttpClientFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,7 +19,9 @@ object XhsApiClient {
 
     private val client = HttpClientFactory.shared
 
-    private val gson = Gson()
+    // serializeNulls matches Python json.dumps (None -> null) — keeps "video_info": null
+    // in the request body, and must match XhsSigner's serialization byte-for-byte.
+    private val gson = GsonBuilder().serializeNulls().create()
 
     data class PublishResult(
         val success: Boolean,
@@ -97,6 +100,9 @@ object XhsApiClient {
                 val uploadUrl = "https://$addr/$fileId"
 
                 val imgBytes = Base64.decode(imgB64, Base64.NO_WRAP)
+                // Real dimensions of the compressed image (bounds-only decode).
+                val bounds = BitmapFactory.Options().apply { inJustDecodeBounds = true }
+                BitmapFactory.decodeByteArray(imgBytes, 0, imgBytes.size, bounds)
                 // .use{} closes the response body so the connection can be reused —
                 // without it every image upload leaks a pooled connection.
                 client.newCall(Request.Builder()
@@ -113,7 +119,7 @@ object XhsApiClient {
                 }
 
                 imageMetas.add(mapOf(
-                    "file_id" to fileId, "width" to 1024, "height" to 768,
+                    "file_id" to fileId, "width" to bounds.outWidth, "height" to bounds.outHeight,
                     "metadata" to mapOf("source" to -1),
                     "stickers" to mapOf("version" to 2, "floating" to emptyList<String>()),
                     "extra_info_json" to """{"mimeType":"image/jpeg","image_metadata":{"bg_color":"","origin_size":${imgBytes.size}}}""",

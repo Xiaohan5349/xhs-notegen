@@ -87,20 +87,30 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
     }
 
     fun updateFoodInfo(info: FoodInfo) { _foodInfo.value = info }
-    fun setStyle(style: NoteStyle) { _selectedStyle.value = style }
+    fun setStyle(style: NoteStyle) {
+        _selectedStyle.value = style
+        // Persist so the next draft defaults to this style.
+        viewModelScope.launch { styleRepo.setStyleForType(NoteType.FOOD.key, style) }
+    }
 
     suspend fun saveDraftSuspend(): Long {
         if (!_foodInfo.value.isValid()) throw IllegalStateException("Dish and restaurant name required")
         val count = _photoUris.value.size
         if (count < 1 || count > 20) throw IllegalStateException("Select 1-20 photos")
 
-        val draft = NoteDraft(
-            type = NoteType.FOOD,
-            status = NoteStatus.DRAFT,
-            photoUris = _photoUris.value.map { it.toString() },
-            styleLabel = _selectedStyle.value.key,
-            foodInfo = _foodInfo.value,
-        )
-        return draftRepo.insert(draft)
+        // Guard against double-tap creating duplicate drafts.
+        _isSaving.value = true
+        try {
+            val draft = NoteDraft(
+                type = NoteType.FOOD,
+                status = NoteStatus.DRAFT,
+                photoUris = _photoUris.value.map { it.toString() },
+                styleLabel = _selectedStyle.value.key,
+                foodInfo = _foodInfo.value,
+            )
+            return draftRepo.insert(draft)
+        } finally {
+            _isSaving.value = false
+        }
     }
 }

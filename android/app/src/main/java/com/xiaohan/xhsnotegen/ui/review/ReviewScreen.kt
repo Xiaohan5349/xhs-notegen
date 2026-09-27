@@ -129,7 +129,8 @@ fun ReviewScreen(
                     }
                 }
 
-                val v = variants[selectedIndex]
+                // getOrNull guards against index >= size after partial regeneration.
+                val v = variants.getOrNull(selectedIndex) ?: return@Scaffold
 
                 if (v.warnings.isNotEmpty()) {
                     Card(colors = CardDefaults.cardColors(

@@ -53,7 +53,6 @@ fun FoodInfoEntity.toDomain(): FoodInfo = FoodInfo(
     priceOrRating = priceOrRating ?: "",
     vibeNotes = vibeNotes ?: "",
     personalNotes = personalNotes ?: "",
-    sponsored = sponsored,
 )
 
 fun FoodInfo.toEntity(draftId: Long): FoodInfoEntity = FoodInfoEntity(
@@ -66,7 +65,6 @@ fun FoodInfo.toEntity(draftId: Long): FoodInfoEntity = FoodInfoEntity(
     priceOrRating = priceOrRating.ifBlank { null },
     vibeNotes = vibeNotes.ifBlank { null },
     personalNotes = personalNotes.ifBlank { null },
-    sponsored = sponsored,
 )
 
 // ---- StylePreference ----

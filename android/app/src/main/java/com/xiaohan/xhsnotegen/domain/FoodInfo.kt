@@ -9,7 +9,6 @@ data class FoodInfo(
     val priceOrRating: String = "",
     val vibeNotes: String = "",
     val personalNotes: String = "",
-    val sponsored: Boolean = false,
 ) {
     fun isValid(): Boolean = dishNames.isNotBlank() && restaurantName.isNotBlank()
 }

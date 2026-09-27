@@ -69,7 +69,7 @@ fun GeneratingScreen(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
                 Text(
-                    "Generating 2-3 style variants...",
+                    "Generating 4 style variants...",
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )

@@ -8,7 +8,6 @@ import java.io.IOException
 import java.text.SimpleDateFormat
 import java.util.Date
 import java.util.Locale
-import java.util.TimeZone
 
 object ExifReader {
 
@@ -53,8 +52,9 @@ object ExifReader {
             ?: return null
 
         return try {
+            // EXIF timestamps are in LOCAL time — parse as local, not UTC,
+            // otherwise the exported date can be a day off around midnight.
             val parser = SimpleDateFormat("yyyy:MM:dd HH:mm:ss", Locale.US)
-            parser.timeZone = TimeZone.getTimeZone("UTC")
             val date: Date = parser.parse(raw) ?: return null
             val formatter = SimpleDateFormat("yyyy-MM-dd HH:mm", Locale.US)
             formatter.format(date)

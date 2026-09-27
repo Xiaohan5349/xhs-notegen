@@ -32,6 +32,14 @@ object XiaohongshuSharePublisher {
         val variant = draft.variants.getOrNull(draft.selectedVariantIndex)
             ?: return PublishResult.Error("No variant selected")
 
+        // XHS title limit is 20 characters; the API rejects longer titles, so
+        // fail early with an actionable message instead of a raw API error.
+        if (variant.title.length > 20) {
+            return PublishResult.Error(
+                "标题超长（${variant.title.length} 字，上限 20 字），请缩短后再发布"
+            )
+        }
+
         // Compress images
         val urisToShare = if (draft.selectedPublishPhotoUris.isNotEmpty()) {
             draft.selectedPublishPhotoUris

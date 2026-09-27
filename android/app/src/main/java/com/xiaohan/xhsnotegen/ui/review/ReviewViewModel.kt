@@ -13,8 +13,10 @@ import com.xiaohan.xhsnotegen.ui.generate.FoodPrompts
 import com.xiaohan.xhsnotegen.ui.generate.GeminiClient
 import com.xiaohan.xhsnotegen.util.ImageCompressor
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -34,6 +36,20 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
 
     private val _regenerateError = MutableStateFlow<String?>(null)
     val regenerateError: StateFlow<String?> = _regenerateError.asStateFlow()
+
+    private var saveJob: Job? = null
+
+    /**
+     * Debounced persistence for editor edits: typing should not hit the DB on
+     * every keystroke, but edits must survive leaving the screen without Save.
+     */
+    private fun persistDraft(draft: NoteDraft) {
+        saveJob?.cancel()
+        saveJob = viewModelScope.launch {
+            delay(500)
+            repo.update(draft)
+        }
+    }
 
     fun load(draftId: Long) {
         viewModelScope.launch {
@@ -58,6 +74,7 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
             val variants = draft.variants.toMutableList()
             if (index in variants.indices) variants[index] = variants[index].copy(title = text)
             _draft.value = draft.copy(variants = variants)
+            persistDraft(draft.copy(variants = variants))
         }
     }
 
@@ -67,6 +84,7 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
             val variants = draft.variants.toMutableList()
             if (index in variants.indices) variants[index] = variants[index].copy(body = text)
             _draft.value = draft.copy(variants = variants)
+            persistDraft(draft.copy(variants = variants))
         }
     }
 
@@ -76,6 +94,7 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
             val variants = draft.variants.toMutableList()
             if (index in variants.indices) variants[index] = variants[index].copy(hashtags = hashtags)
             _draft.value = draft.copy(variants = variants)
+            persistDraft(draft.copy(variants = variants))
         }
     }
 
@@ -85,6 +104,7 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
             val selected = draft.selectedPublishPhotoUris.toMutableList()
             if (uri in selected) selected.remove(uri) else selected.add(uri)
             _draft.value = draft.copy(selectedPublishPhotoUris = selected)
+            persistDraft(draft.copy(selectedPublishPhotoUris = selected))
         }
     }
 

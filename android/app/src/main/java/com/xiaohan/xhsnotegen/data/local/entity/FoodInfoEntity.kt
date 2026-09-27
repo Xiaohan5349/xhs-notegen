@@ -27,5 +27,4 @@ data class FoodInfoEntity(
     @ColumnInfo(name = "price_or_rating") val priceOrRating: String? = null,
     @ColumnInfo(name = "vibe_notes") val vibeNotes: String? = null,
     @ColumnInfo(name = "personal_notes") val personalNotes: String? = null,
-    @ColumnInfo(name = "sponsored") val sponsored: Boolean = false,
 )

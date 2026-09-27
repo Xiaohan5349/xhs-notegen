@@ -1,7 +1,6 @@
 package com.xiaohan.xhsnotegen.ui.publish
 
-import com.google.gson.Gson
-import java.net.URLEncoder
+import com.google.gson.GsonBuilder
 import java.security.MessageDigest
 
 /**
@@ -74,7 +73,10 @@ object XhsSigner {
 
     fun sign(uri: String, data: Map<String, Any?>? = null, a1: String = "", b1: String = ""): Map<String, String> {
         val v = System.currentTimeMillis()
-        val gson = Gson()
+        // serializeNulls matches Python json.dumps (None -> null) — the server
+        // reproduces the signature from the request body it receives, so this
+        // must stay byte-identical to XhsApiClient's serialization.
+        val gson = GsonBuilder().serializeNulls().create()
         val dataStr = if (data != null) {
             gson.toJson(data) // Gson produces compact JSON by default
         } else ""
@@ -211,11 +213,18 @@ object XhsSigner {
     }
 
     private fun urlEncode(s: String): String {
-        // Python's urllib.parse.quote with safe='~()*!.\''
+        // Mirrors Python's urllib.parse.quote(s, safe="~()*!.'"):
+        //   always-safe = ASCII letters + digits + '_.-~', plus the safe set.
+        // NOTE: ASCII-only check — Kotlin's Char.isLetterOrDigit() also accepts
+        // Unicode letters/digits, which diverges from Python and would change
+        // x-s-common whenever a cookie value (a1/b1) contains non-ASCII.
         val safe = "~()*!.'"
         val sb = StringBuilder()
         for (ch in s) {
-            if (ch.isLetterOrDigit() || ch in safe || ch == '-' || ch == '_') {
+            val c = ch.code
+            if (c in 48..57 || c in 65..90 || c in 97..122 ||
+                ch in safe || ch == '-' || ch == '_' || ch == '.'
+            ) {
                 sb.append(ch)
             } else if (ch == ' ') {
                 sb.append("%20")
