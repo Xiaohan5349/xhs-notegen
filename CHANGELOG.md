@@ -1,6 +1,6 @@
 # Changelog
 
-## Unreleased
+## v1.1.0 — 2026-09-27
 
 ### Fixed
 - x-s-common signature now matches upstream: 10 of the 256 checksum-table entries were mistranscribed, the checksum overflowed 32-bit math, and `x9` was sent as a string instead of a number (locked in by golden tests)
