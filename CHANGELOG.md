@@ -1,6 +1,8 @@
 # Changelog
 
-## Unreleased
+## v1.3.1 — 2026-09-27
+
+Includes everything since v1.1.0 (1.2.0 and 1.3.0 were built without separate changelog entries).
 
 ### Added
 - Multiple AI providers: Gemini, ChatGPT (OpenAI), Claude, DeepSeek, and Custom (any OpenAI-compatible API) — each with its own key, built-in model list (verified Sept 2026) and a free-text model id for newer models
@@ -12,6 +14,7 @@
 
 ### Fixed
 - XHS login: the login page now uses the phone's real browser identity (the hard-coded "Chrome/149" user agent contradicted the engine version, which XHS security checks can flag), drops the embedded-WebView "wv" marker, supports popups and JS dialogs, accepts third-party cookies, and shows real loading progress
+- XHS login: QR login is now the recommended path — verified on a real phone. SMS login from the in-app browser is answered by XHS risk control (HTTP 471 → a "scan to verify" QR), so it can hang
 - XHS login: new "save QR" button — when XHS asks to scan a QR code (QR login or extra verification), save it and scan it in the XHS app from the album (扫一扫 → 相册)
 
 ### Changed

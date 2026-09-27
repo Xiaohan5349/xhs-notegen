@@ -31,11 +31,17 @@ android {
         applicationId = "com.xiaohan.xhsnotegen"
         minSdk = 29
         targetSdk = 35
-        versionCode = 4
-        versionName = "1.3.0"
+        versionCode = 5
+        versionName = "1.3.1"
     }
 
     buildTypes {
+        debug {
+            // Installs next to the release app ("食记 Debug") instead of replacing it,
+            // so testing never touches the real app's notes.
+            applicationIdSuffix = ".debug"
+            versionNameSuffix = "-debug"
+        }
         release {
             isMinifyEnabled = true
             proguardFiles(

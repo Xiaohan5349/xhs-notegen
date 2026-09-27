@@ -112,8 +112,12 @@ fun XhsLoginScreen(
                     Icon(Icons.Outlined.Info, null, Modifier.size(18.dp))
                     Text(
                         if (looksLoggedIn) "You're logged in — tap Done."
-                        else "Log in below, then tap Done. If a QR code appears, tap the QR icon above to save it, " +
-                            "then scan it in the XHS app from your album (扫一扫 → 相册).",
+                        // Verified on a real phone: SMS login from an in-app browser is answered
+                        // with XHS risk control (HTTP 471 → a "scan to verify" QR that keeps
+                        // waiting). QR login goes straight through.
+                        else "Tip: QR login works best. Tap the QR corner of the login card, tap the QR icon " +
+                            "above to save it, then in the XHS app: 扫一扫 → 相册 → pick it. Tap Done once logged in. " +
+                            "SMS login may get stuck on an extra verification step.",
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
