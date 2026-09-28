@@ -1,5 +1,16 @@
 # Changelog
 
+## v1.4.0 — 2026-09-27
+
+### Added
+- Photos: tap any photo for Set as cover / Move left / Move right / Remove, and a Select mode to remove several or pick a cover at once (create screen). On the review screen, long-press a photo for Set as cover / Move earlier / Move later / Leave out, plus "Include all"
+- Model switcher ("Writing with …") on the create and review screens — change provider or model on the spot; each version shows which model wrote it
+- Release build guard: refuses to build a release whose versionCode is lower than the last one (recorded in app/released-version-code.txt), since installing it would force an uninstall and wipe notes, API keys and the XHS login
+
+### Fixed
+- Tags now post as real XHS topics: each tag is looked up with XHS topic search and written in XHS's own "#话题[话题]#" format with its topic id; tags XHS doesn't know stay plain "#tag" text
+- OpenAI "quota" errors are told apart: no API credit (ChatGPT Plus/Pro doesn't include API credit), request too large for the account's rate limit, or a temporary rate limit — with the provider's own message
+
 ## v1.3.1 — 2026-09-27
 
 Includes everything since v1.1.0 (1.2.0 and 1.3.0 were built without separate changelog entries).

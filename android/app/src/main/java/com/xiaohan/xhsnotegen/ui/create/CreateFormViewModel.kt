@@ -92,9 +92,21 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
         _photoMessage.value = null
     }
 
+    /** Removes several photos at once (selection mode). */
+    fun removePhotos(uris: Set<Uri>) {
+        _photoUris.value = _photoUris.value.filterNot { it in uris }
+        ImageCleanup.deleteLocalFiles(uris.map { it.toString() })
+        _photoMessage.value = null
+    }
+
     /** Moves a photo to the front — the first photo is the note's cover. */
     fun makeCover(uri: Uri) {
         _photoUris.value = listOf(uri) + (_photoUris.value - uri)
+    }
+
+    /** Moves a photo one step left (-1) or right (+1). */
+    fun movePhoto(uri: Uri, delta: Int) {
+        _photoUris.value = _photoUris.value.moved(uri, delta)
     }
 
     fun updateFoodInfo(info: FoodInfo) { _foodInfo.value = info }
@@ -132,4 +144,13 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
         if (!saved) ImageCleanup.deleteLocalFiles(_photoUris.value.map { it.toString() })
         super.onCleared()
     }
+}
+
+/** Returns a copy with [item] moved by [delta] positions (clamped to the list bounds). */
+internal fun <T> List<T>.moved(item: T, delta: Int): List<T> {
+    val from = indexOf(item)
+    if (from < 0) return this
+    val to = (from + delta).coerceIn(0, size - 1)
+    if (to == from) return this
+    return toMutableList().apply { removeAt(from); add(to, item) }
 }

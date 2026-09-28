@@ -9,6 +9,7 @@ import com.xiaohan.xhsnotegen.domain.NoteDraft
 import com.xiaohan.xhsnotegen.domain.NoteStatus
 import com.xiaohan.xhsnotegen.domain.NoteStyle
 import com.xiaohan.xhsnotegen.domain.NoteVariant
+import com.xiaohan.xhsnotegen.ui.create.moved
 import com.xiaohan.xhsnotegen.ui.generate.NoteGenerator
 import com.xiaohan.xhsnotegen.ui.publish.XiaohongshuSharePublisher
 import com.xiaohan.xhsnotegen.ui.publish.XiaohongshuSharePublisher.PublishResult
@@ -129,6 +130,21 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
             return
         }
         mutate { it.copy(selectedPublishPhotoUris = if (uri in selected) selected - uri else selected + uri) }
+    }
+
+    /** Makes [uri] the cover: first in the post (adding it to the post if it was left out). */
+    fun setCover(uri: String) = mutate { d ->
+        d.copy(selectedPublishPhotoUris = listOf(uri) + (d.selectedPublishPhotoUris - uri))
+    }
+
+    /** Moves an included photo earlier (-1) or later (+1) in the post. */
+    fun movePublishPhoto(uri: String, delta: Int) = mutate { d ->
+        d.copy(selectedPublishPhotoUris = d.selectedPublishPhotoUris.moved(uri, delta))
+    }
+
+    /** Includes every photo, keeping the current order and appending the rest. */
+    fun includeAllPhotos() = mutate { d ->
+        d.copy(selectedPublishPhotoUris = d.selectedPublishPhotoUris + (d.photoUris - d.selectedPublishPhotoUris.toSet()))
     }
 
     fun saveChanges() {

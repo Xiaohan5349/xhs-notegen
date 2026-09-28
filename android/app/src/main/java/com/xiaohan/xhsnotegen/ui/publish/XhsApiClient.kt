@@ -52,7 +52,9 @@ object XhsApiClient {
                     "extra_info_json" to """{"mimeType":"image/jpeg","image_metadata":{"bg_color":"","origin_size":${img.bytes.size}}}""",
                 )
             }
-            createNote(cookies, a1, buildNoteBody(title, body, hashtags, imageMetas))
+            // Tags only become real (clickable) XHS topics with an id from topic search.
+            val topics = hashtags.map { resolveTopic(cookies, a1, it) ?: Topic(name = it) }
+            createNote(cookies, a1, buildNoteBody(title, body, topics, imageMetas))
         } catch (e: ApiFailure) {
             PublishResult(false, error = e.message.orEmpty(), authExpired = e.authExpired)
         } catch (e: Exception) {
@@ -108,6 +110,57 @@ object XhsApiClient {
             }
             fileId
         }
+    }
+
+    /** A tag to publish. [id] is empty when XHS has no matching topic (then it stays plain text). */
+    data class Topic(val name: String, val id: String = "", val link: String = "")
+
+    /**
+     * Looks up the XHS topic for [keyword] (same call the web editor makes when
+     * you type "#"). Accepts an exact name match, else a close one (one name
+     * contains the other) — never an unrelated suggestion.
+     * Any failure just returns null — the tag is then posted as plain text.
+     */
+    private fun resolveTopic(cookies: String, a1: String, keyword: String): Topic? = runCatching {
+        val uri = "/web_api/sns/v1/search/topic"
+        val data = mapOf(
+            "keyword" to keyword,
+            "suggest_topic_request" to mapOf("title" to "", "desc" to ""),
+            "page" to mapOf("page_size" to 20, "page" to 1),
+        )
+        val headers = getSignedHeaders(uri, data, a1)
+        val json = client.newCall(Request.Builder()
+            .url("https://edith.xiaohongshu.com$uri")
+            .apply { headers.forEach { (k, v) -> addHeader(k, v) } }
+            .addHeader("Cookie", cookies)
+            .post(gson.toJson(data).toRequestBody("application/json".toMediaType()))
+            .build()
+        ).execute().use { resp -> checkResponse("Topic search", resp.code, resp.body?.string().orEmpty()) }
+
+        @Suppress("UNCHECKED_CAST")
+        val dtos = ((json["data"] as? Map<String, Any?>)?.get("topic_info_dtos") as? List<Map<String, Any?>>).orEmpty()
+        pickTopic(keyword, dtos)
+    }.getOrNull()
+
+    internal fun pickTopic(keyword: String, dtos: List<Map<String, Any?>>): Topic? {
+        val candidates = dtos.mapNotNull { d ->
+            val id = d["id"] as? String ?: return@mapNotNull null
+            val name = d["name"] as? String ?: return@mapNotNull null
+            Topic(name = name, id = id, link = d["link"] as? String ?: "")
+        }
+        val k = keyword.trim()
+        return candidates.firstOrNull { it.name.equals(k, ignoreCase = true) }
+            ?: candidates.firstOrNull { it.name.contains(k, ignoreCase = true) || k.contains(it.name, ignoreCase = true) }
+    }
+
+    /**
+     * Note body as XHS expects it: linked topics are written "#name[话题]#"
+     * (the web editor's own format); unlinked tags stay plain "#name".
+     */
+    internal fun descWithTopics(body: String, topics: List<Topic>): String {
+        if (topics.isEmpty()) return body
+        val tags = topics.joinToString(" ") { if (it.id.isNotEmpty()) "#${it.name}[话题]#" else "#${it.name}" }
+        return "$body\n$tags"
     }
 
     /** Step 3: create the note. */
@@ -179,7 +232,7 @@ object XhsApiClient {
     }
 
     private fun buildNoteBody(
-        title: String, body: String, hashtags: List<String>,
+        title: String, body: String, topics: List<Topic>,
         images: List<Map<String, Any>>,
     ): Map<String, Any?> {
         fun jsonStr(vararg pairs: Pair<String, Any?>): String = gson.toJson(mapOf(*pairs))
@@ -192,9 +245,12 @@ object XhsApiClient {
                     "extraInfo" to jsonStr("subType" to "official", "systemId" to "web"),
                 ),
                 "title" to title,
-                "desc" to if (hashtags.isEmpty()) body else "$body\n${hashtags.joinToString(" ") { "#$it" }}",
+                "desc" to descWithTopics(body, topics),
                 "ats" to emptyList<String>(),
-                "hash_tag" to hashtags.map { mapOf("id" to "", "name" to it) },
+                // Only real topics go in hash_tag; an entry without an id isn't a topic.
+                "hash_tag" to topics.filter { it.id.isNotEmpty() }.map {
+                    mapOf("id" to it.id, "name" to it.name, "type" to "topic", "link" to it.link)
+                },
                 "business_binds" to jsonStr(
                     "version" to 1, "noteId" to 0, "bizType" to 0,
                     "noteOrderBind" to emptyMap<String, Any>(),

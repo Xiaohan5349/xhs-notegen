@@ -31,8 +31,8 @@ android {
         applicationId = "com.xiaohan.xhsnotegen"
         minSdk = 29
         targetSdk = 35
-        versionCode = 5
-        versionName = "1.3.1"
+        versionCode = 6
+        versionName = "1.4.0"
     }
 
     buildTypes {
@@ -98,4 +98,28 @@ dependencies {
 }
 base {
     archivesName.set("食记-${android.defaultConfig.versionName}")
+}
+
+// Release guard: a versionCode LOWER than the last release can't install as an
+// update — Android makes you uninstall first, which deletes all notes, API keys
+// and the XHS login. The last released code is recorded in released-version-code.txt
+// (commit it). Rebuilding the same code is fine: that reinstalls in place.
+val releasedVersionFile = file("released-version-code.txt")
+val currentVersionCode = android.defaultConfig.versionCode ?: 0
+// Checked first thing in the release build, before signing or packaging.
+tasks.matching { it.name == "preReleaseBuild" }.configureEach {
+    doFirst {
+        val last = releasedVersionFile.takeIf { it.exists() }?.readText()?.trim()?.toIntOrNull() ?: 0
+        if (currentVersionCode < last) {
+            throw GradleException(
+                "versionCode $currentVersionCode is lower than the last release ($last). " +
+                    "Installing it would force an uninstall and wipe the app's data. " +
+                    "Set versionCode to ${last + 1} (or higher) in app/build.gradle.kts."
+            )
+        }
+    }
+}
+// Recorded only after a release build succeeds.
+tasks.matching { it.name == "assembleRelease" || it.name == "bundleRelease" }.configureEach {
+    doLast { releasedVersionFile.writeText("$currentVersionCode\n") }
 }

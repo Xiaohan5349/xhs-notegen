@@ -131,4 +131,23 @@ class AiWriterTest {
             listOf(NoteStyle.CLEAN))
         assertEquals("b", v.single().body)
     }
+
+    @Test
+    fun `openai quota errors are told apart`() {
+        val c = cfg(AiProvider.OPENAI)
+        val noCredit = AiWriter.httpError(c, 429,
+            """{"error":{"message":"You exceeded your current quota, please check your plan and billing details.","type":"insufficient_quota","code":"insufficient_quota"}}""")
+        assertTrue(noCredit.message!!.contains("no credit"))
+        assertTrue(noCredit.message!!.contains("ChatGPT Plus"))
+        assertFalse(noCredit.retryable)
+
+        val tooBig = AiWriter.httpError(c, 429,
+            """{"error":{"message":"Request too large for gpt-6-luna on tokens per min (TPM): Limit 30000, Requested 41000.","type":"tokens","code":"rate_limit_exceeded"}}""")
+        assertTrue(tooBig.message!!.contains("too big"))
+        assertFalse(tooBig.retryable)
+
+        val busy = AiWriter.httpError(c, 429, """{"error":{"message":"Rate limit reached for requests","code":"rate_limit_exceeded"}}""")
+        assertTrue(busy.retryable)
+        assertTrue(busy.message!!.contains("Rate limit reached"))
+    }
 }

@@ -64,6 +64,7 @@ object AiWriter {
             try {
                 val request = buildRequest(config, systemPrompt, userPrompt, imagesBase64, styles, mode)
                 return@withContext retrying { parseVariants(execute(config, request), styles) }
+                    .map { it.copy(model = config.label) }
             } catch (e: AiException) {
                 // A 400 at a stricter mode is usually "I don't support that response format".
                 if (!e.badRequest) throw e
@@ -308,25 +309,37 @@ object AiWriter {
     private enum class Stop { OK, TRUNCATED, BLOCKED }
 
     internal fun httpError(c: AiConfig, code: Int, raw: String): AiException {
-        val message = runCatching {
-            val json = JsonParser.parseString(raw).asJsonObject
-            val err = json.get("error")
-            when {
-                err == null -> json.str("message")
-                err.isJsonObject -> err.asJsonObject.str("message")
-                else -> err.asString
-            }
-        }.getOrNull()?.takeIf { it.isNotBlank() } ?: raw.take(200)
+        // Providers put the reason in error.message and a machine-readable
+        // error.code / error.type (OpenAI) or error.status (Gemini).
+        val err = runCatching { JsonParser.parseString(raw).asJsonObject }.getOrNull()?.let { json ->
+            json.get("error")?.let { if (it.isJsonObject) it.asJsonObject else null }
+        }
+        val message = (err?.str("message")
+            ?: runCatching { JsonParser.parseString(raw).asJsonObject.let { it.str("message") ?: it.str("error") } }.getOrNull())
+            ?.takeIf { it.isNotBlank() } ?: raw.take(200)
+        val errCode = listOfNotNull(err?.str("code"), err?.str("type"), err?.str("status")).joinToString(" ").lowercase()
         val name = c.provider.displayName
         val keyProblem = message.contains("api key", ignoreCase = true) || message.contains("api_key", ignoreCase = true) ||
             message.contains("authentication", ignoreCase = true)
+        val noCredit = "insufficient_quota" in errCode || message.contains("insufficient", ignoreCase = true) ||
+            message.contains("exceeded your current quota", ignoreCase = true)
+        // "Request too large … tokens per min": waiting won't help, the request itself is over the limit.
+        val tooLarge = message.contains("too large", ignoreCase = true) ||
+            (message.contains("tokens per min", ignoreCase = true) && message.contains("requested", ignoreCase = true))
         return when {
             code == 401 || (code in listOf(400, 403) && keyProblem) ->
                 AiException("$name rejected the API key. Check it in Settings.")
-            code == 402 -> AiException("Your $name account is out of credit.")
+            code == 402 || (code == 429 && noCredit) -> AiException(
+                "Your $name API account has no credit left ($message). " +
+                    if (c.provider == AiProvider.OPENAI) "Note: a ChatGPT Plus/Pro subscription doesn't include API credit — add it at platform.openai.com → Billing."
+                    else "Add credit in your $name account."
+            )
+            code == 429 && tooLarge -> AiException(
+                "This note is too big for your $name account's rate limit ($message). Try fewer photos, or a model with higher limits."
+            )
+            code == 429 -> AiException("$name rate limit: $message", retryable = true)
             code == 403 -> AiException("This key can't use \"${c.model}\": $message")
             code == 404 -> AiException("Model \"${c.model}\" wasn't found at $name. Check the model in Settings.")
-            code == 429 -> AiException("$name rate limit or quota reached. Wait a minute and retry.", retryable = true)
             code >= 500 -> AiException("$name is having trouble ($code). Retrying may help.", retryable = true)
             code == 400 || code == 422 -> AiException("$name couldn't handle the request: $message", badRequest = true)
             else -> AiException("$name error $code: $message")

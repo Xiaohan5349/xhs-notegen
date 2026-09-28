@@ -3,7 +3,9 @@ package com.xiaohan.xhsnotegen.ui.review
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -18,6 +20,8 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Star
@@ -42,6 +46,7 @@ import com.xiaohan.xhsnotegen.domain.NoteStyle
 import com.xiaohan.xhsnotegen.domain.NoteVariant
 import com.xiaohan.xhsnotegen.ui.components.EmptyState
 import com.xiaohan.xhsnotegen.ui.components.Eyebrow
+import com.xiaohan.xhsnotegen.ui.components.ModelChip
 import com.xiaohan.xhsnotegen.ui.components.StatusPill
 import com.xiaohan.xhsnotegen.ui.publish.XiaohongshuSharePublisher.TITLE_LIMIT
 
@@ -51,6 +56,7 @@ fun ReviewScreen(
     draftId: Long,
     onNavigateBack: () -> Unit,
     onNavigateToLogin: () -> Unit = {},
+    onOpenSettings: () -> Unit = {},
     viewModel: ReviewViewModel = viewModel(),
 ) {
     val draft by viewModel.draft.collectAsState()
@@ -132,6 +138,8 @@ fun ReviewScreen(
                     title = "Not written yet",
                     body = "This note's photos and details are saved. Let's write it.",
                     action = {
+                      Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        ModelChip(onOpenSettings = onOpenSettings)
                         Button(onClick = viewModel::regenerateAll, enabled = aiTask == AiTask.NONE) {
                             if (aiTask != AiTask.NONE) {
                                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp,
@@ -144,6 +152,7 @@ fun ReviewScreen(
                                 Text("Write it now")
                             }
                         }
+                      }
                     },
                 )
             }
@@ -160,7 +169,13 @@ fun ReviewScreen(
                 .padding(bottom = 16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp),
         ) {
-            PhotoPicker(d, onToggle = viewModel::togglePublishPhoto)
+            PhotoPicker(
+                d,
+                onToggle = viewModel::togglePublishPhoto,
+                onSetCover = viewModel::setCover,
+                onMove = viewModel::movePublishPhoto,
+                onIncludeAll = viewModel::includeAllPhotos,
+            )
 
             StyleTabs(d, onSelect = viewModel::selectVariant)
 
@@ -177,6 +192,11 @@ fun ReviewScreen(
                     onRemoveTag = viewModel::removeHashtag,
                 )
 
+                if (v.model.isNotBlank()) {
+                    Text("Written by ${v.model}", style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
+                }
+                ModelChip(onOpenSettings = onOpenSettings)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedButton(
                         onClick = viewModel::rewriteCurrent,
@@ -270,17 +290,29 @@ fun ReviewScreen(
 // Photos
 // ---------------------------------------------------------------------------
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
-private fun PhotoPicker(draft: NoteDraft, onToggle: (String) -> Unit) {
+private fun PhotoPicker(
+    draft: NoteDraft,
+    onToggle: (String) -> Unit,
+    onSetCover: (String) -> Unit,
+    onMove: (String, Int) -> Unit,
+    onIncludeAll: () -> Unit,
+) {
     val selected = draft.selectedPublishPhotoUris
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.padding(horizontal = 20.dp), verticalAlignment = Alignment.Bottom) {
-            Eyebrow("Photos", Modifier.weight(1f))
-            Text(
-                "${selected.size} of ${draft.photoUris.size} in the post · #1 is the cover",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
+        Row(Modifier.padding(start = 20.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                Eyebrow("Photos")
+                Text(
+                    "${selected.size} of ${draft.photoUris.size} in the post · tap to include, hold for cover & order",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            if (selected.size < draft.photoUris.size) {
+                TextButton(onClick = onIncludeAll) { Text("Include all") }
+            }
         }
         LazyRow(
             contentPadding = PaddingValues(horizontal = 16.dp),
@@ -289,36 +321,74 @@ private fun PhotoPicker(draft: NoteDraft, onToggle: (String) -> Unit) {
             itemsIndexed(draft.photoUris, key = { _, uri -> uri }) { _, uri ->
                 val order = selected.indexOf(uri) // -1 when left out
                 val isIn = order >= 0
-                Box(
-                    Modifier
-                        .size(width = 104.dp, height = 138.dp)
-                        .clip(MaterialTheme.shapes.medium)
-                        .border(
-                            width = if (isIn) 2.dp else 0.dp,
-                            color = if (isIn) MaterialTheme.colorScheme.primary else Color.Transparent,
-                            shape = MaterialTheme.shapes.medium,
-                        )
-                        .clickable { onToggle(uri) },
-                ) {
-                    AsyncImage(
-                        model = uri, contentDescription = null, contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                    )
-                    if (!isIn) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)))
+                var menu by remember { mutableStateOf(false) }
+                Box {
                     Box(
                         Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(6.dp)
-                            .size(24.dp)
-                            .clip(CircleShape)
-                            .background(if (isIn) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.25f))
-                            .border(1.5.dp, Color.White, CircleShape),
-                        contentAlignment = Alignment.Center,
+                            .size(width = 104.dp, height = 138.dp)
+                            .clip(MaterialTheme.shapes.medium)
+                            .border(
+                                width = if (isIn) 2.dp else 0.dp,
+                                color = if (isIn) MaterialTheme.colorScheme.primary else Color.Transparent,
+                                shape = MaterialTheme.shapes.medium,
+                            )
+                            .combinedClickable(onClick = { onToggle(uri) }, onLongClick = { menu = true }),
                     ) {
-                        if (isIn) {
-                            Text("${order + 1}", style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onPrimary)
+                        AsyncImage(
+                            model = uri, contentDescription = null, contentScale = ContentScale.Crop,
+                            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                        )
+                        if (!isIn) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)))
+                        if (order == 0) {
+                            Text(
+                                "Cover",
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                modifier = Modifier
+                                    .align(Alignment.BottomStart)
+                                    .padding(6.dp)
+                                    .clip(CircleShape)
+                                    .background(MaterialTheme.colorScheme.primary)
+                                    .padding(horizontal = 8.dp, vertical = 2.dp),
+                            )
                         }
+                        Box(
+                            Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(6.dp)
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(if (isIn) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.25f))
+                                .border(1.5.dp, Color.White, CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (isIn) {
+                                Text("${order + 1}", style = MaterialTheme.typography.labelMedium,
+                                    color = MaterialTheme.colorScheme.onPrimary)
+                            }
+                        }
+                    }
+                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                        if (order != 0) DropdownMenuItem(
+                            text = { Text("Set as cover") },
+                            leadingIcon = { Icon(Icons.Outlined.Star, null) },
+                            onClick = { menu = false; onSetCover(uri) },
+                        )
+                        if (isIn && order > 0) DropdownMenuItem(
+                            text = { Text("Move earlier") },
+                            leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) },
+                            onClick = { menu = false; onMove(uri, -1) },
+                        )
+                        if (isIn && order < selected.lastIndex) DropdownMenuItem(
+                            text = { Text("Move later") },
+                            leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowForward, null) },
+                            onClick = { menu = false; onMove(uri, +1) },
+                        )
+                        DropdownMenuItem(
+                            text = { Text(if (isIn) "Leave out of post" else "Include in post") },
+                            leadingIcon = { Icon(if (isIn) Icons.Outlined.HideImage else Icons.Outlined.AddPhotoAlternate, null) },
+                            onClick = { menu = false; onToggle(uri) },
+                        )
                     }
                 }
             }

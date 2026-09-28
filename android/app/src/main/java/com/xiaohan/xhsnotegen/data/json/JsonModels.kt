@@ -20,6 +20,7 @@ data class VariantDto(
     val body: String? = null,
     val hashtags: List<String?>? = null,
     val warnings: List<String?>? = null,
+    val model: String? = null,
 ) {
     fun toDomain(fallbackStyle: NoteStyle? = null): NoteVariant {
         val resolved = NoteStyle.fromLabelOrNull(style)
@@ -32,6 +33,7 @@ data class VariantDto(
             body = body.orEmpty().trim(),
             hashtags = normalizeHashtags(hashtags.orEmpty().filterNotNull()),
             warnings = warnings.orEmpty().filterNotNull().filter { it.isNotBlank() },
+            model = model.orEmpty(),
         )
     }
 }

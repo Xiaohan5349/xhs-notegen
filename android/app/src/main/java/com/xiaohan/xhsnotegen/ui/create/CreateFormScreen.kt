@@ -17,6 +17,9 @@ import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
+import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.AutoAwesome
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Close
@@ -34,6 +37,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.xiaohan.xhsnotegen.domain.NoteStyle
+import com.xiaohan.xhsnotegen.ui.components.ModelChip
 import com.xiaohan.xhsnotegen.ui.components.SectionCard
 import com.xiaohan.xhsnotegen.ui.components.SoftTextField
 import com.xiaohan.xhsnotegen.ui.components.dashedBorder
@@ -44,6 +48,7 @@ import kotlinx.coroutines.launch
 fun CreateFormScreen(
     onNavigateBack: () -> Unit,
     onDraftSaved: (Long) -> Unit,
+    onOpenSettings: () -> Unit = {},
     viewModel: CreateFormViewModel = viewModel(),
 ) {
     val photos by viewModel.photoUris.collectAsState()
@@ -89,6 +94,7 @@ fun CreateFormScreen(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
+                    ModelChip(onOpenSettings = onOpenSettings)
                     val hint = errorMessage ?: if (missing.isNotEmpty()) "Add ${missing.joinToString(", ")} to continue" else null
                     if (hint != null) {
                         Text(hint, style = MaterialTheme.typography.bodySmall,
@@ -135,12 +141,25 @@ fun CreateFormScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // ---- Photos ----
+            var selecting by remember { mutableStateOf(false) }
+            var selected by remember { mutableStateOf(emptySet<Uri>()) }
+            LaunchedEffect(photos) {
+                selected = selected.filter { it in photos }.toSet()
+                if (photos.isEmpty()) selecting = false
+            }
             SectionCard(
                 title = "Photos",
-                subtitle = if (photos.isEmpty()) "Date and place are filled in from the photos"
-                           else "Tap a photo to make it the cover",
+                subtitle = when {
+                    photos.isEmpty() -> "Date and place are filled in from the photos"
+                    selecting -> "${selected.size} selected"
+                    else -> "Tap a photo for cover, order and remove"
+                },
                 trailing = {
-                    if (photos.isNotEmpty()) {
+                    if (photos.size > 1 || selecting) {
+                        TextButton(onClick = { selecting = !selecting; selected = emptySet() }) {
+                            Text(if (selecting) "Done" else "Select")
+                        }
+                    } else if (photos.isNotEmpty()) {
                         Text("${photos.size}/${CreateFormViewModel.MAX_PHOTOS}",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -153,11 +172,39 @@ fun CreateFormScreen(
                     PhotoStrip(
                         photos = photos,
                         importing = isImporting,
-                        canAddMore = photos.size < CreateFormViewModel.MAX_PHOTOS,
+                        canAddMore = photos.size < CreateFormViewModel.MAX_PHOTOS && !selecting,
+                        selecting = selecting,
+                        selected = selected,
+                        onToggleSelect = { uri -> selected = if (uri in selected) selected - uri else selected + uri },
                         onAdd = pickPhotos,
                         onRemove = viewModel::removePhoto,
                         onMakeCover = viewModel::makeCover,
+                        onMove = viewModel::movePhoto,
                     )
+                    if (selecting) {
+                        Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            TextButton(onClick = {
+                                selected = if (selected.size == photos.size) emptySet() else photos.toSet()
+                            }) { Text(if (selected.size == photos.size) "Select none" else "Select all") }
+                            Spacer(Modifier.weight(1f))
+                            FilledTonalButton(
+                                onClick = { selected.single().let(viewModel::makeCover); selected = emptySet() },
+                                enabled = selected.size == 1,
+                            ) { Text("Set as cover") }
+                            Button(
+                                onClick = { viewModel.removePhotos(selected); selected = emptySet(); selecting = false },
+                                enabled = selected.isNotEmpty(),
+                                colors = ButtonDefaults.buttonColors(
+                                    containerColor = MaterialTheme.colorScheme.error,
+                                    contentColor = MaterialTheme.colorScheme.onError,
+                                ),
+                            ) { Text(if (selected.isEmpty()) "Remove" else "Remove ${selected.size}") }
+                        }
+                    } else if (photos.isNotEmpty()) {
+                        Text("${photos.size}/${CreateFormViewModel.MAX_PHOTOS} photos",
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
                 }
                 photoMessage?.let {
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
@@ -272,45 +319,96 @@ private fun PhotoStrip(
     photos: List<Uri>,
     importing: Boolean,
     canAddMore: Boolean,
+    selecting: Boolean,
+    selected: Set<Uri>,
+    onToggleSelect: (Uri) -> Unit,
     onAdd: () -> Unit,
     onRemove: (Uri) -> Unit,
     onMakeCover: (Uri) -> Unit,
+    onMove: (Uri, Int) -> Unit,
 ) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
         itemsIndexed(photos, key = { _, uri -> uri.toString() }) { index, uri ->
-            Box(
-                Modifier
-                    .size(width = 96.dp, height = 128.dp)
-                    .clip(MaterialTheme.shapes.medium)
-                    .clickable { onMakeCover(uri) }
-            ) {
-                AsyncImage(model = uri, contentDescription = null, contentScale = ContentScale.Crop,
-                    modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh))
-                if (index == 0) {
-                    Text(
-                        "Cover",
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onPrimary,
-                        modifier = Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(6.dp)
-                            .clip(CircleShape)
-                            .background(MaterialTheme.colorScheme.primary)
-                            .padding(horizontal = 8.dp, vertical = 2.dp),
-                    )
-                }
+            var menu by remember { mutableStateOf(false) }
+            val isSelected = uri in selected
+            Box {
                 Box(
                     Modifier
-                        .align(Alignment.TopEnd)
-                        .padding(4.dp)
-                        .size(24.dp)
-                        .clip(CircleShape)
-                        .background(Color.Black.copy(alpha = 0.5f))
-                        .clickable { onRemove(uri) },
-                    contentAlignment = Alignment.Center,
+                        .size(width = 96.dp, height = 128.dp)
+                        .clip(MaterialTheme.shapes.medium)
+                        .border(
+                            width = if (isSelected) 3.dp else 0.dp,
+                            color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
+                            shape = MaterialTheme.shapes.medium,
+                        )
+                        .clickable { if (selecting) onToggleSelect(uri) else menu = true }
                 ) {
-                    Icon(Icons.Filled.Close, contentDescription = "Remove photo", tint = Color.White,
-                        modifier = Modifier.size(14.dp))
+                    AsyncImage(model = uri, contentDescription = null, contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh))
+                    if (index == 0) {
+                        Text(
+                            "Cover",
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onPrimary,
+                            modifier = Modifier
+                                .align(Alignment.BottomStart)
+                                .padding(6.dp)
+                                .clip(CircleShape)
+                                .background(MaterialTheme.colorScheme.primary)
+                                .padding(horizontal = 8.dp, vertical = 2.dp),
+                        )
+                    }
+                    if (selecting) {
+                        Box(
+                            Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(6.dp)
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.3f))
+                                .border(1.5.dp, Color.White, CircleShape),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            if (isSelected) Icon(Icons.Filled.Check, null, Modifier.size(14.dp),
+                                tint = MaterialTheme.colorScheme.onPrimary)
+                        }
+                    } else {
+                        Box(
+                            Modifier
+                                .align(Alignment.TopEnd)
+                                .padding(4.dp)
+                                .size(24.dp)
+                                .clip(CircleShape)
+                                .background(Color.Black.copy(alpha = 0.5f))
+                                .clickable { onRemove(uri) },
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(Icons.Filled.Close, contentDescription = "Remove photo", tint = Color.White,
+                                modifier = Modifier.size(14.dp))
+                        }
+                    }
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    if (index != 0) DropdownMenuItem(
+                        text = { Text("Set as cover") },
+                        leadingIcon = { Icon(Icons.Outlined.Star, null) },
+                        onClick = { menu = false; onMakeCover(uri) },
+                    )
+                    if (index > 0) DropdownMenuItem(
+                        text = { Text("Move left") },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) },
+                        onClick = { menu = false; onMove(uri, -1) },
+                    )
+                    if (index < photos.lastIndex) DropdownMenuItem(
+                        text = { Text("Move right") },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowForward, null) },
+                        onClick = { menu = false; onMove(uri, +1) },
+                    )
+                    DropdownMenuItem(
+                        text = { Text("Remove", color = MaterialTheme.colorScheme.error) },
+                        leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                        onClick = { menu = false; onRemove(uri) },
+                    )
                 }
             }
         }

@@ -13,6 +13,10 @@ data class AiConfig(
     /** Whether photos are sent. False for text-only models. */
     val vision: Boolean,
 ) {
+    /** Short name for the UI, e.g. "Gemini 3.8 Flash" or "Custom · qwen-vl-max". */
+    val label: String
+        get() = provider.findModel(model)?.label ?: "${provider.displayName} · $model"
+
     /** Human-readable reason this config can't be used yet, or null if it's ready. */
     fun problem(): String? = when {
         provider == AiProvider.CUSTOM && baseUrl.isBlank() -> "Set the API address for your custom model in Settings."

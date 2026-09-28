@@ -67,6 +67,7 @@ fun AppNavigation(navController: NavHostController) {
         composable(Routes.CREATE_FORM) {
             CreateFormScreen(
                 onNavigateBack = { navController.popBackStack() },
+                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onDraftSaved = { draftId ->
                     navController.navigate(Routes.generating(draftId)) {
                         popUpTo(Routes.DRAFT_LIST)
@@ -100,6 +101,7 @@ fun AppNavigation(navController: NavHostController) {
                 draftId = draftId,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToLogin = { navController.navigate(Routes.XHS_LOGIN) },
+                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
             )
         }
 
