@@ -8,6 +8,7 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Delete
+import androidx.compose.material.icons.outlined.DriveFileMove
 import androidx.compose.material.icons.outlined.Edit
 import androidx.compose.material.icons.outlined.Label
 import androidx.compose.material.icons.outlined.Place
@@ -31,9 +32,13 @@ fun TagsDialog(
     noteCount: Int,
     tags: List<NoteTag>,
     stateOf: (Long) -> Boolean?,
-    onApply: (add: List<String>, remove: List<Long>) -> Unit,
+    /** Suggested root for new tags (the notes' mode root tag), if any. */
+    defaultParent: NoteTag?,
+    onApply: (add: List<String>, remove: List<Long>, newParentId: Long?) -> Unit,
     onDismiss: () -> Unit,
 ) {
+    val roots = tags.filter { it.parentId == null }
+    var newParent by remember { mutableStateOf(defaultParent) }
     // null = leave as is (mixed), true = add to all, false = remove from all
     val choices = remember { mutableStateMapOf<Long, Boolean?>().apply { tags.forEach { put(it.id, stateOf(it.id)) } } }
     val initial = remember { tags.associate { it.id to stateOf(it.id) } }
@@ -68,14 +73,28 @@ fun TagsDialog(
                     items(newTags.toList()) { name ->
                         TagRow(name, ToggleableState.On, note = "new") { newTags.remove(name) }
                     }
-                    items(tags, key = { it.id }) { tag ->
+                    items(tags.sortedWith(compareBy({ (it.parentId?.let { p -> tags.firstOrNull { t -> t.id == p }?.name } ?: it.name).lowercase() }, { it.parentId != null }, { it.name.lowercase() })), key = { it.id }) { tag ->
                         val state = when (choices[tag.id]) {
                             true -> ToggleableState.On
                             false -> ToggleableState.Off
                             null -> ToggleableState.Indeterminate
                         }
-                        TagRow(tag.name, state, note = if (initial[tag.id] == null && choices[tag.id] == null) "some" else null) {
+                        val parentName = tag.parentId?.let { p -> tags.firstOrNull { it.id == p }?.name }
+                        TagRow(if (parentName != null) "$parentName › ${tag.name}" else tag.name, state,
+                            note = if (initial[tag.id] == null && choices[tag.id] == null) "some" else null) {
                             choices[tag.id] = choices[tag.id] != true
+                        }
+                    }
+                }
+                if (newTags.isNotEmpty() && roots.isNotEmpty()) {
+                    Text("New tags go under", style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        item {
+                            FilterChip(selected = newParent == null, onClick = { newParent = null }, label = { Text("Top level") })
+                        }
+                        items(roots, key = { it.id }) { r ->
+                            FilterChip(selected = newParent?.id == r.id, onClick = { newParent = r }, label = { Text("#${r.name}") })
                         }
                     }
                 }
@@ -90,7 +109,7 @@ fun TagsDialog(
                 commitInput()
                 val add = newTags.toList() + tags.filter { choices[it.id] == true && initial[it.id] != true }.map { it.name }
                 val remove = tags.filter { choices[it.id] == false && initial[it.id] != false }.map { it.id }
-                onApply(add, remove)
+                onApply(add, remove, newParent?.id)
                 onDismiss()
             }) { Text("Apply") }
         },
@@ -179,9 +198,15 @@ fun ManageTagsDialog(
     tags: List<NoteTag>,
     onRename: (Long, String) -> Unit,
     onDelete: (Long) -> Unit,
+    onSetParent: (Long, Long?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var editing by remember { mutableStateOf<NoteTag?>(null) }
+    var moving by remember { mutableStateOf<NoteTag?>(null) }
+    // Roots first, each followed by its sub-tags.
+    val ordered = tags.filter { it.parentId == null }.sortedBy { it.name.lowercase() }
+        .flatMap { r -> listOf(r) + tags.filter { it.parentId == r.id }.sortedBy { it.name.lowercase() } } +
+        tags.filter { t -> t.parentId != null && tags.none { it.id == t.parentId } }
     var text by remember { mutableStateOf("") }
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -191,7 +216,7 @@ fun ManageTagsDialog(
             if (tags.isEmpty()) {
                 Text("No tags yet. Select notes and tap the tag icon to add some.")
             } else LazyColumn(Modifier.heightIn(max = 360.dp)) {
-                items(tags, key = { it.id }) { tag ->
+                items(ordered, key = { it.id }) { tag ->
                     if (editing?.id == tag.id) {
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             TextField(value = text, onValueChange = { text = it }, singleLine = true,
@@ -200,7 +225,20 @@ fun ManageTagsDialog(
                         }
                     } else {
                         Row(verticalAlignment = Alignment.CenterVertically) {
-                            Text("#${tag.name}", style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+                            Text(
+                                "#${tag.name}",
+                                style = if (tag.parentId == null) MaterialTheme.typography.titleSmall else MaterialTheme.typography.bodyLarge,
+                                modifier = Modifier.weight(1f).padding(start = if (tag.parentId == null) 0.dp else 20.dp),
+                            )
+                            Box {
+                                IconButton(onClick = { moving = tag }) { Icon(Icons.Outlined.DriveFileMove, "Move under…") }
+                                DropdownMenu(expanded = moving?.id == tag.id, onDismissRequest = { moving = null }) {
+                                    DropdownMenuItem(text = { Text("Top level") }, onClick = { moving = null; onSetParent(tag.id, null) })
+                                    tags.filter { it.parentId == null && it.id != tag.id }.sortedBy { it.name.lowercase() }.forEach { r ->
+                                        DropdownMenuItem(text = { Text("Under #${r.name}") }, onClick = { moving = null; onSetParent(tag.id, r.id) })
+                                    }
+                                }
+                            }
                             IconButton(onClick = { editing = tag; text = tag.name }) { Icon(Icons.Outlined.Edit, "Rename") }
                             IconButton(onClick = { onDelete(tag.id) }) {
                                 Icon(Icons.Outlined.Delete, "Delete tag", tint = MaterialTheme.colorScheme.error)

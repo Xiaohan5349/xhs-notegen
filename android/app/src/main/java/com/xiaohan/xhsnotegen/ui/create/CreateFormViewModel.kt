@@ -8,6 +8,7 @@ import com.xiaohan.xhsnotegen.XhsNoteGenApp
 import com.xiaohan.xhsnotegen.domain.*
 import com.xiaohan.xhsnotegen.util.ExifReader
 import com.xiaohan.xhsnotegen.util.ImageCleanup
+import com.xiaohan.xhsnotegen.ai.ModeStore
 import com.xiaohan.xhsnotegen.util.PhotoLocation
 import com.xiaohan.xhsnotegen.util.PlaceResolver
 import kotlinx.coroutines.Dispatchers
@@ -64,10 +65,22 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
     private val _canUnlockPhotoPlaces = MutableStateFlow(false)
     val canUnlockPhotoPlaces: StateFlow<Boolean> = _canUnlockPhotoPlaces.asStateFlow()
 
+    /** The writing mode (Food, Travel, …); starts at the last one you used. */
+    private val _mode = MutableStateFlow(ModeStore.lastUsed())
+    val mode: StateFlow<WritingMode> = _mode.asStateFlow()
+    val modes: StateFlow<List<WritingMode>> = ModeStore.modes
+
     init {
         viewModelScope.launch {
-            _selectedStyle.value = styleRepo.resolveStyle(NoteType.FOOD.key)
+            _selectedStyle.value = styleRepo.resolveStyle(_mode.value.key)
         }
+    }
+
+    fun setMode(key: String) {
+        _mode.value = ModeStore.get(key)
+        ModeStore.setLastUsed(key)
+        // Each mode remembers its own favorite style.
+        viewModelScope.launch { _selectedStyle.value = styleRepo.resolveStyle(key) }
     }
 
     val remainingPhotoSlots: Int get() = MAX_PHOTOS - _photoUris.value.size
@@ -161,7 +174,7 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
     fun setStyle(style: NoteStyle) {
         _selectedStyle.value = style
         // Persist so the next draft defaults to this style.
-        viewModelScope.launch { styleRepo.setStyleForType(NoteType.FOOD.key, style) }
+        viewModelScope.launch { styleRepo.setStyleForType(_mode.value.key, style) }
     }
 
     /** Returns the new draft id, or null if a save is already in flight. */
@@ -174,7 +187,7 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
         _isSaving.value = true
         try {
             val draft = NoteDraft(
-                type = NoteType.FOOD,
+                type = _mode.value.key,
                 status = NoteStatus.DRAFT,
                 photoUris = _photoUris.value.map { it.toString() },
                 styleLabel = _selectedStyle.value.key,
@@ -182,6 +195,8 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
                 rating = _rating.value,
             )
             val id = draftRepo.insert(draft).also { saved = true }
+            // Every note starts with its mode's root tag (e.g. 美食, 旅行).
+            draftRepo.rootTag(_mode.value.rootTag)?.let { draftRepo.addTag(listOf(id), it.id) }
             // No photo GPS: work out the place from the text, without delaying generation.
             if (_photoPlace.value?.isKnown != true) {
                 val app = getApplication<Application>()

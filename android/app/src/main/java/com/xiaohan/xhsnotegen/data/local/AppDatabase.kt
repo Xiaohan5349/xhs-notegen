@@ -17,7 +17,7 @@ import com.xiaohan.xhsnotegen.data.local.entity.*
         TagEntity::class,
         NoteTagEntity::class,
     ],
-    version = 3,
+    version = 4,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -50,6 +50,25 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /**
+         * v3 → v4: tags get an optional parent (root tag). SQLite can't add a
+         * foreign key with ALTER TABLE, so the tags table is rebuilt; ids are kept,
+         * so note_tags links stay valid.
+         */
+        val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    "CREATE TABLE IF NOT EXISTS `tags_new` (`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `name` TEXT NOT NULL, " +
+                        "`parent_id` INTEGER, FOREIGN KEY(`parent_id`) REFERENCES `tags`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL )"
+                )
+                db.execSQL("INSERT INTO `tags_new` (`id`, `name`) SELECT `id`, `name` FROM `tags`")
+                db.execSQL("DROP TABLE `tags`")
+                db.execSQL("ALTER TABLE `tags_new` RENAME TO `tags`")
+                db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_tags_name` ON `tags` (`name`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_tags_parent_id` ON `tags` (`parent_id`)")
+            }
+        }
+
         /** v2 → v3: star rating on notes; district + full street address on places. */
         val MIGRATION_2_3 = object : Migration(2, 3) {
             override fun migrate(db: SupportSQLiteDatabase) {
@@ -69,7 +88,7 @@ abstract class AppDatabase : RoomDatabase() {
                 // No destructive fallback: a schema change without a Migration
                 // must fail loudly in testing instead of silently wiping every
                 // user's drafts in production.
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .build().also { INSTANCE = it }
             }
     }

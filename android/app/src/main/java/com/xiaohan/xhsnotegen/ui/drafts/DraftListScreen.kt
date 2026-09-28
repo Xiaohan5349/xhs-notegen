@@ -299,7 +299,8 @@ fun DraftListScreen(
                     else -> null
                 }
             },
-            onApply = { add, remove -> viewModel.applyTags(d.ids, add, remove); viewModel.clearSelection() },
+            defaultParent = viewModel.commonRootTag(d.ids),
+            onApply = { add, remove, parent -> viewModel.applyTags(d.ids, add, remove, parent); viewModel.clearSelection() },
             onDismiss = { dialog = null },
         )
         is HomeDialog.SetPlace -> PlaceDialog(
@@ -324,6 +325,7 @@ fun DraftListScreen(
             tags = state.tags,
             onRename = viewModel::renameTag,
             onDelete = viewModel::deleteTag,
+            onSetParent = viewModel::setTagParent,
             onDismiss = { dialog = null },
         )
         null -> Unit
@@ -429,7 +431,12 @@ private fun FilterRow(
 @Composable
 private fun TagFilterRow(state: DraftListState, onSelect: (Long) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
-        items(state.tags, key = { it.id }) { tag ->
+        // Root tags always; a root's sub-tags appear once it (or one of them) is selected.
+        val selected = state.tags.firstOrNull { it.id == state.tagFilter }
+        val openRoot = selected?.parentId ?: selected?.id
+        val shown = state.tags.filter { it.parentId == null || it.parentId == openRoot }
+            .sortedWith(compareBy({ (it.parentId ?: it.id) != openRoot }, { it.parentId != null }, { it.name.lowercase() }))
+        items(shown, key = { it.id }) { tag ->
             FilterChip(
                 selected = state.tagFilter == tag.id,
                 onClick = { onSelect(tag.id) },
@@ -512,7 +519,8 @@ private fun GroupHeaderRow(header: GroupHeader, collapsed: Boolean, onToggle: ()
         if (header.level == 0) {
             Text(header.title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f, fill = false))
         } else {
-            Icon(Icons.Outlined.Place, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+            Icon(if (header.key.startsWith("tag:")) Icons.Outlined.Label else Icons.Outlined.Place, null,
+                Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(4.dp))
             Text(header.title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f, fill = false))
         }

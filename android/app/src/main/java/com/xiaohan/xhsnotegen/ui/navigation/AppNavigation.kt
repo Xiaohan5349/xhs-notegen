@@ -15,7 +15,8 @@ import com.xiaohan.xhsnotegen.ui.drafts.DraftListScreen
 import com.xiaohan.xhsnotegen.ui.generate.GeneratingScreen
 import com.xiaohan.xhsnotegen.ui.publish.XhsLoginScreen
 import com.xiaohan.xhsnotegen.ui.review.ReviewScreen
-import com.xiaohan.xhsnotegen.ui.settings.PromptEditorScreen
+import com.xiaohan.xhsnotegen.ui.settings.ModeEditorScreen
+import com.xiaohan.xhsnotegen.ui.settings.ModesScreen
 import com.xiaohan.xhsnotegen.ui.settings.SettingsScreen
 
 object Routes {
@@ -25,7 +26,9 @@ object Routes {
     const val REVIEW = "review/{draftId}"
     const val XHS_LOGIN = "xhs_login"
     const val SETTINGS = "settings"
-    const val PROMPT_EDITOR = "prompt_editor"
+    const val MODES = "modes"
+    const val MODE_EDITOR = "mode/{key}"
+    fun modeEditor(key: String) = "mode/$key"
 
     fun generating(draftId: Long) = "generating/$draftId"
     fun review(draftId: Long) = "review/$draftId"
@@ -56,18 +59,29 @@ fun AppNavigation(navController: NavHostController) {
             SettingsScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onLogin = { navController.navigate(Routes.XHS_LOGIN) },
-                onEditPrompt = { navController.navigate(Routes.PROMPT_EDITOR) },
+                onEditPrompt = { navController.navigate(Routes.MODES) },
             )
         }
 
-        composable(Routes.PROMPT_EDITOR) {
-            PromptEditorScreen(onNavigateBack = { navController.popBackStack() })
+        composable(Routes.MODES) {
+            ModesScreen(
+                onNavigateBack = { navController.popBackStack() },
+                onEdit = { navController.navigate(Routes.modeEditor(it)) },
+            )
+        }
+
+        composable(Routes.MODE_EDITOR, arguments = listOf(navArgument("key") { type = NavType.StringType })) { entry ->
+            ModeEditorScreen(
+                modeKey = entry.arguments?.getString("key").orEmpty(),
+                onNavigateBack = { navController.popBackStack() },
+            )
         }
 
         composable(Routes.CREATE_FORM) {
             CreateFormScreen(
                 onNavigateBack = { navController.popBackStack() },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                onManageModes = { navController.navigate(Routes.MODES) },
                 onDraftSaved = { draftId ->
                     navController.navigate(Routes.generating(draftId)) {
                         popUpTo(Routes.DRAFT_LIST)

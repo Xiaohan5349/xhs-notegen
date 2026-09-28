@@ -8,6 +8,9 @@ import com.xiaohan.xhsnotegen.data.repository.DraftRepository
 import com.xiaohan.xhsnotegen.data.repository.StylePreferencesRepository
 import com.xiaohan.xhsnotegen.ui.publish.XhsAuthStore
 import com.xiaohan.xhsnotegen.ui.theme.AppearanceStore
+import com.xiaohan.xhsnotegen.ai.ModeStore
+import androidx.core.content.edit
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -36,6 +39,15 @@ class XhsNoteGenApp : Application() {
         stylePrefsRepository = StylePreferencesRepository(database)
         XhsAuthStore.init(this)
         AppearanceStore.init(this)
+        ModeStore.init(this)
+        // Once, after the update that added modes: tag existing notes with their mode's root tag.
+        val flags = getSharedPreferences("migrations", MODE_PRIVATE)
+        if (!flags.getBoolean("root_tags_backfilled", false)) {
+            applicationScope.launch {
+                draftRepository.backfillRootTags { ModeStore.get(it).rootTag }
+                flags.edit { putBoolean("root_tags_backfilled", true) }
+            }
+        }
         // Debug builds only: lets chrome://inspect on a computer debug the XHS login page.
         if (applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) {
             WebView.setWebContentsDebuggingEnabled(true)

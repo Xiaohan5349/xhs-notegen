@@ -2,7 +2,8 @@ package com.xiaohan.xhsnotegen.domain
 
 data class NoteDraft(
     val id: Long = 0,
-    val type: NoteType = NoteType.FOOD,
+    /** Writing mode key ("food", "travel", or a custom mode's key). */
+    val type: String = BuiltInModes.FOOD,
     val status: NoteStatus = NoteStatus.DRAFT,
     val photoUris: List<String> = emptyList(),
     /** Photos to publish, in publish order (first = cover). Empty means "all" (legacy drafts). */

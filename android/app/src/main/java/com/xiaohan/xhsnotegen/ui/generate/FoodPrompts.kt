@@ -1,6 +1,9 @@
 package com.xiaohan.xhsnotegen.ui.generate
 
+import com.xiaohan.xhsnotegen.domain.BuiltInModes
+import com.xiaohan.xhsnotegen.domain.FieldSlot
 import com.xiaohan.xhsnotegen.domain.FoodInfo
+import com.xiaohan.xhsnotegen.domain.WritingMode
 import com.xiaohan.xhsnotegen.domain.NoteStyle
 import java.text.SimpleDateFormat
 import java.util.Calendar
@@ -108,7 +111,10 @@ object FoodPrompts {
         photosHidden: Boolean = false,
         styleInstruction: (NoteStyle) -> String = ::defaultStyleInstruction,
         rating: Int = 0,
+        /** Labels for the facts; defaults to the Food mode's (菜 / 店 / 味道 …). */
+        mode: WritingMode = BuiltInModes.food,
     ): String = buildString {
+        fun key(slot: FieldSlot) = mode.field(slot).promptKey
         if (voiceSamples.isNotEmpty()) {
             appendLine("## 我以前写的几篇（学我的语气和用词习惯，不要抄内容）")
             voiceSamples.forEach { sample ->
@@ -119,17 +125,17 @@ object FoodPrompts {
             appendLine()
         }
 
-        appendLine("## 这次吃的")
-        appendLine("菜：${foodInfo.dishNames.trim()}")
-        appendLine("店：${foodInfo.restaurantName.trim()}")
+        appendLine("## ${mode.promptHeading}")
+        appendLine("${key(FieldSlot.SUBJECT)}：${foodInfo.dishNames.trim()}")
+        appendLine("${key(FieldSlot.PLACE)}：${foodInfo.restaurantName.trim()}")
         if (foodInfo.location.isNotBlank()) appendLine("地点：${foodInfo.location.trim()}")
         val date = describeMealDate(foodInfo.mealDate)
         if (date != null) appendLine("时间：${date.spoken}")
-        if (foodInfo.tasteNotes.isNotBlank()) appendLine("味道（我的原话）：${foodInfo.tasteNotes.trim()}")
-        if (foodInfo.priceOrRating.isNotBlank()) appendLine("价格/评分（我的原话）：${foodInfo.priceOrRating.trim()}")
-        if (rating in 1..5) appendLine("我给这顿饭打分：$rating/5（语气要和分数一致；正文里不要写出星级或分数）")
-        if (foodInfo.vibeNotes.isNotBlank()) appendLine("环境（我的原话）：${foodInfo.vibeNotes.trim()}")
-        if (foodInfo.personalNotes.isNotBlank()) appendLine("其他想说的（我的原话）：${foodInfo.personalNotes.trim()}")
+        if (foodInfo.tasteNotes.isNotBlank()) appendLine("${key(FieldSlot.FEELING)}（我的原话）：${foodInfo.tasteNotes.trim()}")
+        if (foodInfo.priceOrRating.isNotBlank()) appendLine("${key(FieldSlot.COST)}（我的原话）：${foodInfo.priceOrRating.trim()}")
+        if (rating in 1..5) appendLine("我的打分：$rating/5（语气要和分数一致；正文里不要写出星级或分数）")
+        if (foodInfo.vibeNotes.isNotBlank()) appendLine("${key(FieldSlot.SCENE)}（我的原话）：${foodInfo.vibeNotes.trim()}")
+        if (foodInfo.personalNotes.isNotBlank()) appendLine("${key(FieldSlot.OTHER)}（我的原话）：${foodInfo.personalNotes.trim()}")
         if (photoCount > 0) appendLine("照片：$photoCount 张，附在后面。")
         if (photosHidden) appendLine("这次看不到照片，只根据上面的文字写，不要描述或猜测照片内容。")
         appendLine()

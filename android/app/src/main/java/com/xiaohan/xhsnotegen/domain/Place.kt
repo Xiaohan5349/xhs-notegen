@@ -32,5 +32,5 @@ enum class PlaceSource(val key: String) {
     }
 }
 
-/** A user label on notes. */
-data class NoteTag(val id: Long = 0, val name: String)
+/** A user label on notes. [parentId] set = a sub-tag under a root (upper) tag. */
+data class NoteTag(val id: Long = 0, val name: String, val parentId: Long? = null)

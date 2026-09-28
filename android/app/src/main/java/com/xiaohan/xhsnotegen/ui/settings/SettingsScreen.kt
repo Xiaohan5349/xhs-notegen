@@ -30,7 +30,6 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.xiaohan.xhsnotegen.ai.AiProvider
 import com.xiaohan.xhsnotegen.ai.AiSettings
-import com.xiaohan.xhsnotegen.ai.PromptStore
 import com.xiaohan.xhsnotegen.ui.components.SectionCard
 import com.xiaohan.xhsnotegen.ui.components.softFieldColors
 import com.xiaohan.xhsnotegen.ui.publish.XhsAuthStore
@@ -318,11 +317,7 @@ private fun AiSection(onEditPrompt: () -> Unit) {
         }
 
         // Entry to the prompt editor; "Customized" reminds you when you've changed it.
-        var customized by remember { mutableStateOf(PromptStore.isCustomized(context)) }
-        LifecycleResumeEffect(Unit) {
-            customized = PromptStore.isCustomized(context) // refresh after returning from the editor
-            onPauseOrDispose {}
-        }
+        val modeCount = com.xiaohan.xhsnotegen.ai.ModeStore.modes.collectAsState().value.size
         Row(
             Modifier
                 .fillMaxWidth()
@@ -335,10 +330,10 @@ private fun AiSection(onEditPrompt: () -> Unit) {
         ) {
             Icon(Icons.Outlined.EditNote, null, tint = MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f)) {
-                Text("Writing prompt", style = MaterialTheme.typography.titleSmall)
-                Text(if (customized) "Customized" else "Default — tap to view or edit",
+                Text("Writing modes & prompts", style = MaterialTheme.typography.titleSmall)
+                Text("$modeCount modes — Food, Travel, Outfit… each with its own prompt and root tag",
                     style = MaterialTheme.typography.bodySmall,
-                    color = if (customized) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+                    color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }

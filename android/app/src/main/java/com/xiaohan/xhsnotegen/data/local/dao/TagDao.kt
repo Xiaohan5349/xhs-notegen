@@ -19,6 +19,15 @@ interface TagDao {
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insertTag(tag: TagEntity): Long
 
+    @Query("SELECT * FROM tags")
+    suspend fun all(): List<TagEntity>
+
+    @Query("UPDATE tags SET parent_id = :parentId WHERE id = :id")
+    suspend fun setParent(id: Long, parentId: Long?)
+
+    @Query("SELECT draft_id FROM note_tags WHERE tag_id = :tagId")
+    suspend fun draftIdsWith(tagId: Long): List<Long>
+
     @Query("UPDATE tags SET name = :name WHERE id = :id")
     suspend fun rename(id: Long, name: String)
 

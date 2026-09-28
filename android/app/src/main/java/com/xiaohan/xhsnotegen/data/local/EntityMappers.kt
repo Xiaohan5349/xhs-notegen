@@ -8,7 +8,7 @@ import com.xiaohan.xhsnotegen.domain.*
 
 fun NoteDraftEntity.toDomain(foodInfo: FoodInfo? = null): NoteDraft = NoteDraft(
     id = id,
-    type = NoteType.fromKey(type),
+    type = type.ifBlank { BuiltInModes.FOOD },
     status = NoteStatus.fromKey(status),
     photoUris = JsonCodec.parseStringList(photoUris),
     selectedPublishPhotoUris = JsonCodec.parseStringList(selectedPublishPhotoUris),
@@ -26,7 +26,7 @@ fun NoteDraftEntity.toDomain(foodInfo: FoodInfo? = null): NoteDraft = NoteDraft(
 
 fun NoteDraft.toEntity(): NoteDraftEntity = NoteDraftEntity(
     id = id,
-    type = type.key,
+    type = type,
     status = status.key,
     photoUris = JsonCodec.toJson(photoUris),
     selectedPublishPhotoUris = JsonCodec.toJson(selectedPublishPhotoUris),
@@ -86,7 +86,7 @@ fun FoodInfo.toEntity(draftId: Long): FoodInfoEntity = FoodInfoEntity(
 
 // ---- Tags ----
 
-fun TagEntity.toDomain(): NoteTag = NoteTag(id = id, name = name)
+fun TagEntity.toDomain(): NoteTag = NoteTag(id = id, name = name, parentId = parentId)
 
 // ---- StylePreference ----
 

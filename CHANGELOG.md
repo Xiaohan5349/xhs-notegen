@@ -1,5 +1,20 @@
 # Changelog
 
+## v1.7.0 — 2026-09-28
+
+### Added
+- Writing modes: pick the kind of note at the top of the new-note screen. Each mode has its own form labels, AI prompt, four style descriptions and a root tag
+  - Built in, based on Xiaohongshu's largest content categories: Food (美食), Travel (旅行), Outfit (穿搭), Beauty (美妆护肤), Home (家居), Fitness (运动), Parenting (育儿), Books & Films (书影音). Each prompt keeps the "sound human" rules and names that category's typical AI clichés; Parenting also keeps children's personal details out
+  - Create your own modes (Settings → Writing modes → New mode); edit any mode's name, root tag, labels, prompt and styles; reset built-ins, delete your own
+- Root tags: every note gets its mode's root tag automatically; existing notes get 美食 once after updating
+- Two-level tags: tags can sit under a root tag (旅行 › 京都). New tags default to the notes' root; move tags in Manage tags. Group by Tag shows root → sub-tags (+ General); filtering by a root includes its sub-tags
+- Each mode remembers its favorite style; voice samples come from notes of the same mode
+
+### Changed
+- The single "Writing prompt" editor became part of each mode; a customized Food prompt is carried over
+- Backups carry the tag hierarchy; older backups still import (as Food)
+- Database v4 (tag parents) with a migration — verified that existing tag links are kept
+
 ## v1.6.0 — 2026-09-28
 
 ### Added

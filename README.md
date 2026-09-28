@@ -5,6 +5,7 @@ Standalone Android app that generates Xiaohongshu food notes from photos using A
 ## Features
 
 - **Photo picker** (1-20 photos) with EXIF auto-fill (date, time, GPS location); pick a cover, add or remove photos
+- **Writing modes** — Food, Travel, Outfit, Beauty, Home, Fitness, Parenting, Books & Films, or your own; each with its own form, prompt and root tag
 - **AI generation** — pick Gemini, ChatGPT, Claude, DeepSeek or a custom OpenAI-compatible model; 4 note styles in Chinese (Casual Story, Practical, Punchy, Minimal), written in one request
 - **Sounds like you** — prompts are tuned against typical "AI voice" tells, keep your own words, and learn from notes you've already reviewed or posted
 - **Review & edit** — switch styles, edit title (with the 20-character XHS limit), body and tags, rewrite one style or all four

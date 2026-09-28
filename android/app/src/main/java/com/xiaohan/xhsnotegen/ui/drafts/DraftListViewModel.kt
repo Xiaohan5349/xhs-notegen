@@ -85,10 +85,12 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
     val state: StateFlow<DraftListState> = combine(repo.getAllFlow(), repo.allTagsFlow(), options) { all, tags, o ->
         // A tag filter pointing at a deleted tag simply stops filtering.
         val tagFilter = o.tag?.takeIf { id -> tags.any { it.id == id } }
-        val visible = all.filter { o.filter.matches(it.status) && (tagFilter == null || it.tags.any { t -> t.id == tagFilter }) }
+        // Filtering by a root tag includes its sub-tags.
+        val filterIds = tagFilter?.let { id -> setOf(id) + tags.filter { it.parentId == id }.map { it.id } }
+        val visible = all.filter { o.filter.matches(it.status) && (filterIds == null || it.tags.any { t -> t.id in filterIds }) }
         DraftListState(
             drafts = visible,
-            feed = buildFeed(visible, o.groupBy, o.collapsed),
+            feed = buildFeed(visible, o.groupBy, o.collapsed, tags),
             counts = DraftFilter.entries.associateWith { f -> all.count { f.matches(it.status) } },
             filter = o.filter,
             tags = tags,
@@ -148,11 +150,14 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
         clearSelection()
     }
 
-    /** Applies tag changes: [add] tag names (created if new), [remove] tag ids. */
-    fun applyTags(ids: Set<Long>, add: List<String>, remove: List<Long>) = viewModelScope.launch {
+    /**
+     * Applies tag changes: [add] tag names (new ones are created under
+     * [newParentId], usually the notes' root tag), [remove] tag ids.
+     */
+    fun applyTags(ids: Set<Long>, add: List<String>, remove: List<Long>, newParentId: Long? = null) = viewModelScope.launch {
         try {
             add.map { it.trim().removePrefix("#").trim() }.filter { it.isNotEmpty() }.distinct().forEach { name ->
-                repo.addTag(ids, repo.getOrCreateTag(name).id)
+                repo.addTag(ids, repo.getOrCreateTag(name, newParentId).id)
             }
             remove.forEach { repo.removeTag(ids, it) }
         } catch (e: Exception) {
@@ -165,6 +170,15 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
     }
 
     fun deleteTag(tagId: Long) = viewModelScope.launch { repo.deleteTag(tagId) }
+
+    fun setTagParent(tagId: Long, parentId: Long?) = viewModelScope.launch { repo.setTagParent(tagId, parentId) }
+
+    /** The root tag shared by all these notes' modes, if they're all in one mode. */
+    fun commonRootTag(ids: Set<Long>): com.xiaohan.xhsnotegen.domain.NoteTag? {
+        val modes = state.value.drafts.filter { it.id in ids }.map { it.type }.distinct()
+        val root = modes.singleOrNull()?.let { com.xiaohan.xhsnotegen.ai.ModeStore.get(it).rootTag } ?: return null
+        return state.value.tags.firstOrNull { it.name == root && it.parentId == null }
+    }
 
     fun setRating(ids: Set<Long>, rating: Int) = viewModelScope.launch {
         repo.setRating(ids, rating)
@@ -224,7 +238,7 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
             try {
                 val all = repo.getAll()
                 withContext(Dispatchers.IO) {
-                    val json = JsonCodec.toJson(ExportData(drafts = all))
+                    val json = JsonCodec.toJson(ExportData(drafts = all, tagParents = repo.tagParentsByName()))
                     getApplication<Application>().contentResolver
                         .openOutputStream(targetUri)?.use { out ->
                             out.write(json.toByteArray(Charsets.UTF_8))
@@ -242,11 +256,14 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
     fun importFromUri(uri: Uri) {
         viewModelScope.launch {
             try {
+                var parents: Map<String, String> = emptyMap()
                 val drafts = withContext(Dispatchers.IO) {
                     val json = getApplication<Application>().contentResolver
                         .openInputStream(uri)?.bufferedReader(Charsets.UTF_8)?.use { it.readText() }
                         ?: throw IllegalStateException("Cannot read file")
-                    JsonCodec.parseImport(json).drafts.orEmpty().filterNotNull()
+                    val data = JsonCodec.parseImport(json)
+                    parents = data.tagParents.orEmpty().mapNotNull { (k, v) -> if (k.isNullOrBlank() || v.isNullOrBlank()) null else k to v }.toMap()
+                    data.drafts.orEmpty().filterNotNull()
                         .map { it.toDomain() }
                         .map { withOwnPhotoCopies(it) }
                 }
@@ -254,7 +271,7 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
                     _messages.send("No notes found in that file")
                     return@launch
                 }
-                repo.insertAll(drafts)
+                repo.insertAll(drafts, parents)
                 _messages.send("Imported ${drafts.size} notes")
             } catch (e: Exception) {
                 _messages.send("Import failed: ${e.message ?: "invalid file"}")
@@ -298,7 +315,10 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
          * the region is shown next to the city). Tag: one group per tag — a note
          * with several tags appears under each. Collapsed groups keep their header.
          */
-        fun buildFeed(notes: List<NoteDraft>, groupBy: GroupBy, collapsed: Set<String>): List<FeedItem> = when (groupBy) {
+        fun buildFeed(
+            notes: List<NoteDraft>, groupBy: GroupBy, collapsed: Set<String>,
+            allTags: List<com.xiaohan.xhsnotegen.domain.NoteTag> = emptyList(),
+        ): List<FeedItem> = when (groupBy) {
             GroupBy.NONE -> notes.map { FeedItem.Note(it, "") }
             GroupBy.PLACE -> buildList {
                 val byCountry = notes.groupBy { it.foodInfo.place.country.ifBlank { UNKNOWN_PLACE } }
@@ -330,13 +350,38 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
                 }
             }
             GroupBy.TAG -> buildList {
-                val tagNames = notes.flatMap { d -> d.tags.map { it.name } }.distinct().sortedBy { it.lowercase() }
-                (tagNames + UNTAGGED).forEach { tag ->
-                    val inTag = if (tag == UNTAGGED) notes.filter { it.tags.isEmpty() } else notes.filter { d -> d.tags.any { it.name == tag } }
-                    if (inTag.isEmpty()) return@forEach
-                    val key = "tag:$tag"
-                    add(FeedItem.Header(GroupHeader(key, if (tag == UNTAGGED) tag else "#$tag", 0, inTag.size)))
-                    if (key !in collapsed) inTag.forEach { add(FeedItem.Note(it, key)) }
+                // Two levels: root tag → its sub-tags. Notes carrying the root but none
+                // of its sub-tags sit under "General". Tags without a parent that have no
+                // sub-tags are single-level groups. A note can appear in several groups.
+                val byId = (allTags + notes.flatMap { it.tags }).associateBy { it.id }
+                fun rootOf(t: com.xiaohan.xhsnotegen.domain.NoteTag) = t.parentId?.let { byId[it] } ?: t
+                val roots = notes.flatMap { n -> n.tags.map { rootOf(it) } }.distinctBy { it.id }
+                    .sortedWith(compareByDescending<com.xiaohan.xhsnotegen.domain.NoteTag> { r -> notes.count { n -> n.tags.any { rootOf(it).id == r.id } } }.thenBy { it.name.lowercase() })
+                roots.forEach { root ->
+                    val inRoot = notes.filter { n -> n.tags.any { rootOf(it).id == root.id } }
+                    val key = "tag:${root.id}"
+                    add(FeedItem.Header(GroupHeader(key, "#${root.name}", 0, inRoot.size)))
+                    if (key in collapsed) return@forEach
+                    val children = inRoot.flatMap { n -> n.tags.filter { it.parentId == root.id } }.distinctBy { it.id }.sortedBy { it.name.lowercase() }
+                    if (children.isEmpty()) { inRoot.forEach { add(FeedItem.Note(it, key)) }; return@forEach }
+                    children.forEach { child ->
+                        val inChild = inRoot.filter { n -> n.tags.any { it.id == child.id } }
+                        val childKey = "$key/${child.id}"
+                        add(FeedItem.Header(GroupHeader(childKey, "#${child.name}", 1, inChild.size)))
+                        if (childKey !in collapsed) inChild.forEach { add(FeedItem.Note(it, childKey)) }
+                    }
+                    val general = inRoot.filter { n -> n.tags.none { it.parentId == root.id } }
+                    if (general.isNotEmpty()) {
+                        val gKey = "$key/general"
+                        add(FeedItem.Header(GroupHeader(gKey, "General", 1, general.size)))
+                        if (gKey !in collapsed) general.forEach { add(FeedItem.Note(it, gKey)) }
+                    }
+                }
+                val untagged = notes.filter { it.tags.isEmpty() }
+                if (untagged.isNotEmpty()) {
+                    val key = "tag:none"
+                    add(FeedItem.Header(GroupHeader(key, UNTAGGED, 0, untagged.size)))
+                    if (key !in collapsed) untagged.forEach { add(FeedItem.Note(it, key)) }
                 }
             }
         }

@@ -107,7 +107,8 @@ data class DraftDto(
         return NoteDraft(
             id = 0,
             // Exports store enum *names* (Gson default), older data may hold keys.
-            type = NoteType.entries.firstOrNull { it.name == type } ?: NoteType.fromKey(type.orEmpty()),
+            // Older exports stored the enum name "FOOD"; now it's the mode key.
+            type = type?.lowercase()?.takeIf { it.isNotBlank() } ?: BuiltInModes.FOOD,
             status = NoteStatus.entries.firstOrNull { it.name == status } ?: NoteStatus.fromKey(status.orEmpty()),
             photoUris = photoUris.orEmpty().filterNotNull(),
             selectedPublishPhotoUris = selectedPublishPhotoUris.orEmpty().filterNotNull(),
@@ -132,14 +133,17 @@ data class DraftDto(
 class VariantsResponse(val variants: List<VariantDto?>? = null)
 
 data class ExportData(
-    val version: Int = 1,
+    val version: Int = 2,
     val exportedAt: Long = System.currentTimeMillis(),
     val drafts: List<NoteDraft> = emptyList(),
+    /** Tag hierarchy by name: sub-tag → its root tag. */
+    val tagParents: Map<String, String> = emptyMap(),
 )
 
 data class ImportData(
     val version: Int? = null,
     val drafts: List<DraftDto?>? = null,
+    val tagParents: Map<String?, String?>? = null,
 )
 
 object JsonCodec {
@@ -169,3 +173,42 @@ fun normalizeHashtags(raw: List<String>): List<String> =
         .map { it.trim() }
         .filter { it.isNotEmpty() }
         .distinct()
+
+/** Stored writing mode; nullable so a partial or older record still loads with defaults. */
+data class ModeDto(
+    val key: String? = null,
+    val name: String? = null,
+    val rootTag: String? = null,
+    val promptHeading: String? = null,
+    val fields: Map<String, FieldSpecDto?>? = null,
+    val instructions: String? = null,
+    val styles: Map<String, String?>? = null,
+) {
+    /** Fills anything missing from [base] (the built-in default, or a blank custom mode). */
+    fun toDomain(base: WritingMode): WritingMode = base.copy(
+        name = name?.takeIf { it.isNotBlank() } ?: base.name,
+        rootTag = rootTag?.trim() ?: base.rootTag,
+        promptHeading = promptHeading?.takeIf { it.isNotBlank() } ?: base.promptHeading,
+        fields = FieldSlot.entries.associateWith { slot ->
+            val d = fields?.get(slot.name)
+            val b = base.field(slot)
+            FieldSpec(
+                label = d?.label?.takeIf { it.isNotBlank() } ?: b.label,
+                hint = d?.hint ?: b.hint,
+                promptKey = d?.promptKey?.takeIf { it.isNotBlank() } ?: b.promptKey,
+            )
+        },
+        instructions = instructions?.takeIf { it.isNotBlank() } ?: base.instructions,
+        styles = NoteStyle.entries.associate { s -> s.key to (styles?.get(s.key)?.takeIf { it.isNotBlank() } ?: base.style(s)) },
+    )
+
+    companion object {
+        fun from(m: WritingMode) = ModeDto(
+            key = m.key, name = m.name, rootTag = m.rootTag, promptHeading = m.promptHeading,
+            fields = m.fields.mapKeys { it.key.name }.mapValues { FieldSpecDto(it.value.label, it.value.hint, it.value.promptKey) },
+            instructions = m.instructions, styles = m.styles,
+        )
+    }
+}
+
+data class FieldSpecDto(val label: String? = null, val hint: String? = null, val promptKey: String? = null)

@@ -96,13 +96,46 @@ class DraftRepository(private val db: AppDatabase) {
 
     // ---- Tags ----
 
-    /** Returns the tag with this name, creating it if needed. */
-    suspend fun getOrCreateTag(name: String): NoteTag {
+    /**
+     * Returns the tag with this name, creating it if needed. A new tag goes under
+     * [parentId]; an existing tag keeps its place in the hierarchy.
+     */
+    suspend fun getOrCreateTag(name: String, parentId: Long? = null): NoteTag {
         val clean = name.trim().removePrefix("#").trim()
         require(clean.isNotEmpty()) { "Tag name is empty" }
         tagDao.byName(clean)?.let { return it.toDomain() }
-        val id = tagDao.insertTag(TagEntity(name = clean))
+        val id = tagDao.insertTag(TagEntity(name = clean, parentId = parentId?.takeIf { it > 0 }))
         return (tagDao.byName(clean) ?: TagEntity(id = id, name = clean)).toDomain()
+    }
+
+    /** A mode's root tag: created at the top level if missing. */
+    suspend fun rootTag(name: String): NoteTag? = name.trim().takeIf { it.isNotEmpty() }?.let { getOrCreateTag(it) }
+
+    /** Moves a tag under [parentId] (null = top level). A tag can't sit under itself or its own sub-tag. */
+    suspend fun setTagParent(tagId: Long, parentId: Long?) {
+        if (parentId == tagId) return
+        val all = tagDao.all().associateBy { it.id }
+        if (parentId != null && all[parentId]?.parentId == tagId) return
+        tagDao.setParent(tagId, parentId)
+        // One level only: sub-tags of a tag that becomes a sub-tag move up to its new root.
+        if (parentId != null) all.values.filter { it.parentId == tagId }.forEach { tagDao.setParent(it.id, parentId) }
+    }
+
+    /** name → parent name, for backups. */
+    suspend fun tagParentsByName(): Map<String, String> {
+        val all = tagDao.all().associateBy { it.id }
+        return all.values.mapNotNull { t -> t.parentId?.let { all[it]?.name }?.let { t.name to it } }.toMap()
+    }
+
+    /**
+     * Gives every note its mode's root tag. Runs once after an update (notes
+     * made before modes existed) and is harmless to repeat.
+     */
+    suspend fun backfillRootTags(rootTagOf: (String) -> String) {
+        draftDao.idsAndTypes().groupBy { it.type }.forEach { (type, rows) ->
+            val root = rootTag(rootTagOf(type)) ?: return@forEach
+            addTag(rows.map { it.id }, root.id)
+        }
     }
 
     suspend fun addTag(draftIds: Collection<Long>, tagId: Long) =
@@ -114,8 +147,15 @@ class DraftRepository(private val db: AppDatabase) {
 
     suspend fun deleteTag(tagId: Long) = tagDao.deleteTag(tagId)
 
-    /** Import: all-or-nothing, and every draft gets a fresh auto-generated id; tags are matched by name. */
-    suspend fun insertAll(drafts: List<NoteDraft>) = db.withTransaction {
+    /**
+     * Import: all-or-nothing, and every draft gets a fresh auto-generated id;
+     * tags are matched by name, and [tagParents] (name → root name) rebuilds the hierarchy.
+     */
+    suspend fun insertAll(drafts: List<NoteDraft>, tagParents: Map<String, String> = emptyMap()) = db.withTransaction {
+        tagParents.forEach { (child, parent) ->
+            val p = getOrCreateTag(parent)
+            getOrCreateTag(child, p.id)
+        }
         drafts.forEach { draft ->
             val newDraft = draft.copy(id = 0)
             val draftId = draftDao.insert(newDraft.toEntity())
@@ -131,10 +171,10 @@ class DraftRepository(private val db: AppDatabase) {
      * (user-edited) text is the best example of the user's own voice, so it is
      * fed back to the model as a style reference.
      */
-    suspend fun getVoiceSamples(excludeId: Long, limit: Int = 3): List<String> =
+    suspend fun getVoiceSamples(excludeId: Long, mode: String, limit: Int = 3): List<String> =
         draftDao.getAll()
             .asSequence()
-            .filter { it.id != excludeId }
+            .filter { it.id != excludeId && it.type == mode } // voice of the same kind of note
             .filter { it.status == NoteStatus.SHARED.key || it.status == NoteStatus.REVIEWED.key }
             .mapNotNull { entity ->
                 runCatching { entity.toDomain() }.getOrNull()?.selectedVariant

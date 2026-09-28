@@ -11,6 +11,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -36,7 +37,10 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.xiaohan.xhsnotegen.domain.BuiltInModes
+import com.xiaohan.xhsnotegen.domain.FieldSlot
 import com.xiaohan.xhsnotegen.domain.NoteStyle
+import com.xiaohan.xhsnotegen.domain.WritingMode
 import com.xiaohan.xhsnotegen.ui.components.ModelChip
 import com.xiaohan.xhsnotegen.ui.components.RatingBar
 import com.xiaohan.xhsnotegen.ui.components.ratingWords
@@ -52,6 +56,7 @@ fun CreateFormScreen(
     onNavigateBack: () -> Unit,
     onDraftSaved: (Long) -> Unit,
     onOpenSettings: () -> Unit = {},
+    onManageModes: () -> Unit = {},
     viewModel: CreateFormViewModel = viewModel(),
 ) {
     val photos by viewModel.photoUris.collectAsState()
@@ -62,6 +67,9 @@ fun CreateFormScreen(
     val isSaving by viewModel.isSaving.collectAsState()
     val photoPlace by viewModel.photoPlace.collectAsState()
     val rating by viewModel.rating.collectAsState()
+    val mode by viewModel.mode.collectAsState()
+    val modes by viewModel.modes.collectAsState()
+    fun f(slot: FieldSlot) = mode.field(slot)
     val canUnlockPlaces by viewModel.canUnlockPhotoPlaces.collectAsState()
     val placePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         // Whatever was granted, try again; without access it just offers nothing.
@@ -78,15 +86,15 @@ fun CreateFormScreen(
 
     val missing = buildList {
         if (photos.isEmpty()) add("a photo")
-        if (foodInfo.dishNames.isBlank()) add("what you ate")
-        if (foodInfo.restaurantName.isBlank()) add("where")
+        if (foodInfo.dishNames.isBlank()) add(f(FieldSlot.SUBJECT).label.lowercase())
+        if (foodInfo.restaurantName.isBlank()) add(f(FieldSlot.PLACE).label.lowercase())
     }
     val canGenerate = missing.isEmpty() && !isSaving && !isImporting
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New note") },
+                title = { Text("New ${mode.name.lowercase()} note") },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -151,6 +159,9 @@ fun CreateFormScreen(
                 .padding(horizontal = 16.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
+            // ---- Kind of note ----
+            ModePicker(modes = modes, selected = mode.key, onSelect = viewModel::setMode, onManage = onManageModes)
+
             // ---- Photos ----
             var selecting by remember { mutableStateOf(false) }
             var selected by remember { mutableStateOf(emptySet<Uri>()) }
@@ -248,20 +259,20 @@ fun CreateFormScreen(
             }
 
             // ---- Facts ----
-            SectionCard(title = "The meal") {
+            SectionCard(title = if (mode.key == BuiltInModes.FOOD) "The meal" else "Details", subtitle = mode.rootTag.takeIf { it.isNotBlank() }?.let { "Tagged #$it" }) {
                 SoftTextField(
                     value = foodInfo.dishNames,
                     onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(dishNames = it)) },
-                    label = "What did you eat", required = true,
-                    placeholder = "红烧肉, 糖醋里脊",
-                    leadingIcon = Icons.Outlined.RestaurantMenu,
+                    label = f(FieldSlot.SUBJECT).label, required = true,
+                    placeholder = f(FieldSlot.SUBJECT).hint,
+                    leadingIcon = if (mode.key == BuiltInModes.FOOD) Icons.Outlined.RestaurantMenu else Icons.Outlined.EditNote,
                 )
                 SoftTextField(
                     value = foodInfo.restaurantName,
                     onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(restaurantName = it)) },
-                    label = "Where", required = true, singleLine = true,
-                    placeholder = "Restaurant name",
-                    leadingIcon = Icons.Outlined.Storefront,
+                    label = f(FieldSlot.PLACE).label, required = true, singleLine = true,
+                    placeholder = f(FieldSlot.PLACE).hint,
+                    leadingIcon = if (mode.key == BuiltInModes.FOOD) Icons.Outlined.Storefront else Icons.Outlined.PinDrop,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
                 )
                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
@@ -300,22 +311,22 @@ fun CreateFormScreen(
                 SoftTextField(
                     value = foodInfo.tasteNotes,
                     onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(tasteNotes = it)) },
-                    label = "How was it", minLines = 2, placeholder = "汤有点咸，但面很筋道",
+                    label = f(FieldSlot.FEELING).label, minLines = 2, placeholder = f(FieldSlot.FEELING).hint,
                 )
                 SoftTextField(
                     value = foodInfo.priceOrRating,
                     onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(priceOrRating = it)) },
-                    label = "Price or rating", singleLine = true, placeholder = "两个人150",
+                    label = f(FieldSlot.COST).label, singleLine = true, placeholder = f(FieldSlot.COST).hint,
                 )
                 SoftTextField(
                     value = foodInfo.vibeNotes,
                     onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(vibeNotes = it)) },
-                    label = "The place", minLines = 2, placeholder = "排了40分钟，店里很吵",
+                    label = f(FieldSlot.SCENE).label, minLines = 2, placeholder = f(FieldSlot.SCENE).hint,
                 )
                 SoftTextField(
                     value = foodInfo.personalNotes,
                     onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(personalNotes = it)) },
-                    label = "Anything else", minLines = 2, placeholder = "和谁、为什么来、下次想点什么",
+                    label = f(FieldSlot.OTHER).label, minLines = 2, placeholder = f(FieldSlot.OTHER).hint,
                 )
             }
 
@@ -510,6 +521,34 @@ private fun StyleOption(
         if (selected) {
             Icon(Icons.Filled.CheckCircle, null, tint = c.primary,
                 modifier = Modifier.align(Alignment.TopEnd).size(18.dp))
+        }
+    }
+}
+
+/** Food · Travel · Outfit … as chips; the last chip manages modes. */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun ModePicker(modes: List<WritingMode>, selected: String, onSelect: (String) -> Unit, onManage: () -> Unit) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        items(modes, key = { it.key }) { m ->
+            FilterChip(
+                selected = m.key == selected,
+                onClick = { onSelect(m.key) },
+                label = { Text(m.name) },
+                shape = CircleShape,
+                colors = FilterChipDefaults.filterChipColors(
+                    selectedContainerColor = MaterialTheme.colorScheme.primary,
+                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
+                ),
+            )
+        }
+        item(key = "manage") {
+            AssistChip(
+                onClick = onManage,
+                label = { Text("Modes") },
+                leadingIcon = { Icon(Icons.Outlined.Tune, null, Modifier.size(16.dp)) },
+                shape = CircleShape,
+            )
         }
     }
 }

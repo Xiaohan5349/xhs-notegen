@@ -5,12 +5,12 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.xiaohan.xhsnotegen.domain.NoteStyle
 import com.xiaohan.xhsnotegen.domain.NoteStatus
-import com.xiaohan.xhsnotegen.domain.NoteType
+import com.xiaohan.xhsnotegen.domain.BuiltInModes
 
 @Entity(tableName = "note_drafts")
 data class NoteDraftEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    @ColumnInfo(name = "type") val type: String = NoteType.FOOD.key,
+    @ColumnInfo(name = "type") val type: String = BuiltInModes.FOOD,
     @ColumnInfo(name = "status") val status: String = NoteStatus.DRAFT.key,
     @ColumnInfo(name = "photo_uris") val photoUris: String = "[]",
     @ColumnInfo(name = "selected_publish_photo_uris") val selectedPublishPhotoUris: String = "[]",

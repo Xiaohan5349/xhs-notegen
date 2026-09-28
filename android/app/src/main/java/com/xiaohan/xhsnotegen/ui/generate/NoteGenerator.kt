@@ -3,7 +3,7 @@ package com.xiaohan.xhsnotegen.ui.generate
 import android.content.Context
 import android.net.Uri
 import com.xiaohan.xhsnotegen.ai.AiSettings
-import com.xiaohan.xhsnotegen.ai.PromptStore
+import com.xiaohan.xhsnotegen.ai.ModeStore
 import com.xiaohan.xhsnotegen.ai.AiWriter
 import com.xiaohan.xhsnotegen.data.repository.DraftRepository
 import com.xiaohan.xhsnotegen.domain.NoteDraft
@@ -43,15 +43,17 @@ object NoteGenerator {
         }
 
         onPhase(Phase.WRITING)
-        val voiceSamples = repo.getVoiceSamples(excludeId = draft.id)
+        val mode = ModeStore.get(draft.type)
+        val voiceSamples = repo.getVoiceSamples(excludeId = draft.id, mode = draft.type)
         return AiWriter.generateVariants(
             config = config,
-            systemPrompt = FoodPrompts.systemPrompt(PromptStore.instructions(context)),
+            systemPrompt = FoodPrompts.systemPrompt(mode.instructions),
             userPrompt = FoodPrompts.buildUserPrompt(
                 draft.foodInfo, styles, voiceSamples,
                 photoCount = images.size,
                 photosHidden = !config.vision && draft.photoUris.isNotEmpty(),
-                styleInstruction = { PromptStore.styleInstruction(context, it) },
+                styleInstruction = { mode.style(it) },
+                mode = mode,
                 rating = draft.rating,
             ),
             imagesBase64 = images,

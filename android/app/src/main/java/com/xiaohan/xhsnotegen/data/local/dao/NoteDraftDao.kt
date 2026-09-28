@@ -30,6 +30,11 @@ interface NoteDraftDao {
     @Query("UPDATE note_drafts SET status = :status, updated_at = :now WHERE id IN (:ids)")
     suspend fun setStatus(ids: List<Long>, status: String, now: Long = System.currentTimeMillis())
 
+    @Query("SELECT id, type FROM note_drafts")
+    suspend fun idsAndTypes(): List<IdAndType>
+
     @Query("UPDATE note_drafts SET rating = :rating WHERE id IN (:ids)")
     suspend fun setRating(ids: List<Long>, rating: Int)
 }
+
+data class IdAndType(val id: Long, val type: String)
