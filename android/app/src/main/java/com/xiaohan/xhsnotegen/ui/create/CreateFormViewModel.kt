@@ -43,6 +43,10 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
     private val _isImporting = MutableStateFlow(false)
     val isImporting: StateFlow<Boolean> = _isImporting.asStateFlow()
 
+    private val _rating = MutableStateFlow(0)
+    val rating: StateFlow<Int> = _rating.asStateFlow()
+    fun setRating(value: Int) { _rating.value = value.coerceIn(0, 5) }
+
     private val _isSaving = MutableStateFlow(false)
     val isSaving: StateFlow<Boolean> = _isSaving.asStateFlow()
 
@@ -175,6 +179,7 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
                 photoUris = _photoUris.value.map { it.toString() },
                 styleLabel = _selectedStyle.value.key,
                 foodInfo = _foodInfo.value.copy(place = _photoPlace.value ?: Place()),
+                rating = _rating.value,
             )
             val id = draftRepo.insert(draft).also { saved = true }
             // No photo GPS: work out the place from the text, without delaying generation.

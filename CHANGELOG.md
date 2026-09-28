@@ -1,5 +1,19 @@
 # Changelog
 
+## v1.6.0 — 2026-09-28
+
+### Added
+- Star ratings (1–5): a row of stars on every note card (filled when rated, outlined when not) — tap a star to rate right from the home screen; also set while creating a note, on the review screen, or for many notes at once (select → ☆). Group the home screen by rating. The AI gets your rating so the note's tone matches it
+- Full street address for places (e.g. 中国上海市黄浦区中华路168号), plus the district; shown and editable on the review screen with where it came from (photo / found from text / set by you)
+
+### Changed
+- Group control is now toggles — Place · Tag · Rating; tap the active one again for a plain list (no more "None")
+
+### Fixed
+- Dark themes: group titles (country, city, tag names) were drawn in black and nearly invisible
+- "Re-check all places" no longer relabels places found from text as "from photo"; postal-code suffixes are removed from addresses
+- Database v3 (rating, district, address) with a migration from v1 and v2 — verified on a v2 database with tags and places
+
 ## v1.5.0 — 2026-09-27
 
 ### Added

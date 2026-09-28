@@ -47,6 +47,10 @@ import com.xiaohan.xhsnotegen.domain.NoteVariant
 import com.xiaohan.xhsnotegen.ui.components.EmptyState
 import com.xiaohan.xhsnotegen.ui.components.Eyebrow
 import com.xiaohan.xhsnotegen.ui.components.ModelChip
+import com.xiaohan.xhsnotegen.ui.components.RatingBar
+import com.xiaohan.xhsnotegen.ui.components.ratingWords
+import com.xiaohan.xhsnotegen.ui.drafts.PlaceDialog
+import com.xiaohan.xhsnotegen.domain.PlaceSource
 import com.xiaohan.xhsnotegen.ui.components.StatusPill
 import com.xiaohan.xhsnotegen.ui.publish.XiaohongshuSharePublisher.TITLE_LIMIT
 
@@ -68,6 +72,7 @@ fun ReviewScreen(
     var loginPrompt by remember { mutableStateOf<ReviewEvent.NeedsLogin?>(null) }
     var handoff by remember { mutableStateOf<ReviewEvent.HandedOff?>(null) }
     var confirmRegenerate by remember { mutableStateOf(false) }
+    var editPlace by remember { mutableStateOf(false) }
 
     LaunchedEffect(draftId) { viewModel.load(draftId) }
     LaunchedEffect(Unit) {
@@ -177,6 +182,8 @@ fun ReviewScreen(
                 onIncludeAll = viewModel::includeAllPhotos,
             )
 
+            MealInfoRow(d, onRate = viewModel::setRating, onEditPlace = { editPlace = true })
+
             StyleTabs(d, onSelect = viewModel::selectVariant)
 
             val v = d.selectedVariant ?: return@Column
@@ -227,6 +234,22 @@ fun ReviewScreen(
     }
 
     // ---- Dialogs ----
+
+    if (editPlace) {
+        draft?.let { d ->
+            PlaceDialog(
+                noteCount = 1,
+                initial = d.foodInfo.place,
+                onSave = { country, region, city, address ->
+                    viewModel.setPlace(d.foodInfo.place.copy(
+                        country = country.trim(), region = region.trim(), city = city.trim(), address = address.trim(),
+                        source = PlaceSource.MANUAL,
+                    ))
+                },
+                onDismiss = { editPlace = false },
+            )
+        }
+    }
 
     if (confirmRegenerate) {
         AlertDialog(
@@ -392,6 +415,49 @@ private fun PhotoPicker(
                     }
                 }
             }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Rating + place
+// ---------------------------------------------------------------------------
+
+@Composable
+private fun MealInfoRow(draft: NoteDraft, onRate: (Int) -> Unit, onEditPlace: () -> Unit) {
+    val place = draft.foodInfo.place
+    Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            RatingBar(draft.rating, onRate = onRate, size = 26.dp)
+            Spacer(Modifier.width(6.dp))
+            Text(ratingWords(draft.rating), style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.small)
+                .clickable(onClick = onEditPlace)
+                .padding(horizontal = 8.dp, vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+        ) {
+            Icon(Icons.Outlined.Place, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+            Column(Modifier.weight(1f)) {
+                Text(
+                    place.fullAddress.ifBlank { draft.foodInfo.location.ifBlank { "Add a place" } },
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                val source = when (place.source) {
+                    PlaceSource.GPS -> "From photo location"
+                    PlaceSource.TEXT -> "Found from the restaurant / area — tap to correct"
+                    PlaceSource.MANUAL -> "Set by you"
+                    null -> "Tap to set, or use Organize by place on the home screen"
+                }
+                Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            Icon(Icons.Outlined.Edit, "Edit place", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

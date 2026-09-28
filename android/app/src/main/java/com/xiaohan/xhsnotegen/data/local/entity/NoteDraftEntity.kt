@@ -22,4 +22,6 @@ data class NoteDraftEntity(
     @ColumnInfo(name = "style_label") val styleLabel: String = NoteStyle.DEFAULT.key,
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis(),
+    // Added in schema v3 (MIGRATION_2_3). 0 = not rated.
+    @ColumnInfo(name = "rating", defaultValue = "0") val rating: Int = 0,
 )

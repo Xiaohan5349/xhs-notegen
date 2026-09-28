@@ -33,7 +33,7 @@ enum class DraftFilter(val label: String) {
 }
 
 /** How the home feed is arranged. */
-enum class GroupBy(val label: String) { NONE("None"), PLACE("Place"), TAG("Tag") }
+enum class GroupBy(val label: String) { NONE("None"), PLACE("Place"), TAG("Tag"), RATING("Rating") }
 
 /**
  * One header in a grouped feed. [level] 0 = top group (country / tag),
@@ -109,6 +109,9 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun setTagFilter(tagId: Long?) { _tagFilter.value = if (_tagFilter.value == tagId) null else tagId }
 
+    /** Tapping the active grouping turns grouping off. */
+    fun toggleGroupBy(groupBy: GroupBy) = setGroupBy(if (_groupBy.value == groupBy) GroupBy.NONE else groupBy)
+
     fun setGroupBy(groupBy: GroupBy) {
         _groupBy.value = groupBy
         prefs.edit { putString("group_by", groupBy.name) }
@@ -163,9 +166,15 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun deleteTag(tagId: Long) = viewModelScope.launch { repo.deleteTag(tagId) }
 
+    fun setRating(ids: Set<Long>, rating: Int) = viewModelScope.launch {
+        repo.setRating(ids, rating)
+        clearSelection()
+    }
+
     /** Manual place for the given notes; auto-organize never overwrites it. */
-    fun setPlace(ids: Set<Long>, country: String, region: String, city: String) = viewModelScope.launch {
-        val place = Place(country = country.trim(), region = region.trim(), city = city.trim(), source = PlaceSource.MANUAL)
+    fun setPlace(ids: Set<Long>, country: String, region: String, city: String, address: String = "") = viewModelScope.launch {
+        val place = Place(country = country.trim(), region = region.trim(), city = city.trim(),
+            address = address.trim(), source = PlaceSource.MANUAL)
         ids.forEach { repo.setPlace(it, place) }
         clearSelection()
     }
@@ -282,6 +291,7 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
     companion object {
         const val UNKNOWN_PLACE = "Somewhere"
         const val UNTAGGED = "No tag"
+        const val UNRATED = "Not rated"
 
         /**
          * Flattens notes into headers + notes. Place: Country → City (two levels;
@@ -307,6 +317,16 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
                             }
                             if (cityKey !in collapsed) inCity.forEach { add(FeedItem.Note(it, cityKey)) }
                         }
+                }
+            }
+            GroupBy.RATING -> buildList {
+                (5 downTo 0).forEach { stars ->
+                    val inGroup = notes.filter { it.rating == stars }
+                    if (inGroup.isEmpty()) return@forEach
+                    val key = "rating:$stars"
+                    val title = if (stars == 0) UNRATED else "★".repeat(stars) + "☆".repeat(5 - stars)
+                    add(FeedItem.Header(GroupHeader(key, title, 0, inGroup.size)))
+                    if (key !in collapsed) inGroup.forEach { add(FeedItem.Note(it, key)) }
                 }
             }
             GroupBy.TAG -> buildList {

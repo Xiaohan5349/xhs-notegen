@@ -17,7 +17,7 @@ import com.xiaohan.xhsnotegen.data.local.entity.*
         TagEntity::class,
         NoteTagEntity::class,
     ],
-    version = 2,
+    version = 3,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -50,6 +50,15 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v2 → v3: star rating on notes; district + full street address on places. */
+        val MIGRATION_2_3 = object : Migration(2, 3) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `note_drafts` ADD COLUMN `rating` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `food_info` ADD COLUMN `district` TEXT")
+                db.execSQL("ALTER TABLE `food_info` ADD COLUMN `address` TEXT")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -60,7 +69,7 @@ abstract class AppDatabase : RoomDatabase() {
                 // No destructive fallback: a schema change without a Migration
                 // must fail loudly in testing instead of silently wiping every
                 // user's drafts in production.
-                .addMigrations(MIGRATION_1_2)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3)
                 .build().also { INSTANCE = it }
             }
     }

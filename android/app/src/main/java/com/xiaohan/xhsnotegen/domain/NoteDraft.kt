@@ -17,6 +17,8 @@ data class NoteDraft(
     val updatedAt: Long = System.currentTimeMillis(),
     val foodInfo: FoodInfo = FoodInfo(),
     val tags: List<NoteTag> = emptyList(),
+    /** Your 1–5 star rating; 0 = not rated. */
+    val rating: Int = 0,
 ) {
     val selectedVariant: NoteVariant?
         get() = variants.getOrNull(selectedVariantIndex)

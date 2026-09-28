@@ -26,10 +26,12 @@ interface FoodInfoDao {
 
     @Query(
         "UPDATE food_info SET country = :country, region = :region, city = :city, " +
-            "latitude = :latitude, longitude = :longitude, place_source = :source WHERE draft_id = :draftId"
+            "latitude = :latitude, longitude = :longitude, place_source = :source, " +
+            "district = :district, address = :address WHERE draft_id = :draftId"
     )
     suspend fun setPlace(
         draftId: Long, country: String?, region: String?, city: String?,
         latitude: Double?, longitude: Double?, source: String?,
+        district: String?, address: String?,
     )
 }

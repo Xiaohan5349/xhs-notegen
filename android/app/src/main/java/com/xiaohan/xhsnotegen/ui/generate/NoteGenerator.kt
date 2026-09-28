@@ -52,6 +52,7 @@ object NoteGenerator {
                 photoCount = images.size,
                 photosHidden = !config.vision && draft.photoUris.isNotEmpty(),
                 styleInstruction = { PromptStore.styleInstruction(context, it) },
+                rating = draft.rating,
             ),
             imagesBase64 = images,
             styles = styles,

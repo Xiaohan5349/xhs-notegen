@@ -29,4 +29,7 @@ interface NoteDraftDao {
 
     @Query("UPDATE note_drafts SET status = :status, updated_at = :now WHERE id IN (:ids)")
     suspend fun setStatus(ids: List<Long>, status: String, now: Long = System.currentTimeMillis())
+
+    @Query("UPDATE note_drafts SET rating = :rating WHERE id IN (:ids)")
+    suspend fun setRating(ids: List<Long>, rating: Int)
 }

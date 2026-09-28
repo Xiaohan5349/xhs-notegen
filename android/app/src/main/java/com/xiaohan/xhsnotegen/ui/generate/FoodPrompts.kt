@@ -107,6 +107,7 @@ object FoodPrompts {
         /** The note has photos but the model can't see images (text-only model). */
         photosHidden: Boolean = false,
         styleInstruction: (NoteStyle) -> String = ::defaultStyleInstruction,
+        rating: Int = 0,
     ): String = buildString {
         if (voiceSamples.isNotEmpty()) {
             appendLine("## 我以前写的几篇（学我的语气和用词习惯，不要抄内容）")
@@ -126,6 +127,7 @@ object FoodPrompts {
         if (date != null) appendLine("时间：${date.spoken}")
         if (foodInfo.tasteNotes.isNotBlank()) appendLine("味道（我的原话）：${foodInfo.tasteNotes.trim()}")
         if (foodInfo.priceOrRating.isNotBlank()) appendLine("价格/评分（我的原话）：${foodInfo.priceOrRating.trim()}")
+        if (rating in 1..5) appendLine("我给这顿饭打分：$rating/5（语气要和分数一致；正文里不要写出星级或分数）")
         if (foodInfo.vibeNotes.isNotBlank()) appendLine("环境（我的原话）：${foodInfo.vibeNotes.trim()}")
         if (foodInfo.personalNotes.isNotBlank()) appendLine("其他想说的（我的原话）：${foodInfo.personalNotes.trim()}")
         if (photoCount > 0) appendLine("照片：$photoCount 张，附在后面。")

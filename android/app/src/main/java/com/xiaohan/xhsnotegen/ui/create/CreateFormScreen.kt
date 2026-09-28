@@ -38,6 +38,8 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.xiaohan.xhsnotegen.domain.NoteStyle
 import com.xiaohan.xhsnotegen.ui.components.ModelChip
+import com.xiaohan.xhsnotegen.ui.components.RatingBar
+import com.xiaohan.xhsnotegen.ui.components.ratingWords
 import com.xiaohan.xhsnotegen.ui.components.SectionCard
 import com.xiaohan.xhsnotegen.ui.components.SoftTextField
 import com.xiaohan.xhsnotegen.ui.components.dashedBorder
@@ -59,6 +61,7 @@ fun CreateFormScreen(
     val isImporting by viewModel.isImporting.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
     val photoPlace by viewModel.photoPlace.collectAsState()
+    val rating by viewModel.rating.collectAsState()
     val canUnlockPlaces by viewModel.canUnlockPhotoPlaces.collectAsState()
     val placePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
         // Whatever was granted, try again; without access it just offers nothing.
@@ -220,7 +223,7 @@ fun CreateFormScreen(
                 photoPlace?.takeIf { it.isKnown }?.let { place ->
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Icon(Icons.Outlined.Place, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.secondary)
-                        Text("${place.label} · from photo", style = MaterialTheme.typography.bodySmall,
+                        Text("${place.fullAddress} · from photo", style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -284,6 +287,16 @@ fun CreateFormScreen(
                 title = "In your own words",
                 subtitle = "Optional, but this is what makes it sound like you — your phrasing is kept almost as-is.",
             ) {
+                Column {
+                    Text("Your rating", style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        RatingBar(rating, onRate = viewModel::setRating)
+                        Spacer(Modifier.width(8.dp))
+                        Text(ratingWords(rating), style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
                 SoftTextField(
                     value = foodInfo.tasteNotes,
                     onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(tasteNotes = it)) },

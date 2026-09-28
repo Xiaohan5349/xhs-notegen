@@ -38,6 +38,8 @@ import com.xiaohan.xhsnotegen.domain.NoteDraft
 import com.xiaohan.xhsnotegen.domain.NoteStatus
 import com.xiaohan.xhsnotegen.domain.Place
 import com.xiaohan.xhsnotegen.ui.components.EmptyState
+import com.xiaohan.xhsnotegen.ui.components.CardStars
+import com.xiaohan.xhsnotegen.ui.components.RatingDialog
 import com.xiaohan.xhsnotegen.ui.components.StatusPill
 import com.xiaohan.xhsnotegen.ui.publish.XhsAuthStore
 import com.xiaohan.xhsnotegen.ui.theme.Backdrop
@@ -49,6 +51,7 @@ private sealed interface HomeDialog {
     data class Tags(val ids: Set<Long>) : HomeDialog
     data class SetPlace(val ids: Set<Long>) : HomeDialog
     data class Delete(val ids: Set<Long>) : HomeDialog
+    data class Rate(val ids: Set<Long>) : HomeDialog
     data object ManageTags : HomeDialog
 }
 
@@ -108,6 +111,7 @@ fun DraftListScreen(
                         onTags = { dialog = HomeDialog.Tags(selection) },
                         onStatus = { viewModel.setStatus(selection, it) },
                         onPlace = { dialog = HomeDialog.SetPlace(selection) },
+                        onRate = { dialog = HomeDialog.Rate(selection) },
                         onDelete = { dialog = HomeDialog.Delete(selection) },
                     )
                 } else {
@@ -196,6 +200,9 @@ fun DraftListScreen(
             },
             snackbarHost = { SnackbarHost(snackbarHostState) },
             containerColor = Color.Transparent,
+            // A transparent container gives no content color, so text would fall back
+            // to black — invisible in dark themes. Use the theme's text color.
+            contentColor = MaterialTheme.colorScheme.onBackground,
         ) { padding ->
             LazyVerticalStaggeredGrid(
                 columns = StaggeredGridCells.Fixed(2),
@@ -210,7 +217,7 @@ fun DraftListScreen(
                         Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
                             FilterRow(state.filter, state.counts, viewModel::setFilter)
                             if (state.tags.isNotEmpty()) TagFilterRow(state, viewModel::setTagFilter)
-                            GroupRow(state, organizing, onGroupBy = viewModel::setGroupBy, onOrganize = { viewModel.organize() })
+                            GroupRow(state, organizing, onGroupBy = viewModel::toggleGroupBy, onOrganize = { viewModel.organize() })
                         }
                     }
                 }
@@ -267,6 +274,8 @@ fun DraftListScreen(
                                 onLongClick = { viewModel.toggleSelected(draft.id) },
                                 onTags = { dialog = HomeDialog.Tags(setOf(draft.id)) },
                                 onPlace = { dialog = HomeDialog.SetPlace(setOf(draft.id)) },
+                                onRate = { dialog = HomeDialog.Rate(setOf(draft.id)) },
+                                onQuickRate = { viewModel.setRating(setOf(draft.id), it) },
                                 onStatus = { viewModel.setStatus(setOf(draft.id), it) },
                                 onDelete = { dialog = HomeDialog.Delete(setOf(draft.id)) },
                             )
@@ -296,7 +305,13 @@ fun DraftListScreen(
         is HomeDialog.SetPlace -> PlaceDialog(
             noteCount = d.ids.size,
             initial = state.drafts.firstOrNull { it.id in d.ids }?.foodInfo?.place?.takeIf { d.ids.size == 1 } ?: Place(),
-            onSave = { country, region, city -> viewModel.setPlace(d.ids, country, region, city) },
+            onSave = { country, region, city, address -> viewModel.setPlace(d.ids, country, region, city, address) },
+            onDismiss = { dialog = null },
+        )
+        is HomeDialog.Rate -> RatingDialog(
+            noteCount = d.ids.size,
+            initial = state.drafts.filter { it.id in d.ids }.map { it.rating }.distinct().singleOrNull() ?: 0,
+            onSave = { viewModel.setRating(d.ids, it) },
             onDismiss = { dialog = null },
         )
         is HomeDialog.Delete -> ConfirmDeleteDialog(
@@ -329,6 +344,7 @@ private fun SelectionBar(
     onTags: () -> Unit,
     onStatus: (NoteStatus) -> Unit,
     onPlace: () -> Unit,
+    onRate: () -> Unit,
     onDelete: () -> Unit,
 ) {
     var menu by remember { mutableStateOf(false) }
@@ -338,6 +354,7 @@ private fun SelectionBar(
         actions = {
             if (!allSelected) IconButton(onClick = onSelectAll) { Icon(Icons.Outlined.SelectAll, "Select all") }
             IconButton(onClick = onTags) { Icon(Icons.Outlined.Label, "Tags") }
+            IconButton(onClick = onRate) { Icon(Icons.Outlined.StarOutline, "Rate") }
             IconButton(onClick = onDelete) { Icon(Icons.Outlined.Delete, "Delete") }
             Box {
                 IconButton(onClick = { menu = true }) { Icon(Icons.Outlined.MoreVert, "More") }
@@ -439,7 +456,7 @@ private fun GroupRow(
         Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text("Group", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(8.dp))
-            GroupBy.entries.forEach { g ->
+            GroupBy.entries.filter { it != GroupBy.NONE }.forEach { g ->
                 val on = g == state.groupBy
                 Text(
                     g.label,
@@ -526,6 +543,8 @@ private fun NoteCard(
     onLongClick: () -> Unit,
     onTags: () -> Unit,
     onPlace: () -> Unit,
+    onRate: () -> Unit,
+    onQuickRate: (Int) -> Unit,
     onStatus: (NoteStatus) -> Unit,
     onDelete: () -> Unit,
 ) {
@@ -593,6 +612,12 @@ private fun NoteCard(
             Column(Modifier.padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 4.dp)) {
                 Text(title, style = MaterialTheme.typography.titleSmall, maxLines = 2,
                     overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(end = 8.dp))
+                // Always visible; tap a star to rate without opening the note.
+                CardStars(
+                    rating = draft.rating,
+                    onRate = if (selecting) null else onQuickRate,
+                    modifier = Modifier.padding(top = 2.dp).offset(x = (-5).dp),
+                )
                 if (draft.tags.isNotEmpty()) {
                     Text(
                         draft.tags.joinToString(" ") { "#${it.name}" },
@@ -626,6 +651,8 @@ private fun NoteCard(
                                 onClick = { showMenu = false; onTags() })
                             DropdownMenuItem(text = { Text("Place…") }, leadingIcon = { Icon(Icons.Outlined.Place, null) },
                                 onClick = { showMenu = false; onPlace() })
+                            DropdownMenuItem(text = { Text("Rate…") }, leadingIcon = { Icon(Icons.Outlined.StarOutline, null) },
+                                onClick = { showMenu = false; onRate() })
                             HorizontalDivider()
                             StatusMenuItems { showMenu = false; onStatus(it) }
                             HorizontalDivider()

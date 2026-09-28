@@ -117,12 +117,13 @@ private fun TagRow(name: String, state: ToggleableState, note: String?, onClick:
 fun PlaceDialog(
     noteCount: Int,
     initial: Place,
-    onSave: (country: String, region: String, city: String) -> Unit,
+    onSave: (country: String, region: String, city: String, address: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
     var country by remember { mutableStateOf(initial.country) }
     var region by remember { mutableStateOf(initial.region) }
     var city by remember { mutableStateOf(initial.city) }
+    var address by remember { mutableStateOf(initial.address) }
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Outlined.Place, null) },
@@ -133,7 +134,8 @@ fun PlaceDialog(
                     Triple("Country", country) { v: String -> country = v },
                     Triple("Province / state", region) { v: String -> region = v },
                     Triple("City", city) { v: String -> city = v },
-                ).forEach { (label, value, set) ->
+                ).plus(if (noteCount == 1) listOf(Triple("Street address (optional)", address) { v: String -> address = v }) else emptyList())
+                .forEach { (label, value, set) ->
                     TextField(
                         value = value, onValueChange = set, label = { Text(label) },
                         singleLine = true, modifier = Modifier.fillMaxWidth(),
@@ -145,7 +147,7 @@ fun PlaceDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onSave(country, region, city); onDismiss() },
+            TextButton(onClick = { onSave(country, region, city, address); onDismiss() },
                 enabled = country.isNotBlank() || city.isNotBlank()) { Text("Save") }
         },
         dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },

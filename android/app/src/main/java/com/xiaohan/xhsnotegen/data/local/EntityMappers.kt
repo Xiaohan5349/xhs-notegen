@@ -21,6 +21,7 @@ fun NoteDraftEntity.toDomain(foodInfo: FoodInfo? = null): NoteDraft = NoteDraft(
     createdAt = createdAt,
     updatedAt = updatedAt,
     foodInfo = foodInfo ?: FoodInfo(),
+    rating = rating,
 )
 
 fun NoteDraft.toEntity(): NoteDraftEntity = NoteDraftEntity(
@@ -37,6 +38,7 @@ fun NoteDraft.toEntity(): NoteDraftEntity = NoteDraftEntity(
     styleLabel = styleLabel,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    rating = rating.coerceIn(0, 5),
 )
 
 // ---- FoodInfo ----
@@ -54,6 +56,8 @@ fun FoodInfoEntity.toDomain(): FoodInfo = FoodInfo(
         country = country.orEmpty(),
         region = region.orEmpty(),
         city = city.orEmpty(),
+        district = district.orEmpty(),
+        address = address.orEmpty(),
         latitude = latitude,
         longitude = longitude,
         source = PlaceSource.fromKey(placeSource),
@@ -76,6 +80,8 @@ fun FoodInfo.toEntity(draftId: Long): FoodInfoEntity = FoodInfoEntity(
     latitude = place.latitude,
     longitude = place.longitude,
     placeSource = place.source?.key,
+    district = place.district.ifBlank { null },
+    address = place.address.ifBlank { null },
 )
 
 // ---- Tags ----

@@ -46,7 +46,9 @@ object PlaceResolver {
      * specific query first ("restaurant, area", then area, then restaurant).
      */
     suspend fun forNote(context: Context, info: FoodInfo): Place? {
-        info.place.takeIf { it.hasCoordinates }?.let { p ->
+        // Only real photo GPS is re-read from coordinates; coordinates that came
+        // from a text lookup would otherwise be relabelled as "from photo".
+        info.place.takeIf { it.hasCoordinates && it.source == PlaceSource.GPS }?.let { p ->
             fromCoordinates(context, p.latitude!!, p.longitude!!)?.let { return it }
         }
         val queries = listOf(
@@ -68,9 +70,17 @@ object PlaceResolver {
             country = countryName.orEmpty(),
             region = adminArea.orEmpty().takeIf { it != city }.orEmpty(),
             city = city.orEmpty(),
+            district = subLocality.orEmpty(),
+            // Same full line Samsung Gallery shows: street, number, district, city…
+            address = cleanAddress((0..maxAddressLineIndex).mapNotNull { getAddressLine(it) }.joinToString(" ")),
             latitude = lat, longitude = lng,
             source = source,
         )
         return place.takeIf { it.isKnown }
     }
+
+    /** Drops the postal-code suffix some geocoders append ("… 邮政编码: 200010", "Postal code: …"). */
+    internal fun cleanAddress(raw: String): String =
+        raw.replace(Regex("""\s*(邮政编码|郵遞區號|郵便番号|Postal code|Postcode|ZIP)\s*[:：]?\s*[\w-]+\s*$""", RegexOption.IGNORE_CASE), "")
+            .trim()
 }

@@ -88,7 +88,11 @@ class DraftRepository(private val db: AppDatabase) {
         draftId,
         place.country.ifBlank { null }, place.region.ifBlank { null }, place.city.ifBlank { null },
         place.latitude, place.longitude, place.source?.key,
+        place.district.ifBlank { null }, place.address.ifBlank { null },
     )
+
+    suspend fun setRating(ids: Collection<Long>, rating: Int) =
+        draftDao.setRating(ids.toList(), rating.coerceIn(0, 5))
 
     // ---- Tags ----
 

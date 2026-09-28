@@ -5,6 +5,9 @@ data class Place(
     val country: String = "",
     val region: String = "",   // province / state
     val city: String = "",
+    val district: String = "", // 区 / neighborhood
+    /** Full street address as the geocoder formats it, e.g. "中国上海市黄浦区南京东路100号". */
+    val address: String = "",
     val latitude: Double? = null,
     val longitude: Double? = null,
     val source: PlaceSource? = null,
@@ -15,6 +18,9 @@ data class Place(
     /** "Nanjing, Jiangsu, China" style label; empty when unknown. */
     val label: String
         get() = listOf(city, region, country).filter { it.isNotBlank() }.distinct().joinToString(", ")
+
+    /** Most detailed text available: the street address, else "city, region, country". */
+    val fullAddress: String get() = address.ifBlank { label }
 }
 
 /** How a note's place was found — manual edits are never overwritten by auto-organize. */

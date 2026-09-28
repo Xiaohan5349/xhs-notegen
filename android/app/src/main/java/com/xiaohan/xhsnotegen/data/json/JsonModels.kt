@@ -66,12 +66,15 @@ data class PlaceDto(
     val country: String? = null,
     val region: String? = null,
     val city: String? = null,
+    val district: String? = null,
+    val address: String? = null,
     val latitude: Double? = null,
     val longitude: Double? = null,
     val source: String? = null,
 ) {
     fun toDomain() = Place(
         country = country.orEmpty(), region = region.orEmpty(), city = city.orEmpty(),
+        district = district.orEmpty(), address = address.orEmpty(),
         latitude = latitude, longitude = longitude,
         // Exports store the enum name; tolerate the key too.
         source = PlaceSource.entries.firstOrNull { it.name == source } ?: PlaceSource.fromKey(source),
@@ -96,6 +99,7 @@ data class DraftDto(
     val updatedAt: Long? = null,
     val foodInfo: FoodInfoDto? = null,
     val tags: List<TagDto?>? = null,
+    val rating: Int? = null,
 ) {
     fun toDomain(): NoteDraft {
         val now = System.currentTimeMillis()
@@ -119,6 +123,7 @@ data class DraftDto(
             foodInfo = foodInfo?.toDomain() ?: FoodInfo(),
             tags = tags.orEmpty().mapNotNull { it?.name?.trim()?.takeIf { n -> n.isNotEmpty() } }
                 .distinct().map { NoteTag(name = it) },
+            rating = (rating ?: 0).coerceIn(0, 5),
         )
     }
 }

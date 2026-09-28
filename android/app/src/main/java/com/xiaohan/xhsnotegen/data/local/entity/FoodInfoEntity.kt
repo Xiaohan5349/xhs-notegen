@@ -34,4 +34,7 @@ data class FoodInfoEntity(
     @ColumnInfo(name = "latitude") val latitude: Double? = null,
     @ColumnInfo(name = "longitude") val longitude: Double? = null,
     @ColumnInfo(name = "place_source") val placeSource: String? = null,
+    // Added in schema v3 (MIGRATION_2_3).
+    @ColumnInfo(name = "district") val district: String? = null,
+    @ColumnInfo(name = "address") val address: String? = null,
 )

@@ -147,6 +147,15 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
         d.copy(selectedPublishPhotoUris = d.selectedPublishPhotoUris + (d.photoUris - d.selectedPublishPhotoUris.toSet()))
     }
 
+    fun setRating(value: Int) = mutate(debounce = false) { it.copy(rating = value.coerceIn(0, 5)) }
+
+    /** Place set by hand on this note; auto-organize won't overwrite it. */
+    fun setPlace(place: com.xiaohan.xhsnotegen.domain.Place) {
+        mutate(debounce = false) { it.copy(foodInfo = it.foodInfo.copy(place = place)) }
+        val id = _draft.value?.id ?: return
+        app.applicationScope.launch { repo.setPlace(id, place) }
+    }
+
     fun saveChanges() {
         mutate(debounce = false) {
             if (it.status == NoteStatus.SHARED) it else it.copy(status = NoteStatus.REVIEWED)

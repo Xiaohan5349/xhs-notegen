@@ -70,3 +70,14 @@ class OrganizeTest {
         assertEquals(listOf("面食"), d.tags.map { it.name })
     }
 }
+
+class AddressCleanTest {
+    @Test
+    fun `postal code suffix is removed`() {
+        org.junit.Assert.assertEquals("中国上海市黄浦区中华路168号",
+            com.xiaohan.xhsnotegen.util.PlaceResolver.cleanAddress("中国上海市黄浦区中华路168号 邮政编码: 200010"))
+        org.junit.Assert.assertEquals("1 Main St, Springfield, IL",
+            com.xiaohan.xhsnotegen.util.PlaceResolver.cleanAddress("1 Main St, Springfield, IL Postal code: 62701"))
+        org.junit.Assert.assertEquals("东京都港区", com.xiaohan.xhsnotegen.util.PlaceResolver.cleanAddress("东京都港区"))
+    }
+}
