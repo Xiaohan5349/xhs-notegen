@@ -9,6 +9,8 @@ data class FoodInfo(
     val priceOrRating: String = "",
     val vibeNotes: String = "",
     val personalNotes: String = "",
+    /** Resolved place for organizing (from photo GPS, the text above, or set by hand). */
+    val place: Place = Place(),
 ) {
     fun isValid(): Boolean = dishNames.isNotBlank() && restaurantName.isNotBlank()
 }

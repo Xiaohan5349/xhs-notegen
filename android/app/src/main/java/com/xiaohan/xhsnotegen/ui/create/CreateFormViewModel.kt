@@ -8,6 +8,8 @@ import com.xiaohan.xhsnotegen.XhsNoteGenApp
 import com.xiaohan.xhsnotegen.domain.*
 import com.xiaohan.xhsnotegen.util.ExifReader
 import com.xiaohan.xhsnotegen.util.ImageCleanup
+import com.xiaohan.xhsnotegen.util.PhotoLocation
+import com.xiaohan.xhsnotegen.util.PlaceResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -47,6 +49,17 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
     /** Set once the photos belong to a saved draft; until then they are ours to clean up. */
     private var saved = false
 
+    /** Local copy → the photo it came from (needed to read the original's GPS). */
+    private val originals = mutableMapOf<Uri, Uri>()
+
+    /** Place from photo GPS, when the permission allows reading it. */
+    private val _photoPlace = MutableStateFlow<Place?>(null)
+    val photoPlace: StateFlow<Place?> = _photoPlace.asStateFlow()
+
+    /** True when photos were added but their GPS can't be read without permission. */
+    private val _canUnlockPhotoPlaces = MutableStateFlow(false)
+    val canUnlockPhotoPlaces: StateFlow<Boolean> = _canUnlockPhotoPlaces.asStateFlow()
+
     init {
         viewModelScope.launch {
             _selectedStyle.value = styleRepo.resolveStyle(NoteType.FOOD.key)
@@ -70,7 +83,9 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
                 }
                 val failed = copies.count { it == null }
                 if (failed > 0) _photoMessage.value = "$failed photo(s) couldn't be read and were skipped."
+                accepted.zip(copies).forEach { (orig, copy) -> if (copy != null) originals[copy] = orig }
                 _photoUris.value = _photoUris.value + copies.filterNotNull()
+                resolvePhotoPlace()
 
                 // EXIF comes from the originals (still readable while the grant lasts),
                 // and only fills fields the user hasn't typed into.
@@ -85,6 +100,34 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
             }
         }
     }
+
+    /**
+     * Finds the place of the first photo that carries GPS. Needs photo access +
+     * media location (the picker strips GPS); without them, offers to unlock.
+     */
+    fun resolvePhotoPlace() {
+        if (_photoPlace.value != null) return
+        val app = getApplication<Application>()
+        if (!PhotoLocation.isGranted(app)) {
+            _canUnlockPhotoPlaces.value = _photoUris.value.isNotEmpty()
+            return
+        }
+        _canUnlockPhotoPlaces.value = false
+        viewModelScope.launch {
+            val latLng = withContext(Dispatchers.IO) {
+                _photoUris.value.firstNotNullOfOrNull { originals[it]?.let { o -> PhotoLocation.read(app, o) } }
+            } ?: return@launch
+            val place = PlaceResolver.fromCoordinates(app, latLng[0], latLng[1])
+                ?: Place(latitude = latLng[0], longitude = latLng[1], source = PlaceSource.GPS)
+            _photoPlace.value = place
+            val current = _foodInfo.value
+            if (current.location.isBlank() && place.city.isNotBlank()) {
+                _foodInfo.value = current.copy(location = place.city)
+            }
+        }
+    }
+
+    fun dismissPhotoPlaceOffer() { _canUnlockPhotoPlaces.value = false }
 
     fun removePhoto(uri: Uri) {
         _photoUris.value = _photoUris.value - uri
@@ -131,9 +174,18 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
                 status = NoteStatus.DRAFT,
                 photoUris = _photoUris.value.map { it.toString() },
                 styleLabel = _selectedStyle.value.key,
-                foodInfo = _foodInfo.value,
+                foodInfo = _foodInfo.value.copy(place = _photoPlace.value ?: Place()),
             )
-            return draftRepo.insert(draft).also { saved = true }
+            val id = draftRepo.insert(draft).also { saved = true }
+            // No photo GPS: work out the place from the text, without delaying generation.
+            if (_photoPlace.value?.isKnown != true) {
+                val app = getApplication<Application>()
+                val info = draft.foodInfo
+                this.app.applicationScope.launch {
+                    PlaceResolver.forNote(app, info)?.let { draftRepo.setPlace(id, it) }
+                }
+            }
+            return id
         } finally {
             _isSaving.value = false
         }

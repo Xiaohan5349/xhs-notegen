@@ -4,6 +4,14 @@
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
 
+    <!-- Optional, asked only when you choose to read places from photos: the photo
+         picker strips GPS, so reading where a photo was taken needs photo access
+         plus media location. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
+
     <!-- Android 11+ package visibility: without these, the XHS app is invisible
          to PackageManager and the manual handoff can never launch it. -->
     <queries>

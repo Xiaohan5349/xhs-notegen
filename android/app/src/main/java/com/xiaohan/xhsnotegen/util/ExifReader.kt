@@ -14,6 +14,7 @@ object ExifReader {
         val captureDate: String?,   // yyyy-MM-dd HH:mm format
         val location: String?,      // human-readable city/area
     )
+    // Note: photo-picker copies have GPS zeroed; see PhotoLocation for real coordinates.
 
     fun read(context: Context, uri: Uri): ExifData {
         return try {
@@ -58,6 +59,7 @@ object ExifReader {
     @Suppress("DEPRECATION") // the async overload is API 33+; this runs on Dispatchers.IO
     private fun readLocation(context: Context, exif: ExifInterface): String? {
         val latLong = exif.latLong ?: return null
+        if (PlaceResolver.isNullIsland(latLong[0], latLong[1])) return null // redacted by the photo picker
         return try {
             val addresses = Geocoder(context, Locale.getDefault())
                 .getFromLocation(latLong[0], latLong[1], 1)

@@ -50,6 +50,14 @@ fun FoodInfoEntity.toDomain(): FoodInfo = FoodInfo(
     priceOrRating = priceOrRating ?: "",
     vibeNotes = vibeNotes ?: "",
     personalNotes = personalNotes ?: "",
+    place = Place(
+        country = country.orEmpty(),
+        region = region.orEmpty(),
+        city = city.orEmpty(),
+        latitude = latitude,
+        longitude = longitude,
+        source = PlaceSource.fromKey(placeSource),
+    ),
 )
 
 fun FoodInfo.toEntity(draftId: Long): FoodInfoEntity = FoodInfoEntity(
@@ -62,7 +70,17 @@ fun FoodInfo.toEntity(draftId: Long): FoodInfoEntity = FoodInfoEntity(
     priceOrRating = priceOrRating.ifBlank { null },
     vibeNotes = vibeNotes.ifBlank { null },
     personalNotes = personalNotes.ifBlank { null },
+    country = place.country.ifBlank { null },
+    region = place.region.ifBlank { null },
+    city = place.city.ifBlank { null },
+    latitude = place.latitude,
+    longitude = place.longitude,
+    placeSource = place.source?.key,
 )
+
+// ---- Tags ----
+
+fun TagEntity.toDomain(): NoteTag = NoteTag(id = id, name = name)
 
 // ---- StylePreference ----
 

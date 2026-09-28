@@ -1,5 +1,21 @@
 # Changelog
 
+## v1.5.0 — 2026-09-27
+
+### Added
+- Tags: your own labels on notes (many per note), shown on cards and as filter chips next to Drafts / Ready / Posted; rename or delete them under ⋮ → Manage tags
+- Multi-select on the home screen: long-press a note (or ⋮ → Select), tap others, then tag, change status (draft / ready / posted), set a place or delete them all at once
+- Group the home screen by Place (Country → City, collapsible, with the province shown next to the city) or by Tag
+- Organize by place: finds a Country → Province → City for notes without one, from photo GPS when available, otherwise from the area and restaurant name (geocoded; place names in Chinese). Places set by hand are never overwritten; "Re-check all places" redoes the automatic ones
+- Read where photos were taken: optional photo permission on the create screen fills in the area from the photo's real GPS
+- Backups include each note's place and tags
+
+### Fixed
+- Photo location never worked with the Android photo picker: it strips GPS from the copies apps receive (verified — the date is kept, coordinates are zeroed). Locations are now read from the original photo when you allow photo access, and zeroed coordinates are no longer mistaken for a real place
+
+### Changed
+- Database schema v2 (place columns, tags) with a migration — existing notes are kept (verified on a v1 database)
+
 ## v1.4.0 — 2026-09-27
 
 ### Added

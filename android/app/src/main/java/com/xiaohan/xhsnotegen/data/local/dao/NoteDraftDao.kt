@@ -26,4 +26,7 @@ interface NoteDraftDao {
 
     @Query("DELETE FROM note_drafts WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("UPDATE note_drafts SET status = :status, updated_at = :now WHERE id IN (:ids)")
+    suspend fun setStatus(ids: List<Long>, status: String, now: Long = System.currentTimeMillis())
 }

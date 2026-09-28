@@ -9,7 +9,8 @@ Standalone Android app that generates Xiaohongshu food notes from photos using A
 - **Sounds like you** — prompts are tuned against typical "AI voice" tells, keep your own words, and learn from notes you've already reviewed or posted
 - **Review & edit** — switch styles, edit title (with the 20-character XHS limit), body and tags, rewrite one style or all four
 - **Publishing** straight to Xiaohongshu via the Creator API, or a guided manual handoff (text copied, photos saved in order, XHS opened)
-- **Food diary** — photo-feed home with filters (Drafts / Ready / Posted), import/export JSON backups
+- **Food diary** — photo-feed home with filters (Drafts / Ready / Posted), your own tags, multi-select actions, and grouping by place (Country → City) or tag; import/export JSON backups
+- **Organize by place** — each note gets a place from its photo's GPS (with your permission; the Android photo picker otherwise strips it) or from its area / restaurant name
 - **Themes** — six classic palettes (Tomato, Matcha, Blueberry, Sakura, Sesame, Latte) and three anime-inspired ones with drawn backdrops (Summer Sky, City Pop, Matsuri), each with System / Light / Dark mode
 
 ## Setup
@@ -58,7 +59,7 @@ Room schemas are exported to `android/app/schemas/` — commit them, and add a `
 
 ## How It Works
 
-1. Pick 1-20 food photos → EXIF auto-fills date/time/location
+1. Pick 1-20 food photos → EXIF fills the date/time; allow photo access to also fill the place from GPS
 2. Fill in dish names, restaurant, and — ideally — a few words of your own
 3. Gemini writes 4 diary-style variants in one request (photos are sent once)
 4. Review, edit, and choose which photos to post and in what order

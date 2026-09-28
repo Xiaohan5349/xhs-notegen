@@ -47,6 +47,7 @@ data class FoodInfoDto(
     val priceOrRating: String? = null,
     val vibeNotes: String? = null,
     val personalNotes: String? = null,
+    val place: PlaceDto? = null,
 ) {
     fun toDomain() = FoodInfo(
         dishNames = dishNames.orEmpty(),
@@ -57,8 +58,27 @@ data class FoodInfoDto(
         priceOrRating = priceOrRating.orEmpty(),
         vibeNotes = vibeNotes.orEmpty(),
         personalNotes = personalNotes.orEmpty(),
+        place = place?.toDomain() ?: Place(),
     )
 }
+
+data class PlaceDto(
+    val country: String? = null,
+    val region: String? = null,
+    val city: String? = null,
+    val latitude: Double? = null,
+    val longitude: Double? = null,
+    val source: String? = null,
+) {
+    fun toDomain() = Place(
+        country = country.orEmpty(), region = region.orEmpty(), city = city.orEmpty(),
+        latitude = latitude, longitude = longitude,
+        // Exports store the enum name; tolerate the key too.
+        source = PlaceSource.entries.firstOrNull { it.name == source } ?: PlaceSource.fromKey(source),
+    )
+}
+
+data class TagDto(val name: String? = null)
 
 /** One draft as found in an export file (field names match NoteDraft). */
 data class DraftDto(
@@ -75,6 +95,7 @@ data class DraftDto(
     val createdAt: Long? = null,
     val updatedAt: Long? = null,
     val foodInfo: FoodInfoDto? = null,
+    val tags: List<TagDto?>? = null,
 ) {
     fun toDomain(): NoteDraft {
         val now = System.currentTimeMillis()
@@ -96,6 +117,8 @@ data class DraftDto(
             createdAt = createdAt ?: now,
             updatedAt = updatedAt ?: now,
             foodInfo = foodInfo?.toDomain() ?: FoodInfo(),
+            tags = tags.orEmpty().mapNotNull { it?.name?.trim()?.takeIf { n -> n.isNotEmpty() } }
+                .distinct().map { NoteTag(name = it) },
         )
     }
 }

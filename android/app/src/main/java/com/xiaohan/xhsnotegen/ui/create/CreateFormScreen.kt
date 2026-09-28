@@ -41,6 +41,7 @@ import com.xiaohan.xhsnotegen.ui.components.ModelChip
 import com.xiaohan.xhsnotegen.ui.components.SectionCard
 import com.xiaohan.xhsnotegen.ui.components.SoftTextField
 import com.xiaohan.xhsnotegen.ui.components.dashedBorder
+import com.xiaohan.xhsnotegen.util.PhotoLocation
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -57,6 +58,13 @@ fun CreateFormScreen(
     val photoMessage by viewModel.photoMessage.collectAsState()
     val isImporting by viewModel.isImporting.collectAsState()
     val isSaving by viewModel.isSaving.collectAsState()
+    val photoPlace by viewModel.photoPlace.collectAsState()
+    val canUnlockPlaces by viewModel.canUnlockPhotoPlaces.collectAsState()
+    val placePermission = rememberLauncherForActivityResult(ActivityResultContracts.RequestMultiplePermissions()) {
+        // Whatever was granted, try again; without access it just offers nothing.
+        viewModel.dismissPhotoPlaceOffer()
+        viewModel.resolvePhotoPlace()
+    }
     val scope = rememberCoroutineScope()
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
@@ -208,6 +216,31 @@ fun CreateFormScreen(
                 }
                 photoMessage?.let {
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+                photoPlace?.takeIf { it.isKnown }?.let { place ->
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                        Icon(Icons.Outlined.Place, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.secondary)
+                        Text("${place.label} · from photo", style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+                if (canUnlockPlaces) {
+                    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.secondaryContainer) {
+                        Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                            Text("Read where these photos were taken?", style = MaterialTheme.typography.titleSmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer)
+                            Text(
+                                "Android hides photo locations from apps unless you allow photo access. " +
+                                    "The place is used to fill in the area and organize notes by city.",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSecondaryContainer,
+                            )
+                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Button(onClick = { placePermission.launch(PhotoLocation.permissions()) }) { Text("Allow") }
+                                TextButton(onClick = viewModel::dismissPhotoPlaceOffer) { Text("Not now") }
+                            }
+                        }
+                    }
                 }
             }
 
