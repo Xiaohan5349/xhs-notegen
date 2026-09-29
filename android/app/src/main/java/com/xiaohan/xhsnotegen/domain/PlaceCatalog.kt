@@ -41,7 +41,43 @@ object PlaceCatalog {
     /** Reads the list; also used by tests. */
     fun load(input: InputStream) {
         withData = parse(input.bufferedReader(Charsets.UTF_8).readLines())
+        index = null
     }
+
+    // ---- Showing stored (Chinese) names in the app language ----
+
+    private class Index(
+        val countries: Map<String, String>,
+        val regions: Map<Pair<String, String>, String>,
+        val cities: Map<Pair<String, String>, String>,
+    )
+
+    private var index: Index? = null
+
+    private fun index(): Index = index ?: run {
+        val countries = mutableMapOf<String, String>()
+        Locale.getISOCountries().forEach { code ->
+            val cn = Locale("", code).getDisplayCountry(Locale.SIMPLIFIED_CHINESE)
+            val en = Locale("", code).getDisplayCountry(Locale.ENGLISH)
+            if (cn.isNotBlank() && en.isNotBlank()) countries.putIfAbsent(cn, en)
+        }
+        val regions = mutableMapOf<Pair<String, String>, String>()
+        val cities = mutableMapOf<Pair<String, String>, String>()
+        withData.forEach { c ->
+            countries[c.name.cn] = c.name.en
+            c.cities.forEach { cities.putIfAbsent(c.name.cn to it.cn, it.en) }
+            c.regions.forEach { r ->
+                regions.putIfAbsent(c.name.cn to r.name.cn, r.name.en)
+                r.cities.forEach { cities.putIfAbsent(c.name.cn to it.cn, it.en) }
+            }
+        }
+        Index(countries, regions, cities).also { index = it }
+    }
+
+    /** Places are stored under Chinese names; these show them in the app language (unknown names stay as they are). */
+    fun countryName(cn: String, zh: Boolean): String = if (zh || cn.isBlank()) cn else index().countries[cn] ?: cn
+    fun regionName(country: String, cn: String, zh: Boolean): String = if (zh || cn.isBlank()) cn else index().regions[country to cn] ?: cn
+    fun cityName(country: String, cn: String, zh: Boolean): String = if (zh || cn.isBlank()) cn else index().cities[country to cn] ?: cn
 
     internal fun parse(lines: List<String>): List<CatalogCountry> {
         val out = mutableListOf<CatalogCountry>()

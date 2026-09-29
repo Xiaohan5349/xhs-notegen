@@ -24,4 +24,7 @@ data class NoteDraftEntity(
     @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis(),
     // Added in schema v3 (MIGRATION_2_3). 0 = not rated.
     @ColumnInfo(name = "rating", defaultValue = "0") val rating: Int = 0,
+    // Added in schema v5 (MIGRATION_4_5): "zh" / "en" = the language this note is written in;
+    // null = whatever its writing mode uses.
+    @ColumnInfo(name = "note_language") val noteLanguage: String? = null,
 )

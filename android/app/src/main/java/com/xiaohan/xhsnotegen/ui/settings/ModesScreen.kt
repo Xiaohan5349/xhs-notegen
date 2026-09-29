@@ -25,7 +25,6 @@ import com.xiaohan.xhsnotegen.domain.BuiltInModes
 import com.xiaohan.xhsnotegen.domain.FieldSlot
 import com.xiaohan.xhsnotegen.domain.NoteStyle
 import com.xiaohan.xhsnotegen.domain.PromptField
-import com.xiaohan.xhsnotegen.domain.TagTree
 import com.xiaohan.xhsnotegen.domain.PromptLanguage
 import com.xiaohan.xhsnotegen.domain.WritingMode
 import com.xiaohan.xhsnotegen.i18n.LanguageStore
@@ -66,9 +65,8 @@ fun ModesScreen(onNavigateBack: () -> Unit, onEdit: (String) -> Unit) {
             item {
                 Text(
                     tr(
-                        "Each mode has its own form, AI prompt, note language, photo limit and root tag. Every note you write in a mode gets its root tag, " +
-                            "so notes are grouped by kind automatically.",
-                        "每个模式有自己的表单、AI 提示词、笔记语言、照片上限和根标签。在某个模式下写的笔记会自动带上它的根标签，按类别归好。",
+                        "Each mode has its own form, AI prompt, note language and photo limit. On the home screen you can group notes by mode.",
+                        "每个模式有自己的表单、AI 提示词、笔记语言和照片上限。在首页可以按模式给笔记分组。",
                     ),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -89,7 +87,6 @@ fun ModesScreen(onNavigateBack: () -> Unit, onEdit: (String) -> Unit) {
                         Text(m.name, style = MaterialTheme.typography.titleMedium)
                         Text(
                             listOfNotNull(
-                                m.rootTag.takeIf { it.isNotBlank() }?.let { TagTree.parsePath(it).joinToString(" › ") },
                                 if (m.builtIn) (if (ModeStore.isCustomized(m.key)) tr("Built-in · edited", "内置 · 已修改") else tr("Built-in", "内置")) else tr("Your mode", "自定义"),
                                 m.language.label,
                             ).joinToString(" · "),
@@ -173,11 +170,6 @@ fun ModeEditorScreen(modeKey: String, onNavigateBack: () -> Unit) {
         ) {
             SectionCard(title = tr("Basics", "基本")) {
                 Field(tr("Name", "名称"), draft.name) { update(draft.copy(name = it)) }
-                Field(tr("Root tag", "根标签"), draft.rootTag,
-                    support = tr(
-                        "Added to every note in this mode. Use / for more levels, e.g. 生活/咖啡",
-                        "会加到这个模式的每篇笔记上。用 / 分多级，比如 生活/咖啡",
-                    )) { update(draft.copy(rootTag = it)) }
             }
 
             SectionCard(title = tr("Notes", "笔记"), subtitle = tr("Separate from the app language", "和界面语言分开设置")) {
@@ -222,12 +214,14 @@ fun ModeEditorScreen(modeKey: String, onNavigateBack: () -> Unit) {
             ) {
                 FieldSlot.entries.forEach { slot ->
                     val spec = draft.field(slot)
+                    // The hint and AI name being edited belong to the note language's prompt.
+                    val pf = draft.prompt.fields[slot] ?: BuiltInModes.genericPromptField(slot, draft.language)
                     Text(slotName(slot), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.primary)
                     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                         Field(tr("Label", "标签"), spec.label, Modifier.weight(1.4f)) { update(draft.copy(labels = draft.labels + (slot to it))) }
-                        Field(tr("For AI", "给 AI"), spec.promptKey, Modifier.weight(1f)) { setPromptField(draft, slot, PromptField(it, spec.hint), ::update) }
+                        Field(tr("For AI", "给 AI"), pf.key, Modifier.weight(1f)) { setPromptField(draft, slot, PromptField(it, pf.hint), ::update) }
                     }
-                    Field(tr("Hint", "提示"), spec.hint) { setPromptField(draft, slot, PromptField(spec.promptKey, it), ::update) }
+                    Field(tr("Hint", "提示"), pf.hint) { setPromptField(draft, slot, PromptField(pf.key, it), ::update) }
                 }
             }
 
@@ -271,7 +265,7 @@ fun ModeEditorScreen(modeKey: String, onNavigateBack: () -> Unit) {
             onDismissRequest = { confirm = null },
             icon = { Icon(Icons.Outlined.RestartAlt, null) },
             title = { Text(tr("Reset ${mode.name}?", "把「${mode.name}」恢复默认？")) },
-            text = { Text(tr("Name, root tag, form labels, note language, photo limit, both prompts and styles go back to the app's defaults.", "名称、根标签、表单标签、笔记语言、照片上限、两种语言的提示词和风格都会恢复成默认。")) },
+            text = { Text(tr("Name, form labels, note language, photo limit, both prompts and styles go back to the app's defaults.", "名称、表单标签、笔记语言、照片上限、两种语言的提示词和风格都会恢复成默认。")) },
             confirmButton = {
                 TextButton(onClick = {
                     ModeStore.resetBuiltIn(modeKey)
@@ -285,7 +279,7 @@ fun ModeEditorScreen(modeKey: String, onNavigateBack: () -> Unit) {
             onDismissRequest = { confirm = null },
             icon = { Icon(Icons.Outlined.Delete, null) },
             title = { Text(tr("Delete ${mode.name}?", "删除「${mode.name}」？")) },
-            text = { Text(tr("Notes written in this mode are kept (they'll use the Food prompt if rewritten), and so is the ${mode.rootTag} tag.", "这个模式下写的笔记会保留（重写时改用美食提示词），${mode.rootTag} 标签也会保留。")) },
+            text = { Text(tr("Notes written in this mode are kept (they'll use the Food prompt if rewritten).", "这个模式下写的笔记会保留（重写时改用美食提示词）。")) },
             confirmButton = {
                 TextButton(onClick = { confirm = null; ModeStore.delete(modeKey); onNavigateBack() }) {
                     Text(tr("Delete", "删除"), color = MaterialTheme.colorScheme.error)

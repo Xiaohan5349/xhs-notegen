@@ -1,5 +1,7 @@
 package com.xiaohan.xhsnotegen.domain
 
+import com.xiaohan.xhsnotegen.i18n.LanguageStore
+
 /** Where a meal happened, in a Country → Region → City hierarchy. */
 data class Place(
     val country: String = "",
@@ -19,9 +21,22 @@ data class Place(
     val label: String
         get() = listOf(city, region, country).filter { it.isNotBlank() }.distinct().joinToString(", ")
 
-    /** For showing: "南京市 · 江苏省 · 中国" (each level once). */
+    /** The same place with its names in the app language (stored names are Chinese). */
+    fun localized(zh: Boolean): Place = if (zh) this else copy(
+        country = PlaceCatalog.countryName(country, false),
+        region = PlaceCatalog.regionName(country, region, false),
+        city = PlaceCatalog.cityName(country, city, false),
+    )
+
+    /** For showing, in the app language: "南京市 · 江苏省 · 中国" / "Nanjing · Jiangsu · China" (each level once). */
     val display: String
-        get() = listOf(city, region, country).filter { it.isNotBlank() }.distinct().joinToString(" · ")
+        get() = localized(LanguageStore.isZh).let { p -> listOf(p.city, p.region, p.country).filter { it.isNotBlank() }.distinct().joinToString(" · ") }
+
+    /**
+     * For showing: in Chinese the street address as the geocoder wrote it; in English the place name
+     * (the address is Chinese text, so it stays in the edit dialog).
+     */
+    val fullAddressDisplay: String get() = if (LanguageStore.isZh) address.ifBlank { display } else display.ifBlank { address }
 
     /** Most detailed text available: the street address, else "city, region, country". */
     val fullAddress: String get() = address.ifBlank { label }

@@ -31,13 +31,13 @@ android {
         applicationId = "com.xiaohan.xhsnotegen"
         minSdk = 29
         targetSdk = 35
-        versionCode = 11
-        versionName = "1.9.0"
+        versionCode = 12
+        versionName = "1.10.0"
     }
 
     buildTypes {
         debug {
-            // Installs next to the release app ("食记 Debug") instead of replacing it,
+            // Installs next to the release app ("浮生拾遗 Debug") instead of replacing it,
             // so testing never touches the real app's notes.
             applicationIdSuffix = ".debug"
             versionNameSuffix = "-debug"
@@ -97,7 +97,7 @@ dependencies {
     testImplementation(libs.junit)
 }
 base {
-    archivesName.set("食记-${android.defaultConfig.versionName}")
+    archivesName.set("浮生拾遗-${android.defaultConfig.versionName}")
 }
 
 // Release guard: a versionCode LOWER than the last release can't install as an

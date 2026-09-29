@@ -82,6 +82,17 @@ object ModeStore {
         return get(mode.key)
     }
 
+    /**
+     * Names of the root tags modes used to put on every note (built-in ones plus any you
+     * set yourself), so they can be cleaned up once. Read from what's stored, since the
+     * setting itself is gone.
+     */
+    fun legacyRootTagNames(): Set<String> {
+        val builtIn = listOf("美食", "旅行", "穿搭", "美妆护肤", "家居", "运动", "育儿", "书影音")
+        val stored = overrides().values.mapNotNull { it.rootTag } + customs().mapNotNull { it.rootTag }
+        return (builtIn + stored).map { it.trim() }.filter { it.isNotEmpty() && '/' !in it }.toSet()
+    }
+
     private fun reload() {
         val o = overrides()
         val zh = LanguageStore.isZh

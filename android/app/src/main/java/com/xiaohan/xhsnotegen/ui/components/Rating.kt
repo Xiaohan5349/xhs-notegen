@@ -91,7 +91,7 @@ fun RatingDialog(noteCount: Int, initial: Int, onSave: (Int) -> Unit, onDismiss:
     AlertDialog(
         onDismissRequest = onDismiss,
         icon = { Icon(Icons.Filled.Star, null, tint = StarColor) },
-        title = { Text(if (noteCount == 1) tr("Rate this meal", "给这篇打分") else tr("Rate $noteCount meals", "给 $noteCount 篇打分")) },
+        title = { Text(if (noteCount == 1) tr("Rate this note", "给这篇打分") else tr("Rate $noteCount notes", "给 $noteCount 篇打分")) },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
                 RatingBar(value, onRate = { value = it }, size = 36.dp)

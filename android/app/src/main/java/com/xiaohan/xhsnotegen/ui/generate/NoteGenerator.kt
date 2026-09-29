@@ -43,8 +43,10 @@ object NoteGenerator {
         }
 
         onPhase(Phase.WRITING)
-        val mode = ModeStore.get(draft.type)
-        val voiceSamples = repo.getVoiceSamples(excludeId = draft.id, mode = draft.type)
+        // The note's own language wins over its mode's default.
+        val baseMode = ModeStore.get(draft.type)
+        val mode = draft.language?.let { baseMode.copy(language = it) } ?: baseMode
+        val voiceSamples = repo.getVoiceSamples(excludeId = draft.id, mode = draft.type, language = mode.language)
         return AiWriter.generateVariants(
             config = config,
             systemPrompt = FoodPrompts.systemPrompt(mode.instructions, mode.language),

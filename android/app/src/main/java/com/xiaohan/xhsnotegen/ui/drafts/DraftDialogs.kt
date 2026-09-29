@@ -35,14 +35,12 @@ fun TagsDialog(
     noteCount: Int,
     tags: List<NoteTag>,
     stateOf: (Long) -> Boolean?,
-    /** Suggested root for new tags (the notes' mode root tag), if any. */
-    defaultParent: NoteTag?,
     onApply: (add: List<String>, remove: List<Long>, newParentId: Long?) -> Unit,
     onDismiss: () -> Unit,
 ) {
     val byId = tags.associateBy { it.id }
     val tree = remember(tags) { TagTree.ordered(tags) }
-    var newParent by remember { mutableStateOf(defaultParent) }
+    var newParent by remember { mutableStateOf<NoteTag?>(null) }
     // null = leave as is (mixed), true = add to all, false = remove from all
     val choices = remember { mutableStateMapOf<Long, Boolean?>().apply { tags.forEach { put(it.id, stateOf(it.id)) } } }
     val initial = remember { tags.associate { it.id to stateOf(it.id) } }
@@ -93,8 +91,7 @@ fun TagsDialog(
                 if (newTags.isNotEmpty() && tags.isNotEmpty()) {
                     Text(tr("New tags go under", "新标签放在"), style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    // The notes' root tag first, then the rest of the tree.
-                    val options = listOfNotNull(defaultParent) + tree.map { it.first }.filter { it.id != defaultParent?.id }
+                    val options = tree.map { it.first }
                     androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         item {
                             FilterChip(selected = newParent == null, onClick = { newParent = null }, label = { Text(tr("Top level", "顶层")) })

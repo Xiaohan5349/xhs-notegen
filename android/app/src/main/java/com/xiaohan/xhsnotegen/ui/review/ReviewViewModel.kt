@@ -168,6 +168,9 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
 
     // ---- AI ----
 
+    /** The language the next rewrite is written in; the notes already written are not changed. */
+    fun setLanguage(l: com.xiaohan.xhsnotegen.domain.PromptLanguage) = mutate(debounce = false) { it.copy(language = l) }
+
     /** Rewrites every style. Replaces all variants, including manual edits. */
     fun regenerateAll() {
         val d = _draft.value ?: return

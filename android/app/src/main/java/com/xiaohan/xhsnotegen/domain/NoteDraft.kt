@@ -20,6 +20,8 @@ data class NoteDraft(
     val tags: List<NoteTag> = emptyList(),
     /** Your 1–5 star rating; 0 = not rated. */
     val rating: Int = 0,
+    /** The language this note is written in; null = its writing mode's language. */
+    val language: PromptLanguage? = null,
 ) {
     val selectedVariant: NoteVariant?
         get() = variants.getOrNull(selectedVariantIndex)

@@ -16,7 +16,7 @@ class ModesTest {
     fun `every built-in mode is complete and distinct`() {
         val all = BuiltInModes.all
         assertEquals(all.size, all.map { it.key }.distinct().size)
-        assertEquals(all.size, all.map { it.rootTag }.distinct().size)
+        assertEquals(all.size, all.map { it.name }.distinct().size)
         all.forEach { m ->
             FieldSlot.entries.forEach { assertTrue("${m.key} ${it}", m.field(it).promptKey.isNotBlank()) }
             NoteStyle.entries.forEach { assertTrue(m.style(it).isNotBlank()) }
@@ -41,9 +41,9 @@ class ModesTest {
 
     @Test
     fun `stored mode edits merge over defaults`() {
+        // A stored root tag from v1.9 and earlier is ignored now.
         val dto = JsonCodec.gson.fromJson("""{"key":"travel","rootTag":"出游","fields":{"PLACE":{"label":"City"}}}""", ModeDto::class.java)
         val m = dto.toDomain(BuiltInModes.travel)
-        assertEquals("出游", m.rootTag)
         assertEquals("City", m.field(FieldSlot.PLACE).label)
         assertEquals("地方", m.field(FieldSlot.PLACE).promptKey)      // untouched parts keep defaults
         assertEquals(BuiltInModes.travel.instructions, m.instructions)
@@ -62,7 +62,7 @@ class ModesTest {
             NoteDraft(id = 13, tags = listOf(coffee)),
             NoteDraft(id = 14),
         )
-        val feed = buildFeed(notes, GroupBy.TAG, emptySet(), listOf(travel, kyoto, beach, coffee)).map {
+        val feed = buildFeed(notes, GroupBy.TAG, emptySet(), listOf(travel, kyoto, beach, coffee), zh = true).map {
             when (it) { is FeedItem.Header -> "${"  ".repeat(it.header.level)}[${it.header.title} ${it.header.count}]"; is FeedItem.Note -> "${it.draft.id}" }
         }
         assertEquals(

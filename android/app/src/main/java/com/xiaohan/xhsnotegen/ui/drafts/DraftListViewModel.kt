@@ -2,6 +2,7 @@ package com.xiaohan.xhsnotegen.ui.drafts
 
 import android.app.Application
 import android.net.Uri
+import androidx.compose.runtime.snapshotFlow
 import androidx.core.content.edit
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
@@ -13,7 +14,10 @@ import com.xiaohan.xhsnotegen.domain.NoteStatus
 import com.xiaohan.xhsnotegen.domain.NoteTag
 import com.xiaohan.xhsnotegen.domain.Place
 import com.xiaohan.xhsnotegen.domain.PlaceSource
+import com.xiaohan.xhsnotegen.domain.PlaceCatalog
 import com.xiaohan.xhsnotegen.domain.TagTree
+import com.xiaohan.xhsnotegen.domain.WritingMode
+import com.xiaohan.xhsnotegen.i18n.LanguageStore
 import com.xiaohan.xhsnotegen.ai.ModeStore
 import com.xiaohan.xhsnotegen.i18n.notesCount
 import com.xiaohan.xhsnotegen.i18n.tr
@@ -47,7 +51,7 @@ enum class DraftFilter {
 
 /** How the home feed is arranged. */
 enum class GroupBy {
-    NONE, PLACE, TAG, RATING;
+    NONE, PLACE, TAG, RATING, MODE;
 
     val label: String
         get() = when (this) {
@@ -55,6 +59,7 @@ enum class GroupBy {
             PLACE -> tr("Place", "地点")
             TAG -> tr("Tag", "标签")
             RATING -> tr("Rating", "评分")
+            MODE -> tr("Mode", "模式")
         }
 }
 
@@ -78,6 +83,8 @@ data class DraftListState(
     val tags: List<NoteTag> = emptyList(),
     val tagFilter: Long? = null,
     val groupBy: GroupBy = GroupBy.NONE,
+    /** The order of the Group buttons (Settings → Home screen). */
+    val groupOrder: List<GroupBy> = HomePrefs.DEFAULT_ORDER,
     val collapsed: Set<String> = emptySet(),
     val unplacedCount: Int = 0,
     val loaded: Boolean = false,
@@ -106,7 +113,11 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
     private val options = combine(_filter, _tagFilter, _groupBy, _collapsed) { f, t, g, c -> Options(f, t, g, c) }
     private data class Options(val filter: DraftFilter, val tag: Long?, val groupBy: GroupBy, val collapsed: Set<String>)
 
-    val state: StateFlow<DraftListState> = combine(repo.getAllFlow(), repo.allTagsFlow(), options) { all, tags, o ->
+    /** Things that change how the feed reads without the notes changing: button order, mode names, app language. */
+    private val display = combine(HomePrefs.groupOrder, ModeStore.modes, snapshotFlow { LanguageStore.isZh }) { order, modes, zh -> Display(order, modes, zh) }
+    private data class Display(val order: List<GroupBy>, val modes: List<WritingMode>, val zh: Boolean)
+
+    val state: StateFlow<DraftListState> = combine(repo.getAllFlow(), repo.allTagsFlow(), options, display) { all, tags, o, d ->
         // A tag filter pointing at a deleted tag simply stops filtering.
         val tagFilter = o.tag?.takeIf { id -> tags.any { it.id == id } }
         // Filtering by a tag includes everything below it.
@@ -114,12 +125,14 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
         val visible = all.filter { o.filter.matches(it.status) && (filterIds == null || it.tags.any { t -> t.id in filterIds }) }
         DraftListState(
             drafts = visible,
-            feed = buildFeed(visible, o.groupBy, o.collapsed, tags),
+            feed = buildFeed(visible, o.groupBy, o.collapsed, tags, modeName = { key -> d.modes.firstOrNull { it.key == key }?.name ?: key },
+                modeOrder = d.modes.map { it.key }, zh = d.zh),
             counts = DraftFilter.entries.associateWith { f -> all.count { f.matches(it.status) } },
             filter = o.filter,
             tags = tags,
             tagFilter = tagFilter,
             groupBy = o.groupBy,
+            groupOrder = d.order,
             collapsed = o.collapsed,
             unplacedCount = all.count { !it.foodInfo.place.isKnown },
             loaded = true,
@@ -199,13 +212,6 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
     fun deleteTag(tagId: Long) = viewModelScope.launch { repo.deleteTag(tagId) }
 
     fun setTagParent(tagId: Long, parentId: Long?) = viewModelScope.launch { repo.setTagParent(tagId, parentId) }
-
-    /** The root tag shared by all these notes' modes, if they're all in one mode. */
-    fun commonRootTag(ids: Set<Long>): NoteTag? {
-        val modes = state.value.drafts.filter { it.id in ids }.map { it.type }.distinct()
-        val root = modes.singleOrNull()?.let { TagTree.parsePath(ModeStore.get(it).rootTag).lastOrNull() } ?: return null
-        return state.value.tags.firstOrNull { it.name == root }
-    }
 
     fun setRating(ids: Set<Long>, rating: Int) = viewModelScope.launch {
         repo.setRating(ids, rating)
@@ -365,6 +371,10 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
         fun buildFeed(
             notes: List<NoteDraft>, groupBy: GroupBy, collapsed: Set<String>,
             allTags: List<NoteTag> = emptyList(),
+            /** Name of a writing mode, in the app language. */
+            modeName: (String) -> String = { it },
+            modeOrder: List<String> = emptyList(),
+            zh: Boolean = LanguageStore.isZh,
         ): List<FeedItem> = when (groupBy) {
             GroupBy.NONE -> notes.map { FeedItem.Note(it, "") }
             GroupBy.PLACE -> buildList {
@@ -373,10 +383,10 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
                     .toSortedMap(compareBy<String> { it == unknown }.thenByDescending { k -> notes.count { it.foodInfo.place.country.ifBlank { unknown } == k } }.thenBy { it })
                 byCountry.forEach { (country, inCountry) ->
                     val countryKey = "country:$country"
-                    add(FeedItem.Header(GroupHeader(countryKey, country, 0, inCountry.size)))
+                    add(FeedItem.Header(GroupHeader(countryKey, PlaceCatalog.countryName(country, zh), 0, inCountry.size)))
                     if (countryKey in collapsed) return@forEach
                     val byState = groupsByState(country)
-                    inCountry.groupBy { if (byState) stateTitle(it.foodInfo.place) else cityTitle(it.foodInfo.place) }
+                    inCountry.groupBy { if (byState) stateTitle(it.foodInfo.place, zh) else cityTitle(it.foodInfo.place, zh) }
                         .toList().sortedWith(compareBy<Pair<String, List<NoteDraft>>> { it.first == unknown }.thenByDescending { it.second.size })
                         .forEach { (sub, inSub) ->
                             val subKey = "$countryKey/${if (byState) "state" else "city"}:$sub"
@@ -386,6 +396,15 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
                             }
                             if (subKey !in collapsed) inSub.forEach { add(FeedItem.Note(it, subKey)) }
                         }
+                }
+            }
+            GroupBy.MODE -> buildList {
+                val byMode = notes.groupBy { it.type }
+                byMode.keys.sortedWith(compareBy({ k -> modeOrder.indexOf(k).let { if (it < 0) Int.MAX_VALUE else it } }, { it })).forEach { key ->
+                    val inMode = byMode.getValue(key)
+                    val headerKey = "mode:$key"
+                    add(FeedItem.Header(GroupHeader(headerKey, modeName(key), 0, inMode.size)))
+                    if (headerKey !in collapsed) inMode.forEach { add(FeedItem.Note(it, headerKey)) }
                 }
             }
             GroupBy.RATING -> buildList {
@@ -435,14 +454,18 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
             }
         }
 
-        private fun cityTitle(p: Place): String = when {
-            p.city.isNotBlank() && p.region.isNotBlank() -> "${p.city} · ${p.region}"
-            p.city.isNotBlank() -> p.city
-            p.region.isNotBlank() -> p.region
-            else -> UNKNOWN_PLACE
+        private fun cityTitle(p: Place, zh: Boolean): String {
+            val l = p.localized(zh)
+            return when {
+                l.city.isNotBlank() && l.region.isNotBlank() && l.city != l.region -> "${l.city} · ${l.region}"
+                l.city.isNotBlank() -> l.city
+                l.city.isNotBlank() -> l.city
+                l.region.isNotBlank() -> l.region
+                else -> UNKNOWN_PLACE
+            }
         }
 
         /** State (or province); the city only when the state is missing. */
-        private fun stateTitle(p: Place): String = p.region.ifBlank { p.city }.ifBlank { UNKNOWN_PLACE }
+        private fun stateTitle(p: Place, zh: Boolean): String = p.localized(zh).let { it.region.ifBlank { it.city } }.ifBlank { UNKNOWN_PLACE }
     }
 }

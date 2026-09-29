@@ -1,5 +1,27 @@
 # Changelog
 
+## v1.10.0 — 2026-09-30
+
+### Renamed
+- The app is now **浮生拾遗 / Glint** (was 食记 / XHS NoteGen) — it is for the whole day, not just food. The debug app is "浮生拾遗 Debug" / "Glint Debug". Only the name changed: same package, your notes and settings are kept
+
+### Added
+- New app icon: a gold glint (four-point sparkle) above still water with spreading ripples, on deep teal — drawn in code, with a matching one-colour version for themed icons
+- New **Glint · 浮生** theme (Settings → Appearance → Signature), light and dark: misty teal by day, deep teal night with gold accents, and a drawn header of water ripples with drifting glints. Your current theme is unchanged
+- **Group by Mode** on the home screen (Food, Travel, Outfit…), next to Place · Tag · Rating
+- **Reorder the Group buttons**: Settings → Home screen → move each up or down
+- **Write the note in 中文 / English** on the new-note screen, and again on the review screen for the next rewrite. Each note remembers its language (database v5, with a migration — existing notes use their mode's language)
+
+### Changed
+- Photo limit is now **40** per note (was 20) and the per-mode slider goes up to 40. A mode you edited earlier that had stored "20" now uses 40 — set it again if you want less. Xiaohongshu's own limit per post may be lower, and more photos means a bigger, slower AI request
+- Place and mode names follow the **app** language: in English the home screen shows China › Nanjing · Jiangsu, "Food", and so on (stored places stay Chinese, so groups don't split). Only the prompt and the notes it writes follow the note language
+- Form hints (the grey example text) follow the app language too; the names given to the AI still follow the note language
+- Modes no longer have a **root tag**, and the mode's tag is no longer added to new notes — that is what the Mode group is for
+- The "Organize N without a place" button sits on its own line
+
+### Removed / cleaned up
+- One-time cleanup on first launch: the tags modes used to add to every note (美食, 旅行, 穿搭, 美妆护肤, 家居, 运动, 育儿, 书影音, plus any root tag you set yourself) are removed. Tags that were under them (e.g. 京都 under 旅行) move up a level and keep their notes; all your other tags stay
+
 ## v1.9.0 — 2026-09-29
 
 ### Added

@@ -6,6 +6,8 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material.icons.outlined.Translate
+import com.xiaohan.xhsnotegen.domain.PromptLanguage
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Alignment
@@ -177,6 +179,33 @@ fun SoftTextField(
         if (supporting != null) {
             Text(supporting, style = MaterialTheme.typography.bodySmall,
                 color = if (isError) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/**
+ * "Write the note in: 中文 | English" — the language of the AI's prompt and of the note it writes.
+ * Separate from the app language; each note (and each rewrite) can choose.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun NoteLanguageRow(
+    language: PromptLanguage,
+    onSelect: (PromptLanguage) -> Unit,
+    modifier: Modifier = Modifier,
+    caption: String? = null,
+) {
+    Column(modifier, verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Icon(Icons.Outlined.Translate, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("Write the note in", "笔记语言"), style = MaterialTheme.typography.labelLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
+            PromptLanguage.entries.forEach { l ->
+                FilterChip(selected = language == l, onClick = { onSelect(l) }, label = { Text(l.label) }, shape = CircleShape)
+            }
+        }
+        if (caption != null) {
+            Text(caption, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }

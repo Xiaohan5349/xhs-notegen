@@ -100,6 +100,8 @@ data class DraftDto(
     val foodInfo: FoodInfoDto? = null,
     val tags: List<TagDto?>? = null,
     val rating: Int? = null,
+    /** Exports store the enum name ("ZH"); accept the key ("zh") too. */
+    val language: String? = null,
 ) {
     fun toDomain(): NoteDraft {
         val now = System.currentTimeMillis()
@@ -125,6 +127,7 @@ data class DraftDto(
             tags = tags.orEmpty().mapNotNull { it?.name?.trim()?.takeIf { n -> n.isNotEmpty() } }
                 .distinct().map { NoteTag(name = it) },
             rating = (rating ?: 0).coerceIn(0, 5),
+            language = PromptLanguage.entries.firstOrNull { it.name.equals(language, ignoreCase = true) || it.key == language },
         )
     }
 }
@@ -183,6 +186,7 @@ fun normalizeHashtags(raw: List<String>): List<String> =
 data class ModeDto(
     val key: String? = null,
     val name: String? = null,
+    /** Not used since v1.10 (modes no longer add a tag); read only to clean up the tags it made. */
     val rootTag: String? = null,
     val promptHeading: String? = null,
     val fields: Map<String, FieldSpecDto?>? = null,
@@ -216,13 +220,13 @@ data class ModeDto(
         val enBase = base.prompts[PromptLanguage.EN] ?: BuiltInModes.genericPrompt(PromptLanguage.EN)
         return base.copy(
             name = if (base.builtIn) localized(name, base.name, other?.name) else name?.takeIf { it.isNotBlank() } ?: base.name,
-            rootTag = rootTag?.trim() ?: base.rootTag,
             labels = FieldSlot.entries.associateWith { slot ->
                 localized(fields?.get(slot.name)?.label, base.field(slot).label, other?.field(slot)?.label)
             },
             prompts = mapOf(PromptLanguage.ZH to zh, PromptLanguage.EN to (en?.toDomain(enBase) ?: enBase)),
             language = PromptLanguage.fromKey(language) ?: base.language,
-            maxPhotos = (maxPhotos ?: base.maxPhotos).coerceIn(WritingMode.MIN_PHOTOS, WritingMode.MAX_PHOTOS_LIMIT),
+            maxPhotos = (maxPhotos?.takeIf { it != WritingMode.OLD_DEFAULT_MAX_PHOTOS } ?: base.maxPhotos)
+                .coerceIn(WritingMode.MIN_PHOTOS, WritingMode.MAX_PHOTOS_LIMIT),
         )
     }
 
@@ -239,7 +243,6 @@ data class ModeDto(
             return ModeDto(
                 key = m.key,
                 name = if (base == null || !m.builtIn) m.name else changed(m.name, base.name, other?.name),
-                rootTag = m.rootTag,
                 promptHeading = zh?.heading,
                 fields = FieldSlot.entries.associate { slot ->
                     slot.name to FieldSpecDto(
@@ -252,7 +255,7 @@ data class ModeDto(
                 styles = zh?.styles,
                 en = en?.let { PromptSetDto.from(it) },
                 language = m.language.key,
-                maxPhotos = m.maxPhotos,
+                maxPhotos = m.maxPhotos.takeIf { base == null || it != base.maxPhotos },
             )
         }
     }

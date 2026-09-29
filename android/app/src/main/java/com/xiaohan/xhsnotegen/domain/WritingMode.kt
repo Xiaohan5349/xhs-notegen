@@ -1,5 +1,7 @@
 package com.xiaohan.xhsnotegen.domain
 
+import com.xiaohan.xhsnotegen.i18n.LanguageStore
+
 /** The six inputs of the create form. Stored in FoodInfo's columns whatever the mode. */
 enum class FieldSlot { SUBJECT, PLACE, FEELING, COST, SCENE, OTHER }
 
@@ -36,14 +38,12 @@ data class PromptSet(
 
 /**
  * A kind of note — food, travel, or one you define. Each mode has its own
- * form labels, AI instructions in Chinese and English (one of them in use),
- * a photo limit, and a root tag that every note written in it gets.
+ * form labels, AI instructions in Chinese and English (one of them in use)
+ * and a photo limit. Notes are grouped by mode on the home screen.
  */
 data class WritingMode(
     val key: String,
     val name: String,
-    /** Root tag; may be a path ("生活/咖啡") to sit under other tags. */
-    val rootTag: String,
     /** Form labels, in the app's language. */
     val labels: Map<FieldSlot, String>,
     val prompts: Map<PromptLanguage, PromptSet>,
@@ -60,9 +60,15 @@ data class WritingMode(
     val promptHeading: String get() = prompt.heading
     val styles: Map<String, String> get() = prompt.styles
 
+    /**
+     * Label and hint follow the app language (they're for you); the name given to the AI follows
+     * the note language (it's part of the prompt).
+     */
     fun field(slot: FieldSlot): FieldSpec {
         val p = prompt.fields[slot] ?: BuiltInModes.genericPromptField(slot, language)
-        return FieldSpec(labels[slot] ?: BuiltInModes.genericLabel(slot), p.hint, p.key.ifBlank { BuiltInModes.genericPromptField(slot, language).key })
+        val appLanguage = if (LanguageStore.isZh) PromptLanguage.ZH else PromptLanguage.EN
+        val hint = prompts[appLanguage]?.fields?.get(slot)?.hint?.takeIf { it.isNotBlank() } ?: p.hint
+        return FieldSpec(labels[slot] ?: BuiltInModes.genericLabel(slot), hint, p.key.ifBlank { BuiltInModes.genericPromptField(slot, language).key })
     }
 
     fun style(style: NoteStyle): String = styles[style.key]?.takeIf { it.isNotBlank() } ?: BuiltInModes.genericStyle(style, language)
@@ -71,9 +77,11 @@ data class WritingMode(
     fun withPrompt(p: PromptSet): WritingMode = copy(prompts = prompts + (language to p))
 
     companion object {
-        const val DEFAULT_MAX_PHOTOS = 20
+        const val DEFAULT_MAX_PHOTOS = 40
         const val MIN_PHOTOS = 1
-        /** Upper bound for any mode's limit (the app's limit before per-mode limits). */
-        const val MAX_PHOTOS_LIMIT = 20
+        /** Upper bound for any mode's limit. */
+        const val MAX_PHOTOS_LIMIT = 40
+        /** Before v1.10 every mode stored 20 when edited; that means "not set". */
+        const val OLD_DEFAULT_MAX_PHOTOS = 20
     }
 }

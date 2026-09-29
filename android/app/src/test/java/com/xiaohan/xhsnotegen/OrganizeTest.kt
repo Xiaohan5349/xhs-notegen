@@ -40,14 +40,14 @@ class OrganizeTest {
                 "[日本 1]", "  [东京 · 东京都 1]", "4",
                 "[$UNKNOWN_PLACE 1]", "5",
             ),
-            titles(buildFeed(notes, GroupBy.PLACE, emptySet())),
+            titles(buildFeed(notes, GroupBy.PLACE, emptySet(), zh = true)),
         )
     }
 
     @Test
     fun `collapsing a country hides its cities and notes`() {
         val notes = listOf(note(1, "中国", "", "上海市"), note(2, "日本", "", "东京"))
-        val feed = buildFeed(notes, GroupBy.PLACE, setOf("country:中国"))
+        val feed = buildFeed(notes, GroupBy.PLACE, setOf("country:中国"), zh = true)
         assertEquals(listOf("[中国 1]", "[日本 1]", "  [东京 1]", "2"), titles(feed))
     }
 
@@ -56,7 +56,7 @@ class OrganizeTest {
         val notes = listOf(note(1, tags = arrayOf("咖啡", "甜品")), note(2, tags = arrayOf("咖啡")), note(3))
         assertEquals(
             listOf("[咖啡 2]", "1", "2", "[甜品 1]", "1", "[No tag 1]", "3"),
-            titles(buildFeed(notes, GroupBy.TAG, emptySet())),
+            titles(buildFeed(notes, GroupBy.TAG, emptySet(), zh = true)),
         )
     }
 

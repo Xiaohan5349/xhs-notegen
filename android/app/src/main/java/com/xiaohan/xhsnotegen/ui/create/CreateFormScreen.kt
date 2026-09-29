@@ -47,6 +47,7 @@ import com.xiaohan.xhsnotegen.ui.components.ratingWords
 import com.xiaohan.xhsnotegen.domain.Place
 import com.xiaohan.xhsnotegen.domain.PlaceSource
 import com.xiaohan.xhsnotegen.ui.components.DateWheelDialog
+import com.xiaohan.xhsnotegen.ui.components.NoteLanguageRow
 import com.xiaohan.xhsnotegen.ui.components.PickerField
 import com.xiaohan.xhsnotegen.ui.components.PlacePickerDialog
 import com.xiaohan.xhsnotegen.ui.components.formatDateForDisplay
@@ -75,6 +76,7 @@ fun CreateFormScreen(
     val photoPlace by viewModel.photoPlace.collectAsState()
     val rating by viewModel.rating.collectAsState()
     val place by viewModel.place.collectAsState()
+    val noteLanguage by viewModel.noteLanguage.collectAsState()
     var showPlacePicker by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
     val mode by viewModel.mode.collectAsState()
@@ -183,6 +185,7 @@ fun CreateFormScreen(
         ) {
             // ---- Kind of note ----
             ModePicker(modes = modes, selected = mode.key, onSelect = viewModel::setMode, onManage = onManageModes)
+            NoteLanguageRow(noteLanguage, viewModel::setNoteLanguage)
 
             // ---- Photos ----
             var selecting by remember { mutableStateOf(false) }
@@ -256,7 +259,7 @@ fun CreateFormScreen(
                 photoPlace?.takeIf { it.isKnown }?.let { place ->
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Icon(Icons.Outlined.Place, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.secondary)
-                        Text(tr("${place.fullAddress} · from photo", "${place.fullAddress} · 来自照片"), style = MaterialTheme.typography.bodySmall,
+                        Text(tr("${place.fullAddressDisplay} · from photo", "${place.fullAddressDisplay} · 来自照片"), style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -286,7 +289,6 @@ fun CreateFormScreen(
             // ---- Facts ----
             SectionCard(
                 title = if (mode.key == BuiltInModes.FOOD) tr("The meal", "这一餐") else tr("Details", "内容"),
-                subtitle = mode.rootTag.takeIf { it.isNotBlank() }?.let { tr("Tagged $it", "标签：$it") },
             ) {
                 SoftTextField(
                     value = foodInfo.dishNames,

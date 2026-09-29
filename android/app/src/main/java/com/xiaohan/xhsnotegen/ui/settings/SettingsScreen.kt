@@ -34,6 +34,7 @@ import com.xiaohan.xhsnotegen.i18n.AppLanguage
 import com.xiaohan.xhsnotegen.i18n.LanguageStore
 import com.xiaohan.xhsnotegen.i18n.tr
 import com.xiaohan.xhsnotegen.ui.components.SectionCard
+import com.xiaohan.xhsnotegen.ui.drafts.HomePrefs
 import com.xiaohan.xhsnotegen.ui.components.softFieldColors
 import com.xiaohan.xhsnotegen.ui.publish.XhsAuthStore
 import com.xiaohan.xhsnotegen.ui.theme.AppTheme
@@ -76,6 +77,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             AppearanceSection()
+            HomeSection()
             AiSection(onOpenAi, onEditPrompt)
             AccountSection(onLogin)
             Spacer(Modifier.height(16.dp))
@@ -150,6 +152,41 @@ private fun AppearanceSection() {
     }
 }
 
+// ---------------------------------------------------------------------------
+// Home screen
+// ---------------------------------------------------------------------------
+
+/** Put the Group buttons on the home screen in the order you like. */
+@Composable
+private fun HomeSection() {
+    val context = LocalContext.current
+    val order by HomePrefs.groupOrder.collectAsState()
+
+    SectionCard(
+        title = tr("Home screen", "首页"),
+        subtitle = tr("Order of the Group buttons above your notes", "笔记上方“分组”按钮的顺序"),
+    ) {
+        Column(Modifier.clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainer)) {
+            order.forEachIndexed { i, g ->
+                Row(
+                    Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Text("${i + 1}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.width(24.dp))
+                    Text(g.label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
+                    IconButton(onClick = { HomePrefs.move(context, g, -1) }, enabled = i > 0) {
+                        Icon(Icons.Outlined.KeyboardArrowUp, tr("Move up", "上移"))
+                    }
+                    IconButton(onClick = { HomePrefs.move(context, g, +1) }, enabled = i < order.lastIndex) {
+                        Icon(Icons.Outlined.KeyboardArrowDown, tr("Move down", "下移"))
+                    }
+                }
+            }
+        }
+    }
+}
+
 @Composable
 private fun ThemeSwatch(theme: AppTheme, selected: Boolean, onClick: () -> Unit) {
     val (accent, container) = theme.swatch
@@ -190,6 +227,7 @@ private fun swatchBrush(theme: AppTheme, container: Color): Brush = when (theme.
     Backdrop.SKY -> Brush.verticalGradient(listOf(Color(0xFF5AA9F5), Color(0xFFDCEEFF)))
     Backdrop.SUNSET -> Brush.verticalGradient(listOf(Color(0xFFFFB199), Color(0xFFFF7EB3), Color(0xFFC77DFF)))
     Backdrop.SEIGAIHA -> Brush.verticalGradient(listOf(Color(0xFFFFDAD3), Color(0xFFDBE1FA)))
+    Backdrop.RIPPLE -> Brush.verticalGradient(listOf(Color(0xFF1E6470), Color(0xFFBFE3E5)))
     Backdrop.NONE -> SolidColor(container)
 }
 
@@ -227,7 +265,7 @@ private fun AiSection(onOpenAi: () -> Unit, onEditPrompt: () -> Unit) {
         SettingsRow(
             icon = Icons.Outlined.EditNote,
             title = tr("Writing modes & prompts", "写作模式与提示词"),
-            subtitle = tr("$modeCount modes — Food, Travel, Outfit… each with its own prompt and root tag", "$modeCount 个模式：美食、旅行、穿搭…… 各有自己的提示词和一级标签"),
+            subtitle = tr("$modeCount modes — Food, Travel, Outfit… each with its own prompt, language and photo limit", "$modeCount 个模式：美食、旅行、穿搭…… 各有自己的提示词、语言和照片上限"),
             onClick = onEditPrompt,
         )
     }

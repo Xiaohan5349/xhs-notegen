@@ -42,6 +42,7 @@ import com.xiaohan.xhsnotegen.ui.components.CardStars
 import com.xiaohan.xhsnotegen.ui.components.RatingDialog
 import com.xiaohan.xhsnotegen.ui.components.RatingMeter
 import com.xiaohan.xhsnotegen.domain.TagTree
+import com.xiaohan.xhsnotegen.i18n.LanguageStore
 import com.xiaohan.xhsnotegen.i18n.notesCount
 import com.xiaohan.xhsnotegen.i18n.tr
 import com.xiaohan.xhsnotegen.ui.components.StatusPill
@@ -122,7 +123,7 @@ fun DraftListScreen(
                     LargeTopAppBar(
                         title = {
                             Column {
-                                Text(tr("Food diary", "食记"), maxLines = 1)
+                                Text(tr("Glint", "浮生拾遗"), maxLines = 1)
                                 if (total > 0 && scrollBehavior.state.collapsedFraction < 0.5f) {
                                     Text(
                                         buildString {
@@ -225,9 +226,9 @@ fun DraftListScreen(
                     item(span = StaggeredGridItemSpan.FullLine, key = "empty") {
                         if (total == 0) {
                             EmptyState(
-                                icon = Icons.Outlined.RamenDining,
-                                title = tr("Your food diary is empty", "还没有笔记"),
-                                body = tr("Snap a meal, jot down a few words, and get a note that sounds like you.", "拍张照，随手写几句，就能得到一篇像你自己写的笔记。"),
+                                icon = Icons.Outlined.AutoAwesome,
+                                title = tr("Your diary is empty", "还没有笔记"),
+                                body = tr("Snap a photo, jot down a few words, and get a note that sounds like you.", "拍张照，随手写几句，就能得到一篇像你自己写的笔记。"),
                                 action = {
                                     Button(onClick = onCreateClick) {
                                         Icon(Icons.Filled.Add, null, Modifier.size(18.dp))
@@ -298,7 +299,6 @@ fun DraftListScreen(
                     else -> null
                 }
             },
-            defaultParent = viewModel.commonRootTag(d.ids),
             onApply = { add, remove, parent -> viewModel.applyTags(d.ids, add, remove, parent); viewModel.clearSelection() },
             onDismiss = { dialog = null },
         )
@@ -475,7 +475,7 @@ private fun GroupRow(
         Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Text(tr("Group", "分组"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(8.dp))
-            GroupBy.entries.filter { it != GroupBy.NONE }.forEach { g ->
+            state.groupOrder.forEach { g ->
                 val on = g == state.groupBy
                 Text(
                     g.label,
@@ -488,13 +488,13 @@ private fun GroupRow(
                         .padding(horizontal = 12.dp, vertical = 6.dp),
                 )
             }
-            Spacer(Modifier.weight(1f))
-            if (state.groupBy == GroupBy.PLACE && state.unplacedCount > 0 && organizing == null) {
-                TextButton(onClick = onOrganize) {
-                    Icon(Icons.Outlined.TravelExplore, null, Modifier.size(16.dp))
-                    Spacer(Modifier.width(6.dp))
-                    Text(tr("Organize ${state.unplacedCount}", "整理 ${state.unplacedCount} 篇"))
-                }
+        }
+        // On its own line: with the Group buttons in English there is no room for it beside them.
+        if (state.groupBy == GroupBy.PLACE && state.unplacedCount > 0 && organizing == null) {
+            TextButton(onClick = onOrganize) {
+                Icon(Icons.Outlined.TravelExplore, null, Modifier.size(16.dp))
+                Spacer(Modifier.width(6.dp))
+                Text(tr("Organize ${state.unplacedCount} without a place", "整理 ${state.unplacedCount} 篇没有地点的笔记"), maxLines = 1)
             }
         }
         if (organizing != null) {
@@ -582,7 +582,7 @@ private fun NoteCard(
 
     val variant = draft.selectedVariant
     val title = variant?.title?.takeIf { it.isNotBlank() }
-        ?: draft.foodInfo.dishNames.ifBlank { tr("Untitled meal", "无标题") }
+        ?: draft.foodInfo.dishNames.ifBlank { tr("Untitled", "无标题") }
     val cover = draft.publishPhotoUris.firstOrNull()
     val place = draft.foodInfo.place
 
@@ -660,7 +660,7 @@ private fun NoteCard(
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Text(
-                        listOf(draft.foodInfo.restaurantName, place.city.ifBlank { draft.foodInfo.location })
+                        listOf(draft.foodInfo.restaurantName, place.localized(LanguageStore.isZh).city.ifBlank { draft.foodInfo.location })
                             .filter { it.isNotBlank() }.joinToString(" · ")
                             .ifBlank { draft.foodInfo.mealDate.take(10) },
                         style = MaterialTheme.typography.bodySmall,

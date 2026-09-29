@@ -40,15 +40,17 @@ class XhsNoteGenApp : Application() {
         stylePrefsRepository = StylePreferencesRepository(database)
         XhsAuthStore.init(this)
         AppearanceStore.init(this)
+        com.xiaohan.xhsnotegen.ui.drafts.HomePrefs.init(this)
         LanguageStore.init(this)
         ModeStore.init(this)
         com.xiaohan.xhsnotegen.domain.PlaceCatalog.init(this)
-        // Once, after the update that added modes: tag existing notes with their mode's root tag.
+        // Once, after the update that dropped mode root tags: remove the ones modes had added.
         val flags = getSharedPreferences("migrations", MODE_PRIVATE)
-        if (!flags.getBoolean("root_tags_backfilled", false)) {
+        if (!flags.getBoolean("root_tags_removed", false)) {
+            val names = ModeStore.legacyRootTagNames()
             applicationScope.launch {
-                draftRepository.backfillRootTags { ModeStore.get(it).rootTag }
-                flags.edit { putBoolean("root_tags_backfilled", true) }
+                draftRepository.removeTagsByName(names)
+                flags.edit { putBoolean("root_tags_removed", true) }
             }
         }
         // Debug builds only: lets chrome://inspect on a computer debug the XHS login page.

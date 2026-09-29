@@ -44,10 +44,10 @@ class V18Test {
                 "    [General 1]", "13",
                 "  [General 1]", "14",
             ),
-            titles(buildFeed(notes, GroupBy.TAG, emptySet(), all)),
+            titles(buildFeed(notes, GroupBy.TAG, emptySet(), all, zh = true)),
         )
         // Collapsing 日本 hides everything below it.
-        val collapsed = titles(buildFeed(notes, GroupBy.TAG, setOf("tag:1/2"), all))
+        val collapsed = titles(buildFeed(notes, GroupBy.TAG, setOf("tag:1/2"), all, zh = true))
         assertEquals(listOf("[旅行 5]", "  [日本 4]", "  [General 1]", "14"), collapsed)
     }
 
@@ -77,13 +77,13 @@ class V18Test {
                 "[美国 3]", "  [加利福尼亚州 2]", "1", "2", "  [纽约州 1]", "3",
                 "[中国 1]", "  [南京市 · 江苏省 1]", "4",
             ),
-            titles(buildFeed(notes, GroupBy.PLACE, emptySet())),
+            titles(buildFeed(notes, GroupBy.PLACE, emptySet(), zh = true)),
         )
     }
 
     @Test
     fun `rating groups carry their level instead of star characters`() {
-        val feed = buildFeed(listOf(NoteDraft(id = 1, rating = 4), NoteDraft(id = 2)), GroupBy.RATING, emptySet())
+        val feed = buildFeed(listOf(NoteDraft(id = 1, rating = 4), NoteDraft(id = 2)), GroupBy.RATING, emptySet(), zh = true)
         val headers = feed.filterIsInstance<FeedItem.Header>().map { it.header }
         assertEquals(listOf(4, 0), headers.map { it.rating })
         assertTrue(headers.none { it.title.contains('★') })

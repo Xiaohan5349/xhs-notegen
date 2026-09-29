@@ -35,7 +35,6 @@ object BuiltInModes {
     fun food(zh: Boolean) = WritingMode(
         key = FOOD,
         name = if (zh) "美食" else "Food",
-        rootTag = "美食",
         labels = labels(zh,
             "What did you eat" to "吃了什么", "Where" to "在哪家店", "How was it" to "味道怎么样",
             "Price or rating" to "价格", "The place" to "环境", "Anything else" to "还想说的"),
@@ -56,7 +55,6 @@ object BuiltInModes {
     fun travel(zh: Boolean) = WritingMode(
         key = TRAVEL,
         name = if (zh) "旅行" else "Travel",
-        rootTag = "旅行",
         labels = labels(zh,
             "What did you see or do" to "看了什么、做了什么", "Where" to "去了哪里", "How was it" to "感觉怎么样",
             "Cost / tickets" to "花费 / 门票", "Weather & crowds" to "天气和人流", "Anything else" to "还想说的"),
@@ -82,7 +80,7 @@ object BuiltInModes {
     // ---- General modes for Xiaohongshu's biggest categories ----
 
     fun outfit(zh: Boolean) = category(
-        key = "outfit", name = if (zh) "穿搭" else "Outfit", rootTag = "穿搭", heading = "这次穿的", zh = zh,
+        key = "outfit", name = if (zh) "穿搭" else "Outfit", heading = "这次穿的", zh = zh,
         subject = Triple(tr(zh, "What did you wear", "穿了什么"), "米色风衣 + 直筒牛仔裤 + 乐福鞋", "穿了什么"),
         place = Triple(tr(zh, "Occasion / where", "场合"), "周末逛街、上班通勤", "场合"),
         feeling = Triple(tr(zh, "How did it feel", "穿着感觉"), "风衣有点压个子，但很暖", "感受"),
@@ -103,7 +101,7 @@ object BuiltInModes {
     )
 
     fun beauty(zh: Boolean) = category(
-        key = "beauty", name = if (zh) "美妆护肤" else "Beauty", rootTag = "美妆护肤", heading = "这次用的", zh = zh,
+        key = "beauty", name = if (zh) "美妆护肤" else "Beauty", heading = "这次用的", zh = zh,
         subject = Triple(tr(zh, "What did you use", "用了什么"), "某某精华、某某粉底液 02色", "用了什么"),
         place = Triple(tr(zh, "Routine / occasion", "使用场景"), "早晚护肤、上班妆", "场景"),
         feeling = Triple(tr(zh, "How did it work on you", "用着感觉"), "上脸不黏，但下午T区有点出油", "感受"),
@@ -124,7 +122,7 @@ object BuiltInModes {
     )
 
     fun home(zh: Boolean) = category(
-        key = "home", name = if (zh) "家居" else "Home", rootTag = "家居", heading = "这次家里的", zh = zh,
+        key = "home", name = if (zh) "家居" else "Home", heading = "这次家里的", zh = zh,
         subject = Triple(tr(zh, "What changed at home", "家里添了 / 改了什么"), "换了窗帘、新买的落地灯", "改了什么"),
         place = Triple(tr(zh, "Which room", "哪个房间"), "客厅、出租屋卧室", "房间"),
         feeling = Triple(tr(zh, "How is it", "用着感觉"), "晚上开灯很暖，但开关位置不顺手", "感受"),
@@ -145,7 +143,7 @@ object BuiltInModes {
     )
 
     fun fitness(zh: Boolean) = category(
-        key = "fitness", name = if (zh) "运动" else "Fitness", rootTag = "运动", heading = "这次练的", zh = zh,
+        key = "fitness", name = if (zh) "运动" else "Fitness", heading = "这次练的", zh = zh,
         subject = Triple(tr(zh, "What did you do", "做了什么运动"), "跑了5公里、爬了香山", "做了什么"),
         place = Triple(tr(zh, "Where", "在哪里"), "小区跑道、健身房、某某山", "地点"),
         feeling = Triple(tr(zh, "How did it feel", "感觉怎么样"), "第三公里开始腿很沉", "感受"),
@@ -166,7 +164,7 @@ object BuiltInModes {
     )
 
     fun parenting(zh: Boolean) = category(
-        key = "parenting", name = if (zh) "育儿" else "Parenting", rootTag = "育儿", heading = "这次的", zh = zh,
+        key = "parenting", name = if (zh) "育儿" else "Parenting", heading = "这次的", zh = zh,
         subject = Triple(tr(zh, "What happened", "发生了什么"), "第一次自己吃饭、打了疫苗", "发生了什么"),
         place = Triple(tr(zh, "Where", "在哪里"), "家里、小区公园", "地点"),
         feeling = Triple(tr(zh, "How was it", "感觉怎么样"), "吃得满脸都是，但很认真", "感受"),
@@ -187,7 +185,7 @@ object BuiltInModes {
     )
 
     fun booksFilms(zh: Boolean) = category(
-        key = "books_films", name = if (zh) "书影音" else "Books & Films", rootTag = "书影音", heading = "这次看的", zh = zh,
+        key = "books_films", name = if (zh) "书影音" else "Books & Films", heading = "这次看的", zh = zh,
         subject = Triple(tr(zh, "What did you read / watch", "看了什么"), "《某某》、某某展", "看了什么"),
         place = Triple(tr(zh, "Where / how", "在哪看的"), "电影院、kindle、美术馆", "在哪看的"),
         feeling = Triple(tr(zh, "What stuck with you", "印象最深的"), "结尾那场戏看哭了", "感受"),
@@ -211,7 +209,6 @@ object BuiltInModes {
     fun blank(key: String, name: String, zh: Boolean = LanguageStore.isZh) = WritingMode(
         key = key,
         name = name,
-        rootTag = name,
         labels = FieldSlot.entries.associateWith { genericLabel(it, zh) },
         prompts = PromptLanguage.entries.associateWith { genericPrompt(it) },
         builtIn = false,
@@ -357,7 +354,7 @@ private data class CategorySpec(
 
 /** [subject] etc.: (form label, Chinese hint, Chinese name for the AI). */
 private fun category(
-    key: String, name: String, rootTag: String, heading: String, zh: Boolean,
+    key: String, name: String, heading: String, zh: Boolean,
     subject: Triple<String, String, String>, place: Triple<String, String, String>,
     feeling: Triple<String, String, String>, cost: Triple<String, String, String>,
     scene: Triple<String, String, String>,
@@ -366,7 +363,7 @@ private fun category(
 ): WritingMode {
     val slots = listOf(subject, place, feeling, cost, scene, Triple(BuiltInModes.genericLabel(FieldSlot.OTHER, zh), "", "其他想说的"))
     return WritingMode(
-        key = key, name = name, rootTag = rootTag,
+        key = key, name = name,
         labels = FieldSlot.entries.zip(slots).associate { (slot, t) -> slot to t.first },
         prompts = mapOf(
             PromptLanguage.ZH to PromptSet(

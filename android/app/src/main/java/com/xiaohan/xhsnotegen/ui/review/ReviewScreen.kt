@@ -51,6 +51,8 @@ import com.xiaohan.xhsnotegen.ui.components.ModelChip
 import com.xiaohan.xhsnotegen.ui.components.RatingBar
 import com.xiaohan.xhsnotegen.ui.components.ratingWords
 import com.xiaohan.xhsnotegen.ui.drafts.PlaceDialog
+import com.xiaohan.xhsnotegen.ai.ModeStore
+import com.xiaohan.xhsnotegen.ui.components.NoteLanguageRow
 import com.xiaohan.xhsnotegen.domain.PlaceSource
 import com.xiaohan.xhsnotegen.ui.components.StatusPill
 import com.xiaohan.xhsnotegen.ui.publish.XiaohongshuSharePublisher.TITLE_LIMIT
@@ -145,6 +147,7 @@ fun ReviewScreen(
                     body = tr("This note's photos and details are saved. Let's write it.", "照片和信息都已保存，现在就来写吧。"),
                     action = {
                       Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        NoteLanguageRow(d.language ?: ModeStore.get(d.type).language, viewModel::setLanguage)
                         ModelChip(onOpenSettings = onOpenSettings)
                         Button(onClick = viewModel::regenerateAll, enabled = aiTask == AiTask.NONE) {
                             if (aiTask != AiTask.NONE) {
@@ -204,6 +207,10 @@ fun ReviewScreen(
                     Text(tr("Written by ${v.model}", "写作模型：${v.model}"), style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
                 }
+                NoteLanguageRow(
+                    d.language ?: ModeStore.get(d.type).language, viewModel::setLanguage,
+                    caption = tr("Applies the next time you rewrite", "下次重写时生效"),
+                )
                 ModelChip(onOpenSettings = onOpenSettings)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                     OutlinedButton(
@@ -453,7 +460,7 @@ private fun MealInfoRow(draft: NoteDraft, onRate: (Int) -> Unit, onEditPlace: ()
             Icon(Icons.Outlined.Place, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f)) {
                 Text(
-                    place.fullAddress.ifBlank { draft.foodInfo.location.ifBlank { tr("Add a place", "添加地点") } },
+                    place.fullAddressDisplay.ifBlank { draft.foodInfo.location.ifBlank { tr("Add a place", "添加地点") } },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )

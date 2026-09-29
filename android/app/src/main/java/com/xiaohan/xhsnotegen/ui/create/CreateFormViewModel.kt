@@ -93,12 +93,19 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
 
     fun setMode(key: String) {
         _modeKey.value = key
+        _noteLanguage.value = null
         ModeStore.setLastUsed(key)
         // Each mode remembers its own favorite style.
         viewModelScope.launch { _selectedStyle.value = styleRepo.resolveStyle(key) }
     }
 
     private val maxPhotos: Int get() = ModeStore.get(_modeKey.value).maxPhotos
+    /** The language for this note; null = follow the mode's. Reset when you switch mode. */
+    private val _noteLanguage = MutableStateFlow<PromptLanguage?>(null)
+    val noteLanguage: StateFlow<PromptLanguage> = combine(_noteLanguage, mode) { chosen, m -> chosen ?: m.language }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, mode.value.language)
+    fun setNoteLanguage(l: PromptLanguage) { _noteLanguage.value = l }
+
     val remainingPhotoSlots: Int get() = maxPhotos - _photoUris.value.size
 
     /** Adds picked photos to the current selection (the "+" tile used to replace it). */
@@ -216,10 +223,9 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
                 styleLabel = _selectedStyle.value.key,
                 foodInfo = _foodInfo.value.copy(place = chosenPlace ?: Place()),
                 rating = _rating.value,
+                language = noteLanguage.value,
             )
             val id = draftRepo.insert(draft).also { saved = true }
-            // Every note starts with its mode's root tag (e.g. 美食, 旅行).
-            draftRepo.rootTag(mode.rootTag)?.let { draftRepo.addTag(listOf(id), it.id) }
             // No photo GPS: work out the place from the text, without delaying generation.
             if (chosenPlace?.isKnown != true) {
                 val app = getApplication<Application>()

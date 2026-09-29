@@ -1,4 +1,4 @@
-# Building & Installing XHS NoteGen
+# Building & Installing Glint (浮生拾遗)
 
 How to build an APK and get it onto an Android phone.
 

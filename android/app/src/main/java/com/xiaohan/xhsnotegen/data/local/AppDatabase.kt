@@ -17,7 +17,7 @@ import com.xiaohan.xhsnotegen.data.local.entity.*
         TagEntity::class,
         NoteTagEntity::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 abstract class AppDatabase : RoomDatabase() {
@@ -78,6 +78,13 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        /** v4 → v5: the language each note is written in (null = its mode's language). */
+        val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL("ALTER TABLE `note_drafts` ADD COLUMN `note_language` TEXT")
+            }
+        }
+
         fun getInstance(context: Context): AppDatabase =
             INSTANCE ?: synchronized(this) {
                 INSTANCE ?: Room.databaseBuilder(
@@ -88,7 +95,7 @@ abstract class AppDatabase : RoomDatabase() {
                 // No destructive fallback: a schema change without a Migration
                 // must fail loudly in testing instead of silently wiping every
                 // user's drafts in production.
-                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+                .addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .build().also { INSTANCE = it }
             }
     }

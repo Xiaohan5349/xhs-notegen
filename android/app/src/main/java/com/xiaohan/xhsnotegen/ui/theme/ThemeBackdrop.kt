@@ -39,6 +39,7 @@ fun ThemeBackdrop(modifier: Modifier = Modifier) {
             Backdrop.SKY -> if (dark) nightSky(colors.primary) else summerSky()
             Backdrop.SUNSET -> retroSunset(dark)
             Backdrop.SEIGAIHA -> seigaiha(colors.primary, colors.background)
+            Backdrop.RIPPLE -> glintWater(dark)
             Backdrop.NONE -> Unit
         }
         // Fade out towards the bottom. The busy wave pattern fades sooner and
@@ -126,6 +127,51 @@ private fun DrawScope.retroSunset(dark: Boolean) {
         drawLine(line, Offset(0f, y), Offset(size.width, y), strokeWidth = 1.5f)
         y += step; step *= 1.5f
     }
+}
+
+// ---- Glint (浮生拾遗): still water, spreading ripples and drifting glints of light ----
+
+private fun DrawScope.glintWater(dark: Boolean) {
+    val sky = if (dark) listOf(Color(0xFF0B3540), Color(0xFF0F2A33), Color(0xFF0C1A1F))
+    else listOf(Color(0xFFBFE3E5), Color(0xFFDDEFF0), Color(0xFFF2F6F6))
+    drawRect(Brush.verticalGradient(sky))
+
+    // Ripples spreading from one spot, kept clear of the title (left) and the action icons (top right).
+    val c = Offset(size.width * 0.74f, size.height * 0.56f)
+    val ink = if (dark) Color(0xFF9FDCE0) else Color(0xFF1B6B73)
+    for (i in 1..6) {
+        val rx = size.width * (0.05f + 0.085f * i)
+        val ry = rx * 0.26f
+        drawOval(
+            color = ink.copy(alpha = (if (dark) 0.38f else 0.30f) / (0.8f + i * 0.35f)),
+            topLeft = Offset(c.x - rx, c.y - ry), size = Size(rx * 2, ry * 2),
+            style = Stroke(width = 1.4f * density),
+        )
+    }
+
+    // A few small glints drifting over the water, and one bigger where the ripples begin.
+    val gold = if (dark) Color(0xFFFFD98A) else Color(0xFFD9A030)
+    val rnd = Random(11) // fixed seed: the glints don't jump between frames
+    repeat(9) {
+        val p = Offset(size.width * (0.30f + rnd.nextFloat() * 0.68f), size.height * (0.12f + rnd.nextFloat() * 0.62f))
+        glint(p, (3f + rnd.nextFloat() * 4.5f) * density, gold.copy(alpha = 0.35f + rnd.nextFloat() * 0.5f))
+    }
+    glint(Offset(c.x, c.y - size.height * 0.16f), 13f * density, gold)
+}
+
+/** A four-point sparkle with a soft glow. */
+private fun DrawScope.glint(center: Offset, r: Float, color: Color) {
+    drawCircle(Brush.radialGradient(listOf(color.copy(alpha = color.alpha * 0.35f), Color.Transparent), center, r * 1.8f), r * 1.8f, center)
+    val k = 0.16f * r // how far the arms pinch in toward the middle
+    val star = Path().apply {
+        moveTo(center.x, center.y - r)
+        quadraticBezierTo(center.x + k, center.y - k, center.x + r * 0.72f, center.y)
+        quadraticBezierTo(center.x + k, center.y + k, center.x, center.y + r)
+        quadraticBezierTo(center.x - k, center.y + k, center.x - r * 0.72f, center.y)
+        quadraticBezierTo(center.x - k, center.y - k, center.x, center.y - r)
+        close()
+    }
+    drawPath(star, color)
 }
 
 // ---- Matsuri: 青海波 (seigaiha) wave pattern — a traditional motif ----

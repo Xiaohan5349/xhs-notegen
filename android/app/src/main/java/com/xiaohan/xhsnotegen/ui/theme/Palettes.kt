@@ -17,6 +17,7 @@ enum class AppTheme(
     /** Decorative art drawn behind the home header (original, drawn in code). */
     val backdrop: Backdrop = Backdrop.NONE,
 ) {
+    GLINT("glint", ThemeGroup.SIGNATURE, Backdrop.RIPPLE),
     TOMATO("tomato"),
     MATCHA("matcha"),
     BLUEBERRY("blueberry"),
@@ -30,6 +31,7 @@ enum class AppTheme(
     /** Name shown in the theme picker, in the app language. */
     val displayName: String
         get() = when (this) {
+            GLINT -> tr("Glint", "浮生")
             TOMATO -> tr("Tomato", "番茄")
             MATCHA -> tr("Matcha", "抹茶")
             BLUEBERRY -> tr("Blueberry", "蓝莓")
@@ -52,16 +54,17 @@ enum class AppTheme(
 }
 
 enum class ThemeGroup {
-    CLASSIC, ANIME;
+    SIGNATURE, CLASSIC, ANIME;
 
     val label: String
         get() = when (this) {
+            SIGNATURE -> tr("Signature", "专属")
             CLASSIC -> tr("Classic", "经典")
             ANIME -> tr("Anime-inspired", "动漫风")
         }
 }
 
-enum class Backdrop { NONE, SKY, SUNSET, SEIGAIHA }
+enum class Backdrop { NONE, SKY, SUNSET, SEIGAIHA, RIPPLE }
 
 /** Surface ramp + text colors shared by several themes. */
 private data class Neutrals(
@@ -117,6 +120,15 @@ private val PopDark = Neutrals(
     Color(0xFF170F24), Color(0xFF110A1C), Color(0xFF1F152E), Color(0xFF251A36), Color(0xFF2F2342), Color(0xFF3A2D4E),
     Color(0xFFF1E6F4), Color(0xFFBCA9C4), Color(0xFF56466A), Color(0xFF3A2E4B),
 )
+// Glint: pale mist over water by day, deep teal night by evening.
+private val MistLight = Neutrals(
+    Color(0xFFF2F6F6), Color(0xFFFFFFFF), Color(0xFFEBF1F1), Color(0xFFE4ECEC), Color(0xFFDCE6E6), Color(0xFFD3DFDF),
+    Color(0xFF14262A), Color(0xFF52666A), Color(0xFFC2D2D3), Color(0xFFDCE6E6),
+)
+private val InkWaterDark = Neutrals(
+    Color(0xFF0C1A1F), Color(0xFF081317), Color(0xFF112329), Color(0xFF162A30), Color(0xFF1F363D), Color(0xFF2A444C),
+    Color(0xFFDDEBEC), Color(0xFFA5BCC0), Color(0xFF3F5A61), Color(0xFF2A4147),
+)
 private val IndigoNight = Neutrals(
     Color(0xFF11131F), Color(0xFF0C0E17), Color(0xFF181B29), Color(0xFF1D2030), Color(0xFF272A3B), Color(0xFF323547),
     Color(0xFFEAE6F0), Color(0xFFB3B0C2), Color(0xFF4A4C60), Color(0xFF31344A),
@@ -159,6 +171,10 @@ private fun dark(p: Accent, s: Accent, t: Accent, n: Neutrals) = darkColorScheme
 )
 
 private val lightSchemes: Map<AppTheme, ColorScheme> = mapOf(
+    AppTheme.GLINT to light(
+        Accent(Color(0xFF1B6B73), Color.White, Color(0xFFCDEBED), Color(0xFF00282C)), HerbL,
+        Accent(Color(0xFFB8801A), Color.White, Color(0xFFFFE3A6), Color(0xFF3A2600)), MistLight,
+    ),
     AppTheme.TOMATO to light(Accent(Tomato, Color.White, TomatoContainer, TomatoDeep), HerbL, HoneyL, WarmLight),
     AppTheme.MATCHA to light(Accent(Color(0xFF4E7A3A), Color.White, Color(0xFFDAEACB), Color(0xFF12300A)), TealL, HoneyL, GreenLight),
     AppTheme.BLUEBERRY to light(Accent(Color(0xFF4557A8), Color.White, Color(0xFFDDE1F8), Color(0xFF0E1A56)), HerbL, HoneyL, CoolLight),
@@ -181,6 +197,10 @@ private val lightSchemes: Map<AppTheme, ColorScheme> = mapOf(
 )
 
 private val darkSchemes: Map<AppTheme, ColorScheme> = mapOf(
+    AppTheme.GLINT to dark(
+        Accent(Color(0xFF7FD0D6), Color(0xFF00363A), Color(0xFF1B535A), Color(0xFFCFF3F5)), HerbD,
+        Accent(Color(0xFFF2C96B), Color(0xFF3F2A00), Color(0xFF5E4300), Color(0xFFFFE3A6)), InkWaterDark,
+    ),
     AppTheme.TOMATO to dark(Accent(TomatoLight, TomatoDeep, TomatoNightContainer, TomatoContainer), HerbD, HoneyD, WarmDark),
     AppTheme.MATCHA to dark(Accent(Color(0xFFA8D08D), Color(0xFF173808), Color(0xFF2F4F22), Color(0xFFD2EDC0)), TealD, HoneyD, GreenDark),
     AppTheme.BLUEBERRY to dark(Accent(Color(0xFFB7C2FF), Color(0xFF1A2769), Color(0xFF333F82), Color(0xFFDEE1FF)), HerbD, HoneyD, CoolDark),

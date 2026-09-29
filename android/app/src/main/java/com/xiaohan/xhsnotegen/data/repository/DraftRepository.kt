@@ -109,16 +109,6 @@ class DraftRepository(private val db: AppDatabase) {
     }
 
     /**
-     * A mode's root tag. It may be a path ("生活/咖啡"): each level is created
-     * under the one before if missing, and the last one is returned.
-     */
-    suspend fun rootTag(path: String): NoteTag? {
-        var tag: NoteTag? = null
-        TagTree.parsePath(path).forEach { name -> tag = getOrCreateTag(name, tag?.id) }
-        return tag
-    }
-
-    /**
      * Moves a tag (with everything under it) under [parentId] (null = top level).
      * A tag can't sit under itself or anything below it.
      */
@@ -136,13 +126,12 @@ class DraftRepository(private val db: AppDatabase) {
     }
 
     /**
-     * Gives every note its mode's root tag. Runs once after an update (notes
-     * made before modes existed) and is harmless to repeat.
+     * Removes the tags that writing modes used to add to every note (美食, 旅行 …) — notes are
+     * grouped by mode now. Tags under them move up a level; other tags on the notes stay.
      */
-    suspend fun backfillRootTags(rootTagOf: (String) -> String) {
-        draftDao.idsAndTypes().groupBy { it.type }.forEach { (type, rows) ->
-            val root = rootTag(rootTagOf(type)) ?: return@forEach
-            addTag(rows.map { it.id }, root.id)
+    suspend fun removeTagsByName(names: Collection<String>) = db.withTransaction {
+        names.map { it.trim() }.filter { it.isNotEmpty() && '/' !in it }.distinct().forEach { name ->
+            tagDao.byName(name)?.let { deleteTag(it.id) }
         }
     }
 
@@ -192,10 +181,12 @@ class DraftRepository(private val db: AppDatabase) {
      * (user-edited) text is the best example of the user's own voice, so it is
      * fed back to the model as a style reference.
      */
-    suspend fun getVoiceSamples(excludeId: Long, mode: String, limit: Int = 3): List<String> =
+    suspend fun getVoiceSamples(excludeId: Long, mode: String, language: PromptLanguage? = null, limit: Int = 3): List<String> =
         draftDao.getAll()
             .asSequence()
             .filter { it.id != excludeId && it.type == mode } // voice of the same kind of note
+            // …and in the same language, when we know both.
+            .filter { language == null || it.noteLanguage == null || it.noteLanguage == language.key }
             .filter { it.status == NoteStatus.SHARED.key || it.status == NoteStatus.REVIEWED.key }
             .mapNotNull { entity ->
                 runCatching { entity.toDomain() }.getOrNull()?.selectedVariant

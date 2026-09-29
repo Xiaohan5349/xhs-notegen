@@ -22,6 +22,7 @@ fun NoteDraftEntity.toDomain(foodInfo: FoodInfo? = null): NoteDraft = NoteDraft(
     updatedAt = updatedAt,
     foodInfo = foodInfo ?: FoodInfo(),
     rating = rating,
+    language = PromptLanguage.fromKey(noteLanguage),
 )
 
 fun NoteDraft.toEntity(): NoteDraftEntity = NoteDraftEntity(
@@ -39,6 +40,7 @@ fun NoteDraft.toEntity(): NoteDraftEntity = NoteDraftEntity(
     createdAt = createdAt,
     updatedAt = updatedAt,
     rating = rating.coerceIn(0, 5),
+    noteLanguage = language?.key,
 )
 
 // ---- FoodInfo ----
