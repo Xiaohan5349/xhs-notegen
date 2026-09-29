@@ -7,6 +7,7 @@ import com.xiaohan.xhsnotegen.data.json.JsonCodec
 import com.xiaohan.xhsnotegen.data.json.VariantsResponse
 import com.xiaohan.xhsnotegen.domain.NoteStyle
 import com.xiaohan.xhsnotegen.domain.NoteVariant
+import com.xiaohan.xhsnotegen.i18n.tr
 import com.xiaohan.xhsnotegen.util.HttpClientFactory
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
@@ -71,7 +72,7 @@ object AiWriter {
                 lastBadRequest = e
             }
         }
-        throw lastBadRequest ?: AiException("The model rejected the request")
+        throw lastBadRequest ?: AiException(tr("The model rejected the request", "模型拒绝了这个请求"))
     }
 
     /** One retry for transient failures (rate limits, 5xx, network, truncated JSON). */
@@ -83,7 +84,7 @@ object AiWriter {
             } catch (e: AiException) {
                 if (!e.retryable || attempt >= 1) throw e
             } catch (e: IOException) {
-                if (attempt >= 1) throw AiException("Network error: ${e.message ?: "connection failed"}")
+                if (attempt >= 1) throw AiException(tr("Network error: ${e.message ?: "connection failed"}", "网络错误：${e.message ?: "连接失败"}"))
             }
             attempt++
             delay(3_000)
@@ -257,13 +258,13 @@ object AiWriter {
     /** Pulls the model's answer text out of a successful response body. */
     internal fun extractText(protocol: AiProtocol, raw: String): String {
         val json = runCatching { JsonParser.parseString(raw).asJsonObject }.getOrNull()
-            ?: throw AiException("The model returned an unreadable response", retryable = true)
+            ?: throw AiException(tr("The model returned an unreadable response", "模型返回的内容无法读取"), retryable = true)
 
         val (text, stop) = when (protocol) {
             AiProtocol.GEMINI -> {
-                json.obj("promptFeedback")?.str("blockReason")?.let { throw AiException("The request was blocked ($it)") }
+                json.obj("promptFeedback")?.str("blockReason")?.let { throw AiException(tr("The request was blocked ($it)", "请求被拦截（$it）")) }
                 val cand = json.getAsJsonArray("candidates")?.firstOrNull()?.asJsonObject
-                    ?: throw AiException("The model returned no answer", retryable = true)
+                    ?: throw AiException(tr("The model returned no answer", "模型没有返回回答"), retryable = true)
                 val t = cand.obj("content")?.getAsJsonArray("parts")
                     ?.mapNotNull { it.asJsonObject }
                     ?.filter { it.get("thought")?.asBoolean != true } // skip thought summaries
@@ -276,9 +277,9 @@ object AiWriter {
             }
             AiProtocol.OPENAI_CHAT -> {
                 val choice = json.getAsJsonArray("choices")?.firstOrNull()?.asJsonObject
-                    ?: throw AiException("The model returned no answer", retryable = true)
+                    ?: throw AiException(tr("The model returned no answer", "模型没有返回回答"), retryable = true)
                 val msg = choice.obj("message")
-                if (!msg?.str("refusal").isNullOrBlank()) throw AiException("The model declined: ${msg?.str("refusal")}")
+                if (!msg?.str("refusal").isNullOrBlank()) throw AiException(tr("The model declined: ${msg?.str("refusal")}", "模型拒绝回答：${msg?.str("refusal")}"))
                 msg?.str("content").orEmpty() to when (choice.str("finish_reason")) {
                     "length" -> Stop.TRUNCATED
                     "content_filter" -> Stop.BLOCKED
@@ -298,11 +299,11 @@ object AiWriter {
             }
         }
         when (stop) {
-            Stop.TRUNCATED -> throw AiException("The answer was cut off. Try fewer photos or shorter notes.", retryable = true)
-            Stop.BLOCKED -> throw AiException("The model blocked this content. Try different photos or wording.")
+            Stop.TRUNCATED -> throw AiException(tr("The answer was cut off. Try fewer photos or shorter notes.", "回答被截断了。试试少放几张照片或写短一点。"), retryable = true)
+            Stop.BLOCKED -> throw AiException(tr("The model blocked this content. Try different photos or wording.", "模型拦截了这些内容。换几张照片或换个说法试试。"))
             Stop.OK -> Unit
         }
-        if (text.isBlank()) throw AiException("The model returned an empty answer", retryable = true)
+        if (text.isBlank()) throw AiException(tr("The model returned an empty answer", "模型返回了空回答"), retryable = true)
         return text
     }
 
@@ -328,21 +329,27 @@ object AiWriter {
             (message.contains("tokens per min", ignoreCase = true) && message.contains("requested", ignoreCase = true))
         return when {
             code == 401 || (code in listOf(400, 403) && keyProblem) ->
-                AiException("$name rejected the API key. Check it in Settings.")
+                AiException(tr("$name rejected the API key. Check it in Settings.", "$name 拒绝了 API 密钥，请在设置中检查。"))
             code == 402 || (code == 429 && noCredit) -> AiException(
-                "Your $name API account has no credit left ($message). " +
-                    if (c.provider == AiProvider.OPENAI) "Note: a ChatGPT Plus/Pro subscription doesn't include API credit — add it at platform.openai.com → Billing."
-                    else "Add credit in your $name account."
+                tr("Your $name API account has no credit left ($message). ", "你的 $name API 账户额度已用完（$message）。") +
+                    if (c.provider == AiProvider.OPENAI) tr(
+                        "Note: a ChatGPT Plus/Pro subscription doesn't include API credit — add it at platform.openai.com → Billing.",
+                        "注意：ChatGPT Plus/Pro 订阅不包含 API 额度，请在 platform.openai.com → Billing 充值。",
+                    )
+                    else tr("Add credit in your $name account.", "请在 $name 账户中充值。")
             )
             code == 429 && tooLarge -> AiException(
-                "This note is too big for your $name account's rate limit ($message). Try fewer photos, or a model with higher limits."
+                tr(
+                    "This note is too big for your $name account's rate limit ($message). Try fewer photos, or a model with higher limits.",
+                    "这篇笔记超出了你的 $name 账户频率限制（$message）。试试少放几张照片，或换一个限制更高的模型。",
+                )
             )
-            code == 429 -> AiException("$name rate limit: $message", retryable = true)
-            code == 403 -> AiException("This key can't use \"${c.model}\": $message")
-            code == 404 -> AiException("Model \"${c.model}\" wasn't found at $name. Check the model in Settings.")
-            code >= 500 -> AiException("$name is having trouble ($code). Retrying may help.", retryable = true)
-            code == 400 || code == 422 -> AiException("$name couldn't handle the request: $message", badRequest = true)
-            else -> AiException("$name error $code: $message")
+            code == 429 -> AiException(tr("$name rate limit: $message", "$name 频率限制：$message"), retryable = true)
+            code == 403 -> AiException(tr("This key can't use \"${c.model}\": $message", "这个密钥无法使用“${c.model}”：$message"))
+            code == 404 -> AiException(tr("Model \"${c.model}\" wasn't found at $name. Check the model in Settings.", "$name 上找不到模型“${c.model}”，请在设置中检查模型。"))
+            code >= 500 -> AiException(tr("$name is having trouble ($code). Retrying may help.", "$name 出了点问题（$code），重试也许能解决。"), retryable = true)
+            code == 400 || code == 422 -> AiException(tr("$name couldn't handle the request: $message", "$name 无法处理这个请求：$message"), badRequest = true)
+            else -> AiException(tr("$name error $code: $message", "$name 错误 $code：$message"))
         }
     }
 
@@ -355,7 +362,7 @@ object AiWriter {
         val dtos = runCatching {
             JsonCodec.gson.fromJson(candidate, VariantsResponse::class.java)?.variants
         }.getOrNull().orEmpty().filterNotNull()
-        if (dtos.isEmpty()) throw AiException("Couldn't read the model's answer", retryable = true)
+        if (dtos.isEmpty()) throw AiException(tr("Couldn't read the model's answer", "无法读取模型的回答"), retryable = true)
 
         // Match by the style key the model echoed back; fall back to position.
         val unmatched = dtos.toMutableList()
@@ -367,7 +374,7 @@ object AiWriter {
             val dto = byStyle[style] ?: unmatched.removeFirstOrNull()
             dto?.toDomain(fallbackStyle = style)?.copy(styleLabel = style.key)
                 ?.takeIf { it.body.isNotBlank() }
-        }.ifEmpty { throw AiException("The answer had no usable notes", retryable = true) }
+        }.ifEmpty { throw AiException(tr("The answer had no usable notes", "回答里没有可用的笔记"), retryable = true) }
     }
 
     // ---------------------------------------------------------------------

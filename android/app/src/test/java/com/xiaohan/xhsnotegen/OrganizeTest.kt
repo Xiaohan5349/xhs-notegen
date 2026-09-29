@@ -55,7 +55,7 @@ class OrganizeTest {
     fun `a note with two tags appears under both, untagged last`() {
         val notes = listOf(note(1, tags = arrayOf("咖啡", "甜品")), note(2, tags = arrayOf("咖啡")), note(3))
         assertEquals(
-            listOf("[#咖啡 2]", "1", "2", "[#甜品 1]", "1", "[No tag 1]", "3"),
+            listOf("[咖啡 2]", "1", "2", "[甜品 1]", "1", "[No tag 1]", "3"),
             titles(buildFeed(notes, GroupBy.TAG, emptySet())),
         )
     }

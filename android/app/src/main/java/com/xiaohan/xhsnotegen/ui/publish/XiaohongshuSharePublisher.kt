@@ -12,6 +12,7 @@ import android.os.Environment
 import android.provider.MediaStore
 import com.xiaohan.xhsnotegen.domain.NoteDraft
 import com.xiaohan.xhsnotegen.domain.NoteVariant
+import com.xiaohan.xhsnotegen.i18n.tr
 import com.xiaohan.xhsnotegen.util.ImageCompressor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -59,7 +60,7 @@ object XiaohongshuSharePublisher {
                 images = images,
             )
         } catch (e: Exception) {
-            XhsApiClient.PublishResult(false, error = e.message ?: "Unexpected error")
+            XhsApiClient.PublishResult(false, error = e.message ?: tr("Unexpected error", "意外错误"))
         }
 
         if (result.success) {
@@ -97,12 +98,12 @@ object XiaohongshuSharePublisher {
     private fun validationError(draft: NoteDraft): String {
         val v = draft.selectedVariant
         return when {
-            v == null -> "No note selected"
-            v.title.isBlank() -> "Add a title first"
-            v.body.isBlank() -> "The note body is empty"
+            v == null -> tr("No note selected", "没有选中笔记")
+            v.title.isBlank() -> tr("Add a title first", "请先添加标题")
+            v.body.isBlank() -> tr("The note body is empty", "正文是空的")
             // XHS rejects titles over 20 characters; fail early with an actionable message.
             v.title.length > TITLE_LIMIT -> "标题超长（${v.title.length} 字，上限 $TITLE_LIMIT 字），请缩短后再发布"
-            else -> "Select at least one photo"
+            else -> tr("Select at least one photo", "请至少选择一张照片")
         }
     }
 
@@ -118,7 +119,7 @@ object XiaohongshuSharePublisher {
             try {
                 ImageCompressor.compress(context, Uri.parse(uriStr), ImageCompressor.FOR_PUBLISH)
             } catch (e: Exception) {
-                return@withContext Loaded.Failed("Photo ${i + 1} can't be read anymore. Deselect it and try again.")
+                return@withContext Loaded.Failed(tr("Photo ${i + 1} can't be read anymore. Deselect it and try again.", "第 ${i + 1} 张照片读取不到了。取消选择后再试一次。"))
             }
         }
         Loaded.Ok(images)
@@ -140,7 +141,7 @@ object XiaohongshuSharePublisher {
         images: List<ImageCompressor.Compressed>,
         reason: String?,
     ): PublishResult {
-        val variant = draft.selectedVariant ?: return PublishResult.Error("No note selected")
+        val variant = draft.selectedVariant ?: return PublishResult.Error(tr("No note selected", "没有选中笔记"))
 
         val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
         clipboard.setPrimaryClip(ClipData.newPlainText("note", shareText(variant)))
@@ -164,7 +165,7 @@ object XiaohongshuSharePublisher {
                 }
             }
         }
-        if (savedCount == 0) return PublishResult.Error("Couldn't save photos to the gallery")
+        if (savedCount == 0) return PublishResult.Error(tr("Couldn't save photos to the gallery", "照片无法保存到相册"))
 
         return PublishResult.Handoff(reason = reason, openedXhs = openXhs(context))
     }

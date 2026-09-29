@@ -4,6 +4,7 @@ import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.ui.graphics.Color
+import com.xiaohan.xhsnotegen.i18n.tr
 
 /**
  * Selectable color themes. Each defines an accent family on top of a neutral
@@ -12,20 +13,33 @@ import androidx.compose.ui.graphics.Color
  */
 enum class AppTheme(
     val id: String,
-    val displayName: String,
     val group: ThemeGroup = ThemeGroup.CLASSIC,
     /** Decorative art drawn behind the home header (original, drawn in code). */
     val backdrop: Backdrop = Backdrop.NONE,
 ) {
-    TOMATO("tomato", "Tomato"),
-    MATCHA("matcha", "Matcha"),
-    BLUEBERRY("blueberry", "Blueberry"),
-    SAKURA("sakura", "Sakura"),
-    SESAME("sesame", "Sesame"),
-    LATTE("latte", "Latte"),
-    SUMMER_SKY("summer_sky", "Summer Sky", ThemeGroup.ANIME, Backdrop.SKY),
-    CITY_POP("city_pop", "City Pop", ThemeGroup.ANIME, Backdrop.SUNSET),
-    MATSURI("matsuri", "Matsuri", ThemeGroup.ANIME, Backdrop.SEIGAIHA);
+    TOMATO("tomato"),
+    MATCHA("matcha"),
+    BLUEBERRY("blueberry"),
+    SAKURA("sakura"),
+    SESAME("sesame"),
+    LATTE("latte"),
+    SUMMER_SKY("summer_sky", ThemeGroup.ANIME, Backdrop.SKY),
+    CITY_POP("city_pop", ThemeGroup.ANIME, Backdrop.SUNSET),
+    MATSURI("matsuri", ThemeGroup.ANIME, Backdrop.SEIGAIHA);
+
+    /** Name shown in the theme picker, in the app language. */
+    val displayName: String
+        get() = when (this) {
+            TOMATO -> tr("Tomato", "番茄")
+            MATCHA -> tr("Matcha", "抹茶")
+            BLUEBERRY -> tr("Blueberry", "蓝莓")
+            SAKURA -> tr("Sakura", "樱花")
+            SESAME -> tr("Sesame", "芝麻")
+            LATTE -> tr("Latte", "拿铁")
+            SUMMER_SKY -> tr("Summer Sky", "夏日晴空")
+            CITY_POP -> tr("City Pop", "城市流行")
+            MATSURI -> tr("Matsuri", "祭典")
+        }
 
     fun scheme(dark: Boolean): ColorScheme = if (dark) darkSchemes.getValue(this) else lightSchemes.getValue(this)
 
@@ -37,7 +51,15 @@ enum class AppTheme(
     }
 }
 
-enum class ThemeGroup(val label: String) { CLASSIC("Classic"), ANIME("Anime-inspired") }
+enum class ThemeGroup {
+    CLASSIC, ANIME;
+
+    val label: String
+        get() = when (this) {
+            CLASSIC -> tr("Classic", "经典")
+            ANIME -> tr("Anime-inspired", "动漫风")
+        }
+}
 
 enum class Backdrop { NONE, SKY, SUNSET, SEIGAIHA }
 

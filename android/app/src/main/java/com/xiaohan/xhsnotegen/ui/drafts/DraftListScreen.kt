@@ -40,6 +40,10 @@ import com.xiaohan.xhsnotegen.domain.Place
 import com.xiaohan.xhsnotegen.ui.components.EmptyState
 import com.xiaohan.xhsnotegen.ui.components.CardStars
 import com.xiaohan.xhsnotegen.ui.components.RatingDialog
+import com.xiaohan.xhsnotegen.ui.components.RatingMeter
+import com.xiaohan.xhsnotegen.domain.TagTree
+import com.xiaohan.xhsnotegen.i18n.notesCount
+import com.xiaohan.xhsnotegen.i18n.tr
 import com.xiaohan.xhsnotegen.ui.components.StatusPill
 import com.xiaohan.xhsnotegen.ui.publish.XhsAuthStore
 import com.xiaohan.xhsnotegen.ui.theme.Backdrop
@@ -118,12 +122,12 @@ fun DraftListScreen(
                     LargeTopAppBar(
                         title = {
                             Column {
-                                Text("Food diary", maxLines = 1)
+                                Text(tr("Food diary", "食记"), maxLines = 1)
                                 if (total > 0 && scrollBehavior.state.collapsedFraction < 0.5f) {
                                     Text(
                                         buildString {
-                                            append("$total ${if (total == 1) "note" else "notes"}")
-                                            if (ready > 0) append(" · $ready ready to post")
+                                            append(notesCount(total))
+                                            if (ready > 0) append(tr(" · $ready ready to post", " · $ready 篇待发布"))
                                         },
                                         style = MaterialTheme.typography.bodyMedium,
                                         color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -137,42 +141,37 @@ fun DraftListScreen(
                                     if (loggedIn) Badge(containerColor = MaterialTheme.colorScheme.secondary)
                                 }) {
                                     Icon(Icons.Outlined.AccountCircle,
-                                        contentDescription = if (loggedIn) "Xiaohongshu connected" else "Account")
+                                        contentDescription = if (loggedIn) tr("Settings · Xiaohongshu connected", "设置 · 已连接小红书") else tr("Settings", "设置"))
                                 }
                             }
                             Box {
                                 IconButton(onClick = { showMenu = true }) {
-                                    Icon(Icons.Outlined.MoreVert, contentDescription = "More")
+                                    Icon(Icons.Outlined.MoreVert, contentDescription = tr("More", "更多"))
                                 }
                                 DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
                                     DropdownMenuItem(
-                                        text = { Text("Organize by place") },
+                                        text = { Text(tr("Organize by place", "按地点整理")) },
                                         leadingIcon = { Icon(Icons.Outlined.TravelExplore, null) },
                                         onClick = { showMenu = false; viewModel.organize() },
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Re-check all places") },
+                                        text = { Text(tr("Re-check all places", "重新识别所有地点")) },
                                         leadingIcon = { Icon(Icons.Outlined.Refresh, null) },
                                         onClick = { showMenu = false; viewModel.organize(redo = true) },
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Manage tags") },
+                                        text = { Text(tr("Manage tags", "管理标签")) },
                                         leadingIcon = { Icon(Icons.Outlined.Label, null) },
                                         onClick = { showMenu = false; dialog = HomeDialog.ManageTags },
                                     )
                                     HorizontalDivider()
                                     DropdownMenuItem(
-                                        text = { Text("Settings") },
-                                        leadingIcon = { Icon(Icons.Outlined.Settings, null) },
-                                        onClick = { showMenu = false; onOpenSettings() },
-                                    )
-                                    DropdownMenuItem(
-                                        text = { Text("Import backup") },
+                                        text = { Text(tr("Import backup", "导入备份")) },
                                         leadingIcon = { Icon(Icons.Outlined.FileOpen, null) },
                                         onClick = { showMenu = false; importLauncher.launch(arrayOf("application/json")) },
                                     )
                                     DropdownMenuItem(
-                                        text = { Text("Export backup") },
+                                        text = { Text(tr("Export backup", "导出备份")) },
                                         leadingIcon = { Icon(Icons.Outlined.SaveAlt, null) },
                                         onClick = { showMenu = false; exportLauncher.launch("xhs_notes_backup.json") },
                                     )
@@ -193,7 +192,7 @@ fun DraftListScreen(
                     onClick = onCreateClick,
                     expanded = !gridState.canScrollBackward,
                     icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-                    text = { Text("New note") },
+                    text = { Text(tr("New note", "写笔记")) },
                     containerColor = MaterialTheme.colorScheme.primary,
                     contentColor = MaterialTheme.colorScheme.onPrimary,
                 )
@@ -227,21 +226,21 @@ fun DraftListScreen(
                         if (total == 0) {
                             EmptyState(
                                 icon = Icons.Outlined.RamenDining,
-                                title = "Your food diary is empty",
-                                body = "Snap a meal, jot down a few words, and get a note that sounds like you.",
+                                title = tr("Your food diary is empty", "还没有笔记"),
+                                body = tr("Snap a meal, jot down a few words, and get a note that sounds like you.", "拍张照，随手写几句，就能得到一篇像你自己写的笔记。"),
                                 action = {
                                     Button(onClick = onCreateClick) {
                                         Icon(Icons.Filled.Add, null, Modifier.size(18.dp))
                                         Spacer(Modifier.width(8.dp))
-                                        Text("Write your first note")
+                                        Text(tr("Write your first note", "写第一篇笔记"))
                                     }
                                 },
                             )
                         } else {
                             EmptyState(
                                 icon = Icons.Outlined.FilterList,
-                                title = "Nothing here yet",
-                                body = "No notes match these filters.",
+                                title = tr("Nothing here yet", "这里还没有"),
+                                body = tr("No notes match these filters.", "没有符合筛选条件的笔记。"),
                             )
                         }
                     }
@@ -351,20 +350,20 @@ private fun SelectionBar(
 ) {
     var menu by remember { mutableStateOf(false) }
     TopAppBar(
-        title = { Text("$count selected") },
-        navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.Filled.Close, "Cancel selection") } },
+        title = { Text(tr("$count selected", "已选 $count 篇")) },
+        navigationIcon = { IconButton(onClick = onClose) { Icon(Icons.Filled.Close, tr("Cancel selection", "取消选择")) } },
         actions = {
-            if (!allSelected) IconButton(onClick = onSelectAll) { Icon(Icons.Outlined.SelectAll, "Select all") }
-            IconButton(onClick = onTags) { Icon(Icons.Outlined.Label, "Tags") }
-            IconButton(onClick = onRate) { Icon(Icons.Outlined.StarOutline, "Rate") }
-            IconButton(onClick = onDelete) { Icon(Icons.Outlined.Delete, "Delete") }
+            if (!allSelected) IconButton(onClick = onSelectAll) { Icon(Icons.Outlined.SelectAll, tr("Select all", "全选")) }
+            IconButton(onClick = onTags) { Icon(Icons.Outlined.Label, tr("Tags", "标签")) }
+            IconButton(onClick = onRate) { Icon(Icons.Outlined.StarOutline, tr("Rate", "评分")) }
+            IconButton(onClick = onDelete) { Icon(Icons.Outlined.Delete, tr("Delete", "删除")) }
             Box {
-                IconButton(onClick = { menu = true }) { Icon(Icons.Outlined.MoreVert, "More") }
+                IconButton(onClick = { menu = true }) { Icon(Icons.Outlined.MoreVert, tr("More", "更多")) }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     StatusMenuItems { menu = false; onStatus(it) }
                     HorizontalDivider()
                     DropdownMenuItem(
-                        text = { Text("Set place…") },
+                        text = { Text(tr("Set place…", "设置地点…")) },
                         leadingIcon = { Icon(Icons.Outlined.Place, null) },
                         onClick = { menu = false; onPlace() },
                     )
@@ -382,11 +381,11 @@ private fun SelectionBar(
 
 @Composable
 private fun StatusMenuItems(onPick: (NoteStatus) -> Unit) {
-    DropdownMenuItem(text = { Text("Mark as draft") }, leadingIcon = { Icon(Icons.Outlined.EditNote, null) },
+    DropdownMenuItem(text = { Text(tr("Mark as draft", "标为草稿")) }, leadingIcon = { Icon(Icons.Outlined.EditNote, null) },
         onClick = { onPick(NoteStatus.GENERATED) })
-    DropdownMenuItem(text = { Text("Mark as ready") }, leadingIcon = { Icon(Icons.Outlined.TaskAlt, null) },
+    DropdownMenuItem(text = { Text(tr("Mark as ready", "标为待发布")) }, leadingIcon = { Icon(Icons.Outlined.TaskAlt, null) },
         onClick = { onPick(NoteStatus.REVIEWED) })
-    DropdownMenuItem(text = { Text("Mark as posted") }, leadingIcon = { Icon(Icons.Outlined.Send, null) },
+    DropdownMenuItem(text = { Text(tr("Mark as posted", "标为已发布")) }, leadingIcon = { Icon(Icons.Outlined.Send, null) },
         onClick = { onPick(NoteStatus.SHARED) })
 }
 
@@ -431,16 +430,29 @@ private fun FilterRow(
 @Composable
 private fun TagFilterRow(state: DraftListState, onSelect: (Long) -> Unit) {
     LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp), contentPadding = PaddingValues(horizontal = 4.dp)) {
-        // Root tags always; a root's sub-tags appear once it (or one of them) is selected.
+        // Top-level tags always; selecting one opens the next level after it, and so on
+        // down the selected tag's branch (like drilling into Country → City).
+        val byId = state.tags.associateBy { it.id }
         val selected = state.tags.firstOrNull { it.id == state.tagFilter }
-        val openRoot = selected?.parentId ?: selected?.id
-        val shown = state.tags.filter { it.parentId == null || it.parentId == openRoot }
-            .sortedWith(compareBy({ (it.parentId ?: it.id) != openRoot }, { it.parentId != null }, { it.name.lowercase() }))
-        items(shown, key = { it.id }) { tag ->
+        val openPath = selected?.let { TagTree.path(it, byId) }.orEmpty()
+        val shown = buildList {
+            TagTree.roots(state.tags).forEach { root ->
+                add(root to 0)
+                if (openPath.firstOrNull()?.id != root.id) return@forEach
+                fun open(parent: com.xiaohan.xhsnotegen.domain.NoteTag, depth: Int) {
+                    TagTree.children(parent.id, state.tags).forEach { c ->
+                        add(c to depth)
+                        if (openPath.any { it.id == c.id }) open(c, depth + 1)
+                    }
+                }
+                open(root, 1)
+            }
+        }
+        items(shown, key = { it.first.id }) { (tag, depth) ->
             FilterChip(
                 selected = state.tagFilter == tag.id,
                 onClick = { onSelect(tag.id) },
-                label = { Text("#${tag.name}") },
+                label = { Text(if (depth == 0) tag.name else "› ${tag.name}") },
                 shape = CircleShape,
                 colors = FilterChipDefaults.filterChipColors(
                     containerColor = MaterialTheme.colorScheme.surfaceContainerLowest,
@@ -461,7 +473,7 @@ private fun GroupRow(
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
         Row(Modifier.padding(horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text("Group", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(tr("Group", "分组"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.width(8.dp))
             GroupBy.entries.filter { it != GroupBy.NONE }.forEach { g ->
                 val on = g == state.groupBy
@@ -481,13 +493,13 @@ private fun GroupRow(
                 TextButton(onClick = onOrganize) {
                     Icon(Icons.Outlined.TravelExplore, null, Modifier.size(16.dp))
                     Spacer(Modifier.width(6.dp))
-                    Text("Organize ${state.unplacedCount}")
+                    Text(tr("Organize ${state.unplacedCount}", "整理 ${state.unplacedCount} 篇"))
                 }
             }
         }
         if (organizing != null) {
             Column(Modifier.padding(horizontal = 4.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Finding places… ${organizing.done}/${organizing.total}", style = MaterialTheme.typography.bodySmall,
+                Text(tr("Finding places… ${organizing.done}/${organizing.total}", "正在识别地点… ${organizing.done}/${organizing.total}"), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
                 LinearProgressIndicator(
                     progress = { if (organizing.total == 0) 0f else organizing.done / organizing.total.toFloat() },
@@ -507,22 +519,32 @@ private fun GroupHeaderRow(header: GroupHeader, collapsed: Boolean, onToggle: ()
             .clip(MaterialTheme.shapes.small)
             .clickable(onClick = onToggle)
             .padding(
-                start = if (header.level == 0) 4.dp else 16.dp,
+                // Deeper levels step in, up to a point, so long branches still fit.
+                start = if (header.level == 0) 4.dp else (4 + 12 * header.level.coerceAtMost(4)).dp,
                 top = if (header.level == 0) 12.dp else 2.dp,
                 bottom = 2.dp,
             ),
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Icon(Icons.Outlined.ExpandMore, contentDescription = if (collapsed) "Expand" else "Collapse",
+        Icon(Icons.Outlined.ExpandMore, contentDescription = if (collapsed) tr("Expand", "展开") else tr("Collapse", "收起"),
             modifier = Modifier.size(20.dp).rotate(arrow), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         Spacer(Modifier.width(6.dp))
-        if (header.level == 0) {
+        if (header.rating != null) {
+            // Rating groups: a level meter in the theme color, not stars (stars belong to the cards).
+            if (header.rating > 0) {
+                RatingMeter(header.rating)
+                Spacer(Modifier.width(10.dp))
+            }
+            Text(header.title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f, fill = false),
+                color = if (header.rating > 0) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant)
+        } else if (header.level == 0) {
             Text(header.title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f, fill = false))
         } else {
             Icon(if (header.key.startsWith("tag:")) Icons.Outlined.Label else Icons.Outlined.Place, null,
                 Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
             Spacer(Modifier.width(4.dp))
-            Text(header.title, style = MaterialTheme.typography.titleMedium, modifier = Modifier.weight(1f, fill = false))
+            Text(header.title, style = if (header.level == 1) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
+                modifier = Modifier.weight(1f, fill = false))
         }
         Spacer(Modifier.width(8.dp))
         Text(
@@ -560,7 +582,7 @@ private fun NoteCard(
 
     val variant = draft.selectedVariant
     val title = variant?.title?.takeIf { it.isNotBlank() }
-        ?: draft.foodInfo.dishNames.ifBlank { "Untitled meal" }
+        ?: draft.foodInfo.dishNames.ifBlank { tr("Untitled meal", "无标题") }
     val cover = draft.publishPhotoUris.firstOrNull()
     val place = draft.foodInfo.place
 
@@ -628,7 +650,7 @@ private fun NoteCard(
                 )
                 if (draft.tags.isNotEmpty()) {
                     Text(
-                        draft.tags.joinToString(" ") { "#${it.name}" },
+                        draft.tags.joinToString(" · ") { it.name },
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.primary,
                         maxLines = 1,
@@ -649,23 +671,23 @@ private fun NoteCard(
                     )
                     if (!selecting) Box {
                         IconButton(onClick = { showMenu = true }, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.Outlined.MoreHoriz, contentDescription = "Note options",
+                            Icon(Icons.Outlined.MoreHoriz, contentDescription = tr("Note options", "笔记选项"),
                                 tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
                         }
                         DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                            DropdownMenuItem(text = { Text("Select") }, leadingIcon = { Icon(Icons.Outlined.CheckCircle, null) },
+                            DropdownMenuItem(text = { Text(tr("Select", "选择")) }, leadingIcon = { Icon(Icons.Outlined.CheckCircle, null) },
                                 onClick = { showMenu = false; onLongClick() })
-                            DropdownMenuItem(text = { Text("Tags…") }, leadingIcon = { Icon(Icons.Outlined.Label, null) },
+                            DropdownMenuItem(text = { Text(tr("Tags…", "标签…")) }, leadingIcon = { Icon(Icons.Outlined.Label, null) },
                                 onClick = { showMenu = false; onTags() })
-                            DropdownMenuItem(text = { Text("Place…") }, leadingIcon = { Icon(Icons.Outlined.Place, null) },
+                            DropdownMenuItem(text = { Text(tr("Place…", "地点…")) }, leadingIcon = { Icon(Icons.Outlined.Place, null) },
                                 onClick = { showMenu = false; onPlace() })
-                            DropdownMenuItem(text = { Text("Rate…") }, leadingIcon = { Icon(Icons.Outlined.StarOutline, null) },
+                            DropdownMenuItem(text = { Text(tr("Rate…", "评分…")) }, leadingIcon = { Icon(Icons.Outlined.StarOutline, null) },
                                 onClick = { showMenu = false; onRate() })
                             HorizontalDivider()
                             StatusMenuItems { showMenu = false; onStatus(it) }
                             HorizontalDivider()
                             DropdownMenuItem(
-                                text = { Text("Delete", color = MaterialTheme.colorScheme.error) },
+                                text = { Text(tr("Delete", "删除"), color = MaterialTheme.colorScheme.error) },
                                 leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = MaterialTheme.colorScheme.error) },
                                 onClick = { showMenu = false; onDelete() },
                             )

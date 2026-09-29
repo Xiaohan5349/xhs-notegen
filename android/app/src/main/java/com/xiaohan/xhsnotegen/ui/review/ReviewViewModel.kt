@@ -9,6 +9,7 @@ import com.xiaohan.xhsnotegen.domain.NoteDraft
 import com.xiaohan.xhsnotegen.domain.NoteStatus
 import com.xiaohan.xhsnotegen.domain.NoteStyle
 import com.xiaohan.xhsnotegen.domain.NoteVariant
+import com.xiaohan.xhsnotegen.i18n.tr
 import com.xiaohan.xhsnotegen.ui.create.moved
 import com.xiaohan.xhsnotegen.ui.generate.NoteGenerator
 import com.xiaohan.xhsnotegen.ui.publish.XiaohongshuSharePublisher
@@ -126,7 +127,7 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
         val d = _draft.value ?: return
         val selected = d.selectedPublishPhotoUris
         if (uri in selected && selected.size == 1) {
-            _events.trySend(ReviewEvent.Message("A post needs at least one photo"))
+            _events.trySend(ReviewEvent.Message(tr("A post needs at least one photo", "笔记至少需要一张照片")))
             return
         }
         mutate { it.copy(selectedPublishPhotoUris = if (uri in selected) selected - uri else selected + uri) }
@@ -160,7 +161,7 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
         mutate(debounce = false) {
             if (it.status == NoteStatus.SHARED) it else it.copy(status = NoteStatus.REVIEWED)
         }
-        _events.trySend(ReviewEvent.Message("Saved — marked as ready to post"))
+        _events.trySend(ReviewEvent.Message(tr("Saved — marked as ready to post", "已保存，标为待发布")))
     }
 
     fun markShared() = mutate(debounce = false) { it.copy(status = NoteStatus.SHARED) }
@@ -206,7 +207,7 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _events.trySend(ReviewEvent.Message(e.message ?: "Couldn't generate"))
+                _events.trySend(ReviewEvent.Message(e.message ?: tr("Couldn't generate", "生成失败")))
             } finally {
                 _aiTask.value = AiTask.NONE
             }

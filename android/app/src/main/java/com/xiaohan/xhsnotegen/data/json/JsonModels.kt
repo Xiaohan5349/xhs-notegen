@@ -174,7 +174,12 @@ fun normalizeHashtags(raw: List<String>): List<String> =
         .filter { it.isNotEmpty() }
         .distinct()
 
-/** Stored writing mode; nullable so a partial or older record still loads with defaults. */
+/**
+ * Stored writing mode; nullable so a partial or older record still loads with defaults.
+ * The top-level prompt fields hold the Chinese prompt (the only one before v1.8);
+ * [en] holds the English one. Built-in modes are stored as differences from their
+ * defaults, so untouched parts follow the app language and pick up better defaults.
+ */
 data class ModeDto(
     val key: String? = null,
     val name: String? = null,
@@ -183,32 +188,103 @@ data class ModeDto(
     val fields: Map<String, FieldSpecDto?>? = null,
     val instructions: String? = null,
     val styles: Map<String, String?>? = null,
+    val en: PromptSetDto? = null,
+    val language: String? = null,
+    val maxPhotos: Int? = null,
 ) {
-    /** Fills anything missing from [base] (the built-in default, or a blank custom mode). */
-    fun toDomain(base: WritingMode): WritingMode = base.copy(
-        name = name?.takeIf { it.isNotBlank() } ?: base.name,
-        rootTag = rootTag?.trim() ?: base.rootTag,
-        promptHeading = promptHeading?.takeIf { it.isNotBlank() } ?: base.promptHeading,
-        fields = FieldSlot.entries.associateWith { slot ->
-            val d = fields?.get(slot.name)
-            val b = base.field(slot)
-            FieldSpec(
-                label = d?.label?.takeIf { it.isNotBlank() } ?: b.label,
-                hint = d?.hint ?: b.hint,
-                promptKey = d?.promptKey?.takeIf { it.isNotBlank() } ?: b.promptKey,
-            )
-        },
-        instructions = instructions?.takeIf { it.isNotBlank() } ?: base.instructions,
-        styles = NoteStyle.entries.associate { s -> s.key to (styles?.get(s.key)?.takeIf { it.isNotBlank() } ?: base.style(s)) },
-    )
+    /**
+     * Fills anything missing from [base] (the built-in default, or a blank custom
+     * mode). A name or label equal to the default in [other] (the same default in
+     * the other app language) counts as not customized, so it follows the app language.
+     */
+    fun toDomain(base: WritingMode, other: WritingMode? = null): WritingMode {
+        fun localized(stored: String?, baseValue: String, otherValue: String?): String {
+            val v = stored?.takeIf { it.isNotBlank() } ?: return baseValue
+            return if (v == otherValue) baseValue else v
+        }
+        val zhBase = base.prompts[PromptLanguage.ZH] ?: BuiltInModes.genericPrompt(PromptLanguage.ZH)
+        val zh = PromptSet(
+            heading = promptHeading?.takeIf { it.isNotBlank() } ?: zhBase.heading,
+            fields = FieldSlot.entries.associateWith { slot ->
+                val d = fields?.get(slot.name)
+                val b = zhBase.fields[slot] ?: BuiltInModes.genericPromptField(slot, PromptLanguage.ZH)
+                PromptField(key = d?.promptKey?.takeIf { it.isNotBlank() } ?: b.key, hint = d?.hint ?: b.hint)
+            },
+            instructions = instructions?.takeIf { it.isNotBlank() } ?: zhBase.instructions,
+            styles = NoteStyle.entries.associate { s -> s.key to (styles?.get(s.key)?.takeIf { it.isNotBlank() } ?: zhBase.styles[s.key].orEmpty()) },
+        )
+        val enBase = base.prompts[PromptLanguage.EN] ?: BuiltInModes.genericPrompt(PromptLanguage.EN)
+        return base.copy(
+            name = if (base.builtIn) localized(name, base.name, other?.name) else name?.takeIf { it.isNotBlank() } ?: base.name,
+            rootTag = rootTag?.trim() ?: base.rootTag,
+            labels = FieldSlot.entries.associateWith { slot ->
+                localized(fields?.get(slot.name)?.label, base.field(slot).label, other?.field(slot)?.label)
+            },
+            prompts = mapOf(PromptLanguage.ZH to zh, PromptLanguage.EN to (en?.toDomain(enBase) ?: enBase)),
+            language = PromptLanguage.fromKey(language) ?: base.language,
+            maxPhotos = (maxPhotos ?: base.maxPhotos).coerceIn(WritingMode.MIN_PHOTOS, WritingMode.MAX_PHOTOS_LIMIT),
+        )
+    }
 
     companion object {
-        fun from(m: WritingMode) = ModeDto(
-            key = m.key, name = m.name, rootTag = m.rootTag, promptHeading = m.promptHeading,
-            fields = m.fields.mapKeys { it.key.name }.mapValues { FieldSpecDto(it.value.label, it.value.hint, it.value.promptKey) },
-            instructions = m.instructions, styles = m.styles,
-        )
+        /**
+         * What to store for [m]. With [base] (the default in the current app language)
+         * and [other] (the same default in the other language), only differences are
+         * kept; without them (custom modes) everything is.
+         */
+        fun from(m: WritingMode, base: WritingMode? = null, other: WritingMode? = null): ModeDto {
+            fun changed(v: String, vararg defaults: String?) = v.takeIf { base == null || v !in defaults }
+            val zh = m.prompts[PromptLanguage.ZH]?.takeIf { base == null || it != base.prompts[PromptLanguage.ZH] }
+            val en = m.prompts[PromptLanguage.EN]?.takeIf { base == null || it != base.prompts[PromptLanguage.EN] }
+            return ModeDto(
+                key = m.key,
+                name = if (base == null || !m.builtIn) m.name else changed(m.name, base.name, other?.name),
+                rootTag = m.rootTag,
+                promptHeading = zh?.heading,
+                fields = FieldSlot.entries.associate { slot ->
+                    slot.name to FieldSpecDto(
+                        label = changed(m.field(slot).label, base?.field(slot)?.label, other?.field(slot)?.label),
+                        hint = zh?.fields?.get(slot)?.hint,
+                        promptKey = zh?.fields?.get(slot)?.key,
+                    )
+                },
+                instructions = zh?.instructions,
+                styles = zh?.styles,
+                en = en?.let { PromptSetDto.from(it) },
+                language = m.language.key,
+                maxPhotos = m.maxPhotos,
+            )
+        }
     }
 }
 
 data class FieldSpecDto(val label: String? = null, val hint: String? = null, val promptKey: String? = null)
+
+data class PromptSetDto(
+    val heading: String? = null,
+    val fields: Map<String, PromptFieldDto?>? = null,
+    val instructions: String? = null,
+    val styles: Map<String, String?>? = null,
+) {
+    fun toDomain(base: PromptSet) = PromptSet(
+        heading = heading?.takeIf { it.isNotBlank() } ?: base.heading,
+        fields = FieldSlot.entries.associateWith { slot ->
+            val d = fields?.get(slot.name)
+            val b = base.fields[slot] ?: PromptField("", "")
+            PromptField(key = d?.key?.takeIf { it.isNotBlank() } ?: b.key, hint = d?.hint ?: b.hint)
+        },
+        instructions = instructions?.takeIf { it.isNotBlank() } ?: base.instructions,
+        styles = NoteStyle.entries.associate { s -> s.key to (styles?.get(s.key)?.takeIf { it.isNotBlank() } ?: base.styles[s.key].orEmpty()) },
+    )
+
+    companion object {
+        fun from(p: PromptSet) = PromptSetDto(
+            heading = p.heading,
+            fields = p.fields.mapKeys { it.key.name }.mapValues { PromptFieldDto(it.value.key, it.value.hint) },
+            instructions = p.instructions,
+            styles = p.styles,
+        )
+    }
+}
+
+data class PromptFieldDto(val key: String? = null, val hint: String? = null)

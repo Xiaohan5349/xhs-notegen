@@ -25,6 +25,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
+import com.xiaohan.xhsnotegen.i18n.tr
 import com.xiaohan.xhsnotegen.ui.components.EmptyState
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -49,7 +50,7 @@ fun GeneratingScreen(
                 title = {},
                 navigationIcon = {
                     IconButton(onClick = onError) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("Back", "返回"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -71,17 +72,17 @@ fun GeneratingScreen(
                 ) {
                     EmptyState(
                         icon = Icons.Outlined.CloudOff,
-                        title = "Couldn't write the note",
+                        title = tr("Couldn't write the note", "笔记没写成"),
                         body = state.error.orEmpty(),
                         action = {
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                OutlinedButton(onClick = onError) { Text("Back") }
-                                Button(onClick = { viewModel.retry(draftId) }) { Text("Try again") }
+                                OutlinedButton(onClick = onError) { Text(tr("Back", "返回")) }
+                                Button(onClick = { viewModel.retry(draftId) }) { Text(tr("Try again", "重试")) }
                             }
                         },
                     )
                     Text(
-                        "Your note is saved as a draft — you can come back to it anytime.",
+                        tr("Your note is saved as a draft — you can come back to it anytime.", "笔记已存为草稿，随时可以回来继续。"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         textAlign = TextAlign.Center,
@@ -104,10 +105,10 @@ private fun Working(state: GenerationState) {
     ) {
         PhotoStack(state.photoUris)
         Spacer(Modifier.height(40.dp))
-        Text("Writing your note", style = MaterialTheme.typography.headlineMedium)
+        Text(tr("Writing your note", "正在写笔记"), style = MaterialTheme.typography.headlineMedium)
         Spacer(Modifier.height(8.dp))
         Text(
-            "Four takes, in four styles. Usually under a minute.",
+            tr("Four takes, in four styles. Usually under a minute.", "四种风格，各写一篇，通常不到一分钟。"),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
             textAlign = TextAlign.Center,
@@ -116,8 +117,8 @@ private fun Working(state: GenerationState) {
 
         val writing = state.phase == NoteGenerator.Phase.WRITING
         Column(verticalArrangement = Arrangement.spacedBy(14.dp)) {
-            Step("Looking at your photos", done = writing, active = !writing)
-            Step("Writing in your voice", done = false, active = writing)
+            Step(tr("Looking at your photos", "正在看照片"), done = writing, active = !writing)
+            Step(tr("Writing in your voice", "用你的语气写作"), done = false, active = writing)
         }
     }
 }

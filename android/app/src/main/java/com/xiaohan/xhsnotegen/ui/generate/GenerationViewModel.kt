@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import com.xiaohan.xhsnotegen.XhsNoteGenApp
 import com.xiaohan.xhsnotegen.domain.NoteStatus
 import com.xiaohan.xhsnotegen.domain.NoteStyle
+import com.xiaohan.xhsnotegen.i18n.tr
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,7 +51,7 @@ class GenerationViewModel(application: Application) : AndroidViewModel(applicati
         job = viewModelScope.launch {
             try {
                 val draft = draftRepo.getById(draftId)
-                    ?: throw IllegalStateException("This note no longer exists.")
+                    ?: throw IllegalStateException(tr("This note no longer exists.", "这篇笔记已不存在。"))
                 _state.update { it.copy(photoUris = draft.photoUris) }
 
                 val styles = NoteStyle.orderedFrom(draft.preferredStyle)
@@ -71,7 +72,7 @@ class GenerationViewModel(application: Application) : AndroidViewModel(applicati
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _state.update { it.copy(error = e.message ?: "Something went wrong") }
+                _state.update { it.copy(error = e.message ?: tr("Something went wrong", "出错了")) }
             }
         }
     }

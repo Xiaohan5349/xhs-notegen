@@ -25,6 +25,7 @@ import com.xiaohan.xhsnotegen.ai.AiConfig
 import com.xiaohan.xhsnotegen.ai.AiModel
 import com.xiaohan.xhsnotegen.ai.AiProvider
 import com.xiaohan.xhsnotegen.ai.AiSettings
+import com.xiaohan.xhsnotegen.i18n.tr
 
 /**
  * "Writing with: Gemini 3.8 Flash ▾" — switch provider/model right where you
@@ -52,7 +53,8 @@ fun ModelChip(onOpenSettings: () -> Unit, modifier: Modifier = Modifier) {
         },
         label = {
             Text(
-                if (problem != null) "${config.label} · needs setup" else "Writing with ${config.label}",
+                if (problem != null) tr("${config.label} · needs setup", "${config.label} · 需要设置")
+                else tr("Writing with ${config.label}", "写作模型：${config.label}"),
                 maxLines = 1, overflow = TextOverflow.Ellipsis,
             )
         },
@@ -92,8 +94,8 @@ private fun ModelPickerSheet(
                 .padding(bottom = 24.dp),
             verticalArrangement = Arrangement.spacedBy(14.dp),
         ) {
-            Text("Choose a model", style = MaterialTheme.typography.headlineSmall)
-            Text("Used for new notes and rewrites. Each version shows which model wrote it.",
+            Text(tr("Choose a model", "选择模型"), style = MaterialTheme.typography.headlineSmall)
+            Text(tr("Used for new notes and rewrites. Each version shows which model wrote it.", "用于新笔记和重写。每个版本都会显示写作模型。"),
                 style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
 
             AiProvider.entries.forEach { p ->
@@ -103,7 +105,7 @@ private fun ModelPickerSheet(
                 // Built-in models, plus a saved "other" model id for this provider.
                 val saved = AiSettings.model(context, p)
                 val models = p.models + listOfNotNull(
-                    saved.takeIf { it.isNotBlank() && p.findModel(it) == null }?.let { AiModel(it, it, "Your model") }
+                    saved.takeIf { it.isNotBlank() && p.findModel(it) == null }?.let { AiModel(it, it, tr("Your model", "自定义模型")) }
                 )
                 if (models.isEmpty() && !usable) return@forEach
 
@@ -114,7 +116,7 @@ private fun ModelPickerSheet(
                             TextButton(onClick = onOpenSettings) {
                                 Icon(Icons.Outlined.Key, null, Modifier.size(16.dp))
                                 Spacer(Modifier.width(6.dp))
-                                Text(if (p == AiProvider.CUSTOM) "Set up" else "Add key")
+                                Text(if (p == AiProvider.CUSTOM) tr("Set up", "设置") else tr("Add key", "添加密钥"))
                             }
                         }
                     }
@@ -146,7 +148,7 @@ private fun ModelPickerSheet(
             OutlinedButton(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Outlined.Settings, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text("Keys, custom models & prompt")
+                Text(tr("Keys, custom models & prompt", "密钥、自定义模型和提示词"))
             }
         }
     }

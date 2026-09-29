@@ -66,7 +66,7 @@ class ModesTest {
             when (it) { is FeedItem.Header -> "${"  ".repeat(it.header.level)}[${it.header.title} ${it.header.count}]"; is FeedItem.Note -> "${it.draft.id}" }
         }
         assertEquals(
-            listOf("[#旅行 3]", "  [#京都 1]", "10", "  [#海边 1]", "11", "  [General 1]", "12", "[#咖啡 1]", "13", "[No tag 1]", "14"),
+            listOf("[旅行 3]", "  [京都 1]", "10", "  [海边 1]", "11", "  [General 1]", "12", "[咖啡 1]", "13", "[No tag 1]", "14"),
             feed,
         )
     }

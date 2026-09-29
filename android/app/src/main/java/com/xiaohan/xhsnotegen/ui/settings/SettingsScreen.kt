@@ -30,6 +30,9 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import com.xiaohan.xhsnotegen.ai.AiProvider
 import com.xiaohan.xhsnotegen.ai.AiSettings
+import com.xiaohan.xhsnotegen.i18n.AppLanguage
+import com.xiaohan.xhsnotegen.i18n.LanguageStore
+import com.xiaohan.xhsnotegen.i18n.tr
 import com.xiaohan.xhsnotegen.ui.components.SectionCard
 import com.xiaohan.xhsnotegen.ui.components.softFieldColors
 import com.xiaohan.xhsnotegen.ui.publish.XhsAuthStore
@@ -50,10 +53,10 @@ fun SettingsScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Settings") },
+                title = { Text(tr("Settings", "设置")) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("Back", "返回"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -90,7 +93,7 @@ private fun AppearanceSection() {
     val theme by AppearanceStore.theme.collectAsState()
     val mode by AppearanceStore.darkMode.collectAsState()
 
-    SectionCard(title = "Appearance") {
+    SectionCard(title = tr("Appearance", "外观")) {
         ThemeGroup.entries.forEach { group ->
             Text(group.label, style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -126,6 +129,23 @@ private fun AppearanceSection() {
                 ) { Text(m.label) }
             }
         }
+        Text(tr("Language", "语言"), style = MaterialTheme.typography.labelLarge,
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
+            AppLanguage.entries.forEachIndexed { i, l ->
+                SegmentedButton(
+                    selected = l == LanguageStore.choice,
+                    onClick = { LanguageStore.set(context, l) },
+                    shape = SegmentedButtonDefaults.itemShape(i, AppLanguage.entries.size),
+                ) { Text(l.label) }
+            }
+        }
+        Text(
+            tr("App language. The language notes are written in is set per writing mode.",
+                "界面语言。笔记用什么语言写，在每个写作模式里单独设置。"),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }
 
@@ -195,8 +215,8 @@ private fun AiSection(onEditPrompt: () -> Unit) {
     var otherModel by remember(provider) { mutableStateOf(if (provider.findModel(model) == null) model else "") }
 
     SectionCard(
-        title = "AI writing",
-        subtitle = "Which model writes your notes. Keys stay on this phone.",
+        title = tr("AI writing", "AI 写作"),
+        subtitle = tr("Which model writes your notes. Keys stay on this phone.", "选择用哪个模型写笔记。密钥只保存在这台手机上。"),
     ) {
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             AiProvider.entries.forEach { p ->
@@ -230,7 +250,7 @@ private fun AiSection(onEditPrompt: () -> Unit) {
                                 Text(m.label, style = MaterialTheme.typography.titleSmall)
                                 if (m.id == provider.defaultModel) {
                                     Spacer(Modifier.width(8.dp))
-                                    Text("Recommended", style = MaterialTheme.typography.labelSmall,
+                                    Text(tr("Recommended", "推荐"), style = MaterialTheme.typography.labelSmall,
                                         color = MaterialTheme.colorScheme.primary)
                                 }
                             }
@@ -247,14 +267,14 @@ private fun AiSection(onEditPrompt: () -> Unit) {
                 value = baseUrl,
                 onValueChange = { baseUrl = it; AiSettings.setCustomBaseUrl(context, it) },
                 modifier = Modifier.fillMaxWidth(),
-                label = { Text("API address") },
+                label = { Text(tr("API address", "API 地址")) },
                 placeholder = { Text("https://example.com/v1") },
                 leadingIcon = { Icon(Icons.Outlined.Link, null) },
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
                 shape = MaterialTheme.shapes.medium,
                 colors = softFieldColors(),
-                supportingText = { Text("OpenAI-compatible base URL; /chat/completions is added for you") },
+                supportingText = { Text(tr("OpenAI-compatible base URL; /chat/completions is added for you", "兼容 OpenAI 的基础地址，会自动加上 /chat/completions")) },
             )
         }
 
@@ -267,14 +287,14 @@ private fun AiSection(onEditPrompt: () -> Unit) {
                 AiSettings.setModel(context, provider, chosen)
             },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text(if (provider == AiProvider.CUSTOM) "Model" else "Other model (optional)") },
-            placeholder = { Text(if (provider == AiProvider.CUSTOM) "e.g. qwen-vl-max" else "Any ${provider.displayName} model id") },
+            label = { Text(if (provider == AiProvider.CUSTOM) tr("Model", "模型") else tr("Other model (optional)", "其他模型（选填）")) },
+            placeholder = { Text(if (provider == AiProvider.CUSTOM) tr("e.g. qwen-vl-max", "例如 qwen-vl-max") else tr("Any ${provider.displayName} model id", "任意 ${provider.displayName} 模型 ID")) },
             leadingIcon = { Icon(Icons.Outlined.Memory, null) },
             singleLine = true,
             shape = MaterialTheme.shapes.medium,
             colors = softFieldColors(),
             supportingText = if (provider != AiProvider.CUSTOM) {
-                { Text("Overrides the list above — for models released after this app version") }
+                { Text(tr("Overrides the list above — for models released after this app version", "会覆盖上面的选择，用于本版本之后发布的新模型")) }
             } else null,
         )
 
@@ -282,12 +302,12 @@ private fun AiSection(onEditPrompt: () -> Unit) {
             value = apiKey,
             onValueChange = { apiKey = it; AiSettings.setApiKey(context, provider, it) },
             modifier = Modifier.fillMaxWidth(),
-            label = { Text("${provider.displayName} API key") },
+            label = { Text(tr("${provider.displayName} API key", "${provider.displayName} API 密钥")) },
             leadingIcon = { Icon(Icons.Outlined.Key, null) },
             trailingIcon = {
                 IconButton(onClick = { showKey = !showKey }) {
                     Icon(if (showKey) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                        contentDescription = if (showKey) "Hide key" else "Show key")
+                        contentDescription = if (showKey) tr("Hide key", "隐藏密钥") else tr("Show key", "显示密钥"))
                 }
             },
             visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
@@ -301,8 +321,8 @@ private fun AiSection(onEditPrompt: () -> Unit) {
         if (provider == AiProvider.CUSTOM) {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text("Model can see photos", style = MaterialTheme.typography.titleSmall)
-                    Text("Turn off for text-only models — only your notes are sent",
+                    Text(tr("Model can see photos", "模型能看图片"), style = MaterialTheme.typography.titleSmall)
+                    Text(tr("Turn off for text-only models — only your notes are sent", "纯文本模型请关闭，只会发送你写的文字"),
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
@@ -311,7 +331,7 @@ private fun AiSection(onEditPrompt: () -> Unit) {
         } else if (builtIn != null && !builtIn.vision) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                 Icon(Icons.Outlined.HideImage, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.tertiary)
-                Text("This model can't see images, so notes are written from your text only.",
+                Text(tr("This model can't see images, so notes are written from your text only.", "这个模型看不了图片，笔记只根据你写的文字生成。"),
                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -330,8 +350,8 @@ private fun AiSection(onEditPrompt: () -> Unit) {
         ) {
             Icon(Icons.Outlined.EditNote, null, tint = MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f)) {
-                Text("Writing modes & prompts", style = MaterialTheme.typography.titleSmall)
-                Text("$modeCount modes — Food, Travel, Outfit… each with its own prompt and root tag",
+                Text(tr("Writing modes & prompts", "写作模式与提示词"), style = MaterialTheme.typography.titleSmall)
+                Text(tr("$modeCount modes — Food, Travel, Outfit… each with its own prompt and root tag", "$modeCount 个模式：美食、旅行、穿搭…… 各有自己的提示词和一级标签"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
@@ -350,7 +370,7 @@ private fun AccountSection(onLogin: () -> Unit) {
     val loggedIn by XhsAuthStore.loggedIn.collectAsState()
     var confirmLogout by remember { mutableStateOf(false) }
 
-    SectionCard(title = "Xiaohongshu") {
+    SectionCard(title = tr("Xiaohongshu", "小红书")) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Box(
                 Modifier.size(10.dp).clip(CircleShape).background(
@@ -358,17 +378,17 @@ private fun AccountSection(onLogin: () -> Unit) {
                 )
             )
             Column(Modifier.weight(1f)) {
-                Text(if (loggedIn) "Connected" else "Not connected", style = MaterialTheme.typography.titleSmall)
+                Text(if (loggedIn) tr("Connected", "已连接") else tr("Not connected", "未连接"), style = MaterialTheme.typography.titleSmall)
                 Text(
-                    if (loggedIn) "Notes post straight to your account" else "Log in to post directly from the app",
+                    if (loggedIn) tr("Notes post straight to your account", "笔记会直接发到你的账号") else tr("Log in to post directly from the app", "登录后可在应用内直接发布"),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             if (loggedIn) {
-                TextButton(onClick = { confirmLogout = true }) { Text("Log out") }
+                TextButton(onClick = { confirmLogout = true }) { Text(tr("Log out", "退出登录")) }
             } else {
-                FilledTonalButton(onClick = onLogin) { Text("Log in") }
+                FilledTonalButton(onClick = onLogin) { Text(tr("Log in", "登录")) }
             }
         }
     }
@@ -376,14 +396,14 @@ private fun AccountSection(onLogin: () -> Unit) {
     if (confirmLogout) {
         AlertDialog(
             onDismissRequest = { confirmLogout = false },
-            title = { Text("Log out of Xiaohongshu?") },
-            text = { Text("You can still post by hand — the app copies the text and saves the photos for you.") },
+            title = { Text(tr("Log out of Xiaohongshu?", "退出小红书登录？")) },
+            text = { Text(tr("You can still post by hand — the app copies the text and saves the photos for you.", "你仍可手动发布：应用会帮你复制文字并保存图片。")) },
             confirmButton = {
                 TextButton(onClick = { XhsAuthStore.clear(context); confirmLogout = false }) {
-                    Text("Log out", color = MaterialTheme.colorScheme.error)
+                    Text(tr("Log out", "退出登录"), color = MaterialTheme.colorScheme.error)
                 }
             },
-            dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmLogout = false }) { Text(tr("Cancel", "取消")) } },
         )
     }
 }

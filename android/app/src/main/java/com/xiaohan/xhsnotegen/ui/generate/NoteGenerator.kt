@@ -47,7 +47,7 @@ object NoteGenerator {
         val voiceSamples = repo.getVoiceSamples(excludeId = draft.id, mode = draft.type)
         return AiWriter.generateVariants(
             config = config,
-            systemPrompt = FoodPrompts.systemPrompt(mode.instructions),
+            systemPrompt = FoodPrompts.systemPrompt(mode.instructions, mode.language),
             userPrompt = FoodPrompts.buildUserPrompt(
                 draft.foodInfo, styles, voiceSamples,
                 photoCount = images.size,

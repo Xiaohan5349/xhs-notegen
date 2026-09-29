@@ -108,17 +108,25 @@ class DraftRepository(private val db: AppDatabase) {
         return (tagDao.byName(clean) ?: TagEntity(id = id, name = clean)).toDomain()
     }
 
-    /** A mode's root tag: created at the top level if missing. */
-    suspend fun rootTag(name: String): NoteTag? = name.trim().takeIf { it.isNotEmpty() }?.let { getOrCreateTag(it) }
+    /**
+     * A mode's root tag. It may be a path ("生活/咖啡"): each level is created
+     * under the one before if missing, and the last one is returned.
+     */
+    suspend fun rootTag(path: String): NoteTag? {
+        var tag: NoteTag? = null
+        TagTree.parsePath(path).forEach { name -> tag = getOrCreateTag(name, tag?.id) }
+        return tag
+    }
 
-    /** Moves a tag under [parentId] (null = top level). A tag can't sit under itself or its own sub-tag. */
+    /**
+     * Moves a tag (with everything under it) under [parentId] (null = top level).
+     * A tag can't sit under itself or anything below it.
+     */
     suspend fun setTagParent(tagId: Long, parentId: Long?) {
         if (parentId == tagId) return
-        val all = tagDao.all().associateBy { it.id }
-        if (parentId != null && all[parentId]?.parentId == tagId) return
+        val all = tagDao.all().map { it.toDomain() }
+        if (parentId != null && parentId in TagTree.descendants(tagId, all)) return
         tagDao.setParent(tagId, parentId)
-        // One level only: sub-tags of a tag that becomes a sub-tag move up to its new root.
-        if (parentId != null) all.values.filter { it.parentId == tagId }.forEach { tagDao.setParent(it.id, parentId) }
     }
 
     /** name → parent name, for backups. */
@@ -145,14 +153,27 @@ class DraftRepository(private val db: AppDatabase) {
 
     suspend fun renameTag(tagId: Long, name: String) = tagDao.rename(tagId, name.trim().removePrefix("#").trim())
 
-    suspend fun deleteTag(tagId: Long) = tagDao.deleteTag(tagId)
+    /** Deletes a tag; the tags under it move up one level (notes keep their other tags). */
+    suspend fun deleteTag(tagId: Long) = db.withTransaction {
+        val all = tagDao.all()
+        val parent = all.firstOrNull { it.id == tagId }?.parentId
+        all.filter { it.parentId == tagId }.forEach { tagDao.setParent(it.id, parent) }
+        tagDao.deleteTag(tagId)
+    }
 
     /**
      * Import: all-or-nothing, and every draft gets a fresh auto-generated id;
      * tags are matched by name, and [tagParents] (name → root name) rebuilds the hierarchy.
      */
     suspend fun insertAll(drafts: List<NoteDraft>, tagParents: Map<String, String> = emptyMap()) = db.withTransaction {
-        tagParents.forEach { (child, parent) ->
+        // Upper levels first, so a parent is placed before its own children are created.
+        fun depth(name: String): Int {
+            var d = 0
+            var cur: String? = tagParents[name]
+            while (cur != null && d < tagParents.size) { d++; cur = tagParents[cur] }
+            return d
+        }
+        tagParents.entries.sortedBy { depth(it.key) }.forEach { (child, parent) ->
             val p = getOrCreateTag(parent)
             getOrCreateTag(child, p.id)
         }

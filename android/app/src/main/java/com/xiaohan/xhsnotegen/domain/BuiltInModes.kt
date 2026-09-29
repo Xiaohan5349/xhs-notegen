@@ -1,63 +1,94 @@
 package com.xiaohan.xhsnotegen.domain
 
+import com.xiaohan.xhsnotegen.i18n.LanguageStore
 import com.xiaohan.xhsnotegen.ui.generate.FoodPrompts
 
-/** Defaults for the built-in modes and for new custom modes. */
+/**
+ * Defaults for the built-in modes and for new custom modes. Names and form
+ * labels follow the app language ([zh]); each mode carries a Chinese and an
+ * English prompt, and writes in Chinese unless you switch it.
+ */
 object BuiltInModes {
 
     const val FOOD = "food"
     const val TRAVEL = "travel"
 
-    val food = WritingMode(
+    /** Built-in modes, labelled in the current app language. */
+    val all: List<WritingMode> get() = all(LanguageStore.isZh)
+
+    fun all(zh: Boolean): List<WritingMode> = listOf(
+        food(zh), travel(zh), outfit(zh), beauty(zh), home(zh), fitness(zh), parenting(zh), booksFilms(zh),
+    )
+
+    val food: WritingMode get() = food(LanguageStore.isZh)
+    val travel: WritingMode get() = travel(LanguageStore.isZh)
+
+    fun builtIn(key: String): WritingMode? = all.firstOrNull { it.key == key }
+    fun builtIn(key: String, zh: Boolean): WritingMode? = all(zh).firstOrNull { it.key == key }
+
+    private fun labels(zh: Boolean, vararg pairs: Pair<String, String>): Map<FieldSlot, String> =
+        FieldSlot.entries.zip(pairs.toList()).associate { (slot, p) -> slot to if (zh) p.second else p.first }
+
+    private fun zhFields(vararg f: Pair<String, String>): Map<FieldSlot, PromptField> =
+        FieldSlot.entries.zip(f.toList()).associate { (slot, p) -> slot to PromptField(key = p.first, hint = p.second) }
+
+    fun food(zh: Boolean) = WritingMode(
         key = FOOD,
-        name = "Food",
+        name = if (zh) "美食" else "Food",
         rootTag = "美食",
-        promptHeading = "这次吃的",
-        fields = mapOf(
-            FieldSlot.SUBJECT to FieldSpec("What did you eat", "红烧肉, 糖醋里脊", "菜"),
-            FieldSlot.PLACE to FieldSpec("Where", "Restaurant name", "店"),
-            FieldSlot.FEELING to FieldSpec("How was it", "汤有点咸，但面很筋道", "味道"),
-            FieldSlot.COST to FieldSpec("Price or rating", "两个人150", "价格"),
-            FieldSlot.SCENE to FieldSpec("The place", "排了40分钟，店里很吵", "环境"),
-            FieldSlot.OTHER to FieldSpec("Anything else", "和谁、为什么来、下次想点什么", "其他想说的"),
+        labels = labels(zh,
+            "What did you eat" to "吃了什么", "Where" to "在哪家店", "How was it" to "味道怎么样",
+            "Price or rating" to "价格", "The place" to "环境", "Anything else" to "还想说的"),
+        prompts = mapOf(
+            PromptLanguage.ZH to PromptSet(
+                heading = "这次吃的",
+                fields = zhFields(
+                    "菜" to "红烧肉, 糖醋里脊", "店" to "店名", "味道" to "汤有点咸，但面很筋道",
+                    "价格" to "两个人150", "环境" to "排了40分钟，店里很吵", "其他想说的" to "和谁、为什么来、下次想点什么"),
+                instructions = FoodPrompts.DEFAULT_SYSTEM_PROMPT,
+                styles = NoteStyle.entries.associate { it.key to FoodPrompts.defaultStyleInstruction(it) },
+            ),
+            PromptLanguage.EN to EnglishPrompts.food,
         ),
-        instructions = FoodPrompts.DEFAULT_SYSTEM_PROMPT,
-        styles = NoteStyle.entries.associate { it.key to FoodPrompts.defaultStyleInstruction(it) },
         builtIn = true,
     )
 
-    val travel = WritingMode(
+    fun travel(zh: Boolean) = WritingMode(
         key = TRAVEL,
-        name = "Travel",
+        name = if (zh) "旅行" else "Travel",
         rootTag = "旅行",
-        promptHeading = "这次去的",
-        fields = mapOf(
-            FieldSlot.SUBJECT to FieldSpec("What did you see or do", "爬了伏见稻荷、逛了锦市场", "做了什么"),
-            FieldSlot.PLACE to FieldSpec("Where", "Place, sight or trip name", "地方"),
-            FieldSlot.FEELING to FieldSpec("How was it", "人太多了，但山顶很安静", "感受"),
-            FieldSlot.COST to FieldSpec("Cost / tickets", "门票免费，打车60", "花费"),
-            FieldSlot.SCENE to FieldSpec("Weather & crowds", "下小雨，早上人少", "天气和人"),
-            FieldSlot.OTHER to FieldSpec("Anything else", "和谁、怎么去的、有什么小插曲", "其他想说的"),
-        ),
-        instructions = TRAVEL_PROMPT,
-        styles = mapOf(
-            NoteStyle.CASUAL_STORY.key to "随手记：像给朋友讲这一天——怎么去的、和谁、印象最深的一两个瞬间。80到200字，分成几小段。",
-            NoteStyle.PRACTICAL.key to "实用记录：写给以后的自己和想去的人看的。怎么去、花了多少、几点去合适、值不值得专门去。可以分行，每行是完整的口语句子。100到200字。",
-            NoteStyle.PUNCHY.key to "清单式：几行短句，每行开头一个小标签（比如 去了／交通／花费／人多吗／建议，只写有信息的项），标签后面是一句大白话。最后可以加一句自己的碎碎念。",
-            NoteStyle.CLEAN.key to "极简：除日期行外只写两到四句话。去了哪，加一个最具体的画面或感受。",
+        labels = labels(zh,
+            "What did you see or do" to "看了什么、做了什么", "Where" to "去了哪里", "How was it" to "感觉怎么样",
+            "Cost / tickets" to "花费 / 门票", "Weather & crowds" to "天气和人流", "Anything else" to "还想说的"),
+        prompts = mapOf(
+            PromptLanguage.ZH to PromptSet(
+                heading = "这次去的",
+                fields = zhFields(
+                    "做了什么" to "爬了伏见稻荷、逛了锦市场", "地方" to "地名、景点或行程名", "感受" to "人太多了，但山顶很安静",
+                    "花费" to "门票免费，打车60", "天气和人" to "下小雨，早上人少", "其他想说的" to "和谁、怎么去的、有什么小插曲"),
+                instructions = TRAVEL_PROMPT,
+                styles = mapOf(
+                    NoteStyle.CASUAL_STORY.key to "随手记：像给朋友讲这一天——怎么去的、和谁、印象最深的一两个瞬间。80到200字，分成几小段。",
+                    NoteStyle.PRACTICAL.key to "实用记录：写给以后的自己和想去的人看的。怎么去、花了多少、几点去合适、值不值得专门去。可以分行，每行是完整的口语句子。100到200字。",
+                    NoteStyle.PUNCHY.key to "清单式：几行短句，每行开头一个小标签（比如 去了／交通／花费／人多吗／建议，只写有信息的项），标签后面是一句大白话。最后可以加一句自己的碎碎念。",
+                    NoteStyle.CLEAN.key to "极简：除日期行外只写两到四句话。去了哪，加一个最具体的画面或感受。",
+                ),
+            ),
+            PromptLanguage.EN to EnglishPrompts.travel,
         ),
         builtIn = true,
     )
 
     // ---- General modes for Xiaohongshu's biggest categories ----
 
-    val outfit = category(
-        key = "outfit", name = "Outfit", rootTag = "穿搭", heading = "这次穿的",
-        subject = FieldSpec("What did you wear", "米色风衣 + 直筒牛仔裤 + 乐福鞋", "穿了什么"),
-        place = FieldSpec("Occasion / where", "周末逛街、上班通勤", "场合"),
-        feeling = FieldSpec("How did it feel", "风衣有点压个子，但很暖", "感受"),
-        cost = FieldSpec("Price / brand", "风衣优衣库，裤子穿了三年", "价格和牌子"),
-        scene = FieldSpec("Height, size & weather", "163/50kg，穿M；15度有风", "身材尺码和天气"),
+    fun outfit(zh: Boolean) = category(
+        key = "outfit", name = if (zh) "穿搭" else "Outfit", rootTag = "穿搭", heading = "这次穿的", zh = zh,
+        subject = Triple(tr(zh, "What did you wear", "穿了什么"), "米色风衣 + 直筒牛仔裤 + 乐福鞋", "穿了什么"),
+        place = Triple(tr(zh, "Occasion / where", "场合"), "周末逛街、上班通勤", "场合"),
+        feeling = Triple(tr(zh, "How did it feel", "穿着感觉"), "风衣有点压个子，但很暖", "感受"),
+        cost = Triple(tr(zh, "Price / brand", "价格和牌子"), "风衣优衣库，裤子穿了三年", "价格和牌子"),
+        scene = Triple(tr(zh, "Height, size & weather", "身高尺码和天气"), "163/50kg，穿M；15度有风", "身材尺码和天气"),
+        en = EnglishPrompts.outfit,
         spec = CategorySpec(
             diary = "穿搭日记", moment = "出门前在镜子前拍完照、随手记一下今天穿了什么",
             smallDetails = "袖子有点长卷了两折、风一吹下摆很好看、走了一天鞋有点磨脚",
@@ -71,13 +102,14 @@ object BuiltInModes {
         ),
     )
 
-    val beauty = category(
-        key = "beauty", name = "Beauty", rootTag = "美妆护肤", heading = "这次用的",
-        subject = FieldSpec("What did you use", "某某精华、某某粉底液 02色", "用了什么"),
-        place = FieldSpec("Routine / occasion", "早晚护肤、上班妆", "场景"),
-        feeling = FieldSpec("How did it work on you", "上脸不黏，但下午T区有点出油", "感受"),
-        cost = FieldSpec("Price / where bought", "专柜 480，用了两周", "价格和购买"),
-        scene = FieldSpec("Skin type & season", "混油皮，换季容易泛红", "肤质和季节"),
+    fun beauty(zh: Boolean) = category(
+        key = "beauty", name = if (zh) "美妆护肤" else "Beauty", rootTag = "美妆护肤", heading = "这次用的", zh = zh,
+        subject = Triple(tr(zh, "What did you use", "用了什么"), "某某精华、某某粉底液 02色", "用了什么"),
+        place = Triple(tr(zh, "Routine / occasion", "使用场景"), "早晚护肤、上班妆", "场景"),
+        feeling = Triple(tr(zh, "How did it work on you", "用着感觉"), "上脸不黏，但下午T区有点出油", "感受"),
+        cost = Triple(tr(zh, "Price / where bought", "价格和渠道"), "专柜 480，用了两周", "价格和购买"),
+        scene = Triple(tr(zh, "Skin type & season", "肤质和季节"), "混油皮，换季容易泛红", "肤质和季节"),
+        en = EnglishPrompts.beauty,
         spec = CategorySpec(
             diary = "美妆护肤日记", moment = "卸完妆、洗完脸随手记一下最近用的东西",
             smallDetails = "瓶口设计不好容易洒、味道有点冲、第三天下巴冒了个痘",
@@ -91,13 +123,14 @@ object BuiltInModes {
         ),
     )
 
-    val home = category(
-        key = "home", name = "Home", rootTag = "家居", heading = "这次家里的",
-        subject = FieldSpec("What changed at home", "换了窗帘、新买的落地灯", "改了什么"),
-        place = FieldSpec("Which room", "客厅、出租屋卧室", "房间"),
-        feeling = FieldSpec("How is it", "晚上开灯很暖，但开关位置不顺手", "感受"),
-        cost = FieldSpec("Cost / where from", "灯 199，窗帘找人定做 600", "花费"),
-        scene = FieldSpec("Size & before/after", "12平，以前很暗", "大小和变化"),
+    fun home(zh: Boolean) = category(
+        key = "home", name = if (zh) "家居" else "Home", rootTag = "家居", heading = "这次家里的", zh = zh,
+        subject = Triple(tr(zh, "What changed at home", "家里添了 / 改了什么"), "换了窗帘、新买的落地灯", "改了什么"),
+        place = Triple(tr(zh, "Which room", "哪个房间"), "客厅、出租屋卧室", "房间"),
+        feeling = Triple(tr(zh, "How is it", "用着感觉"), "晚上开灯很暖，但开关位置不顺手", "感受"),
+        cost = Triple(tr(zh, "Cost / where from", "花费和渠道"), "灯 199，窗帘找人定做 600", "花费"),
+        scene = Triple(tr(zh, "Size & before/after", "面积和前后变化"), "12平，以前很暗", "大小和变化"),
+        en = EnglishPrompts.home,
         spec = CategorySpec(
             diary = "家居生活日记", moment = "收拾完屋子、坐在沙发上随手记一下",
             smallDetails = "装完才发现柜门挡开关、猫第一天就占了新垫子、快递盒还没扔",
@@ -111,13 +144,14 @@ object BuiltInModes {
         ),
     )
 
-    val fitness = category(
-        key = "fitness", name = "Fitness", rootTag = "运动", heading = "这次练的",
-        subject = FieldSpec("What did you do", "跑了5公里、爬了香山", "做了什么"),
-        place = FieldSpec("Where", "小区跑道、健身房、某某山", "地点"),
-        feeling = FieldSpec("How did it feel", "第三公里开始腿很沉", "感受"),
-        cost = FieldSpec("Time / pace / distance", "38分钟，配速7分半", "时长和数据"),
-        scene = FieldSpec("Weather & gear", "闷热，新跑鞋第一次穿", "天气和装备"),
+    fun fitness(zh: Boolean) = category(
+        key = "fitness", name = if (zh) "运动" else "Fitness", rootTag = "运动", heading = "这次练的", zh = zh,
+        subject = Triple(tr(zh, "What did you do", "做了什么运动"), "跑了5公里、爬了香山", "做了什么"),
+        place = Triple(tr(zh, "Where", "在哪里"), "小区跑道、健身房、某某山", "地点"),
+        feeling = Triple(tr(zh, "How did it feel", "感觉怎么样"), "第三公里开始腿很沉", "感受"),
+        cost = Triple(tr(zh, "Time / pace / distance", "时长 / 配速 / 距离"), "38分钟，配速7分半", "时长和数据"),
+        scene = Triple(tr(zh, "Weather & gear", "天气和装备"), "闷热，新跑鞋第一次穿", "天气和装备"),
+        en = EnglishPrompts.fitness,
         spec = CategorySpec(
             diary = "运动日记", moment = "刚运动完、喘着气拿手机随手记一下",
             smallDetails = "耳机没电了只能听自己喘气、半路鞋带开了、下山的时候膝盖有点疼",
@@ -131,13 +165,14 @@ object BuiltInModes {
         ),
     )
 
-    val parenting = category(
-        key = "parenting", name = "Parenting", rootTag = "育儿", heading = "这次的",
-        subject = FieldSpec("What happened", "第一次自己吃饭、打了疫苗", "发生了什么"),
-        place = FieldSpec("Where", "家里、小区公园", "地点"),
-        feeling = FieldSpec("How was it", "吃得满脸都是，但很认真", "感受"),
-        cost = FieldSpec("Age / stage", "1岁2个月", "月龄"),
-        scene = FieldSpec("Products or tips used", "用了吸盘碗", "用到的东西"),
+    fun parenting(zh: Boolean) = category(
+        key = "parenting", name = if (zh) "育儿" else "Parenting", rootTag = "育儿", heading = "这次的", zh = zh,
+        subject = Triple(tr(zh, "What happened", "发生了什么"), "第一次自己吃饭、打了疫苗", "发生了什么"),
+        place = Triple(tr(zh, "Where", "在哪里"), "家里、小区公园", "地点"),
+        feeling = Triple(tr(zh, "How was it", "感觉怎么样"), "吃得满脸都是，但很认真", "感受"),
+        cost = Triple(tr(zh, "Age / stage", "月龄 / 阶段"), "1岁2个月", "月龄"),
+        scene = Triple(tr(zh, "Products or tips used", "用到的东西或方法"), "用了吸盘碗", "用到的东西"),
+        en = EnglishPrompts.parenting,
         spec = CategorySpec(
             diary = "育儿日记", moment = "孩子睡着以后、随手记一下今天的小事",
             smallDetails = "勺子拿反了还很骄傲、打完针哭了三秒就去看狗了、午觉只睡了四十分钟",
@@ -151,13 +186,14 @@ object BuiltInModes {
         ),
     )
 
-    val booksFilms = category(
-        key = "books_films", name = "Books & Films", rootTag = "书影音", heading = "这次看的",
-        subject = FieldSpec("What did you read / watch", "《某某》、某某展", "看了什么"),
-        place = FieldSpec("Where / how", "电影院、kindle、美术馆", "在哪看的"),
-        feeling = FieldSpec("What stuck with you", "结尾那场戏看哭了", "感受"),
-        cost = FieldSpec("Tickets / price", "电影票 45", "花费"),
-        scene = FieldSpec("Favorite line or part", "有一句话一直记着", "印象深的地方"),
+    fun booksFilms(zh: Boolean) = category(
+        key = "books_films", name = if (zh) "书影音" else "Books & Films", rootTag = "书影音", heading = "这次看的", zh = zh,
+        subject = Triple(tr(zh, "What did you read / watch", "看了什么"), "《某某》、某某展", "看了什么"),
+        place = Triple(tr(zh, "Where / how", "在哪看的"), "电影院、kindle、美术馆", "在哪看的"),
+        feeling = Triple(tr(zh, "What stuck with you", "印象最深的"), "结尾那场戏看哭了", "感受"),
+        cost = Triple(tr(zh, "Tickets / price", "票价 / 价格"), "电影票 45", "花费"),
+        scene = Triple(tr(zh, "Favorite line or part", "喜欢的句子或片段"), "有一句话一直记着", "印象深的地方"),
+        en = EnglishPrompts.booksFilms,
         spec = CategorySpec(
             diary = "书影音日记", moment = "看完/读完以后、趁印象还在随手记一下",
             smallDetails = "中间走神去看了手机、旁边的人一直在吃爆米花、有一句话截图存下来了",
@@ -171,37 +207,61 @@ object BuiltInModes {
         ),
     )
 
-    val all: List<WritingMode> = listOf(food, travel, outfit, beauty, home, fitness, parenting, booksFilms)
-
-    fun builtIn(key: String): WritingMode? = all.firstOrNull { it.key == key }
-
-    /** Starting point for a new custom mode: travel-style wording, generic labels. */
-    fun blank(key: String, name: String) = WritingMode(
+    /** Starting point for a new custom mode: general wording and labels, both languages. */
+    fun blank(key: String, name: String, zh: Boolean = LanguageStore.isZh) = WritingMode(
         key = key,
         name = name,
         rootTag = name,
-        promptHeading = "这次的",
-        fields = FieldSlot.entries.associateWith { genericField(it) },
-        instructions = GENERIC_PROMPT,
-        styles = NoteStyle.entries.associate { it.key to genericStyle(it) },
+        labels = FieldSlot.entries.associateWith { genericLabel(it, zh) },
+        prompts = PromptLanguage.entries.associateWith { genericPrompt(it) },
         builtIn = false,
     )
 
-    fun genericField(slot: FieldSlot): FieldSpec = when (slot) {
-        FieldSlot.SUBJECT -> FieldSpec("What was it", "", "内容")
-        FieldSlot.PLACE -> FieldSpec("Where", "", "地点")
-        FieldSlot.FEELING -> FieldSpec("How was it", "", "感受")
-        FieldSlot.COST -> FieldSpec("Cost", "", "花费")
-        FieldSlot.SCENE -> FieldSpec("Details", "", "细节")
-        FieldSlot.OTHER -> FieldSpec("Anything else", "", "其他想说的")
+    fun genericLabel(slot: FieldSlot, zh: Boolean = LanguageStore.isZh): String = when (slot) {
+        FieldSlot.SUBJECT -> tr(zh, "What was it", "是什么")
+        FieldSlot.PLACE -> tr(zh, "Where", "在哪里")
+        FieldSlot.FEELING -> tr(zh, "How was it", "感觉怎么样")
+        FieldSlot.COST -> tr(zh, "Cost", "花费")
+        FieldSlot.SCENE -> tr(zh, "Details", "细节")
+        FieldSlot.OTHER -> tr(zh, "Anything else", "还想说的")
     }
 
-    fun genericStyle(style: NoteStyle): String = when (style) {
-        NoteStyle.CASUAL_STORY -> "随手记：像给朋友发消息那样讲这件事，印象最深的一两个细节。80到200字，分成几小段。"
-        NoteStyle.PRACTICAL -> "实用记录：写给以后的自己查的。关键信息、花费、值不值得。可以分行，每行是完整的口语句子。100到200字。"
-        NoteStyle.PUNCHY -> "清单式：几行短句，每行开头一个小标签，只写有信息的项，标签后面是一句大白话。"
-        NoteStyle.CLEAN -> "极简：除日期行外只写两到四句话，只留最具体的一个细节。"
+    fun genericPromptField(slot: FieldSlot, language: PromptLanguage): PromptField = when (language) {
+        PromptLanguage.EN -> EnglishPrompts.genericField(slot)
+        PromptLanguage.ZH -> PromptField(
+            key = when (slot) {
+                FieldSlot.SUBJECT -> "内容"
+                FieldSlot.PLACE -> "地点"
+                FieldSlot.FEELING -> "感受"
+                FieldSlot.COST -> "花费"
+                FieldSlot.SCENE -> "细节"
+                FieldSlot.OTHER -> "其他想说的"
+            },
+            hint = "",
+        )
     }
+
+    fun genericPrompt(language: PromptLanguage): PromptSet = when (language) {
+        PromptLanguage.EN -> EnglishPrompts.generic
+        PromptLanguage.ZH -> PromptSet(
+            heading = "这次的",
+            fields = FieldSlot.entries.associateWith { genericPromptField(it, PromptLanguage.ZH) },
+            instructions = GENERIC_PROMPT,
+            styles = NoteStyle.entries.associate { it.key to genericStyle(it, PromptLanguage.ZH) },
+        )
+    }
+
+    fun genericStyle(style: NoteStyle, language: PromptLanguage = PromptLanguage.ZH): String = when (language) {
+        PromptLanguage.EN -> EnglishPrompts.genericStyle(style)
+        PromptLanguage.ZH -> when (style) {
+            NoteStyle.CASUAL_STORY -> "随手记：像给朋友发消息那样讲这件事，印象最深的一两个细节。80到200字，分成几小段。"
+            NoteStyle.PRACTICAL -> "实用记录：写给以后的自己查的。关键信息、花费、值不值得。可以分行，每行是完整的口语句子。100到200字。"
+            NoteStyle.PUNCHY -> "清单式：几行短句，每行开头一个小标签，只写有信息的项，标签后面是一句大白话。"
+            NoteStyle.CLEAN -> "极简：除日期行外只写两到四句话，只留最具体的一个细节。"
+        }
+    }
+
+    private fun tr(zh: Boolean, en: String, cn: String) = if (zh) cn else en
 }
 
 private val TRAVEL_PROMPT = """
@@ -295,21 +355,31 @@ private data class CategorySpec(
     val example2: String,
 )
 
+/** [subject] etc.: (form label, Chinese hint, Chinese name for the AI). */
 private fun category(
-    key: String, name: String, rootTag: String, heading: String,
-    subject: FieldSpec, place: FieldSpec, feeling: FieldSpec, cost: FieldSpec, scene: FieldSpec,
+    key: String, name: String, rootTag: String, heading: String, zh: Boolean,
+    subject: Triple<String, String, String>, place: Triple<String, String, String>,
+    feeling: Triple<String, String, String>, cost: Triple<String, String, String>,
+    scene: Triple<String, String, String>,
+    en: PromptSet,
     spec: CategorySpec,
-) = WritingMode(
-    key = key, name = name, rootTag = rootTag, promptHeading = heading,
-    fields = mapOf(
-        FieldSlot.SUBJECT to subject, FieldSlot.PLACE to place, FieldSlot.FEELING to feeling,
-        FieldSlot.COST to cost, FieldSlot.SCENE to scene,
-        FieldSlot.OTHER to FieldSpec("Anything else", "", "其他想说的"),
-    ),
-    instructions = categoryPrompt(spec),
-    styles = NoteStyle.entries.associate { it.key to BuiltInModes.genericStyle(it) },
-    builtIn = true,
-)
+): WritingMode {
+    val slots = listOf(subject, place, feeling, cost, scene, Triple(BuiltInModes.genericLabel(FieldSlot.OTHER, zh), "", "其他想说的"))
+    return WritingMode(
+        key = key, name = name, rootTag = rootTag,
+        labels = FieldSlot.entries.zip(slots).associate { (slot, t) -> slot to t.first },
+        prompts = mapOf(
+            PromptLanguage.ZH to PromptSet(
+                heading = heading,
+                fields = FieldSlot.entries.zip(slots).associate { (slot, t) -> slot to PromptField(key = t.third, hint = t.second) },
+                instructions = categoryPrompt(spec),
+                styles = NoteStyle.entries.associate { it.key to BuiltInModes.genericStyle(it, PromptLanguage.ZH) },
+            ),
+            PromptLanguage.EN to en,
+        ),
+        builtIn = true,
+    )
+}
 
 private fun categoryPrompt(s: CategorySpec) = """
 你在帮我写我自己的${s.diary}。写好后我会发到小红书，但它首先是我的日记：写给自己看，顺便给刷到的人看看。写出来要像我本人${s.moment}，不能让人一眼看出是AI写的。

@@ -48,6 +48,7 @@ import com.xiaohan.xhsnotegen.ui.components.SectionCard
 import com.xiaohan.xhsnotegen.ui.components.SoftTextField
 import com.xiaohan.xhsnotegen.ui.components.dashedBorder
 import com.xiaohan.xhsnotegen.util.PhotoLocation
+import com.xiaohan.xhsnotegen.i18n.tr
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -79,25 +80,34 @@ fun CreateFormScreen(
     val scope = rememberCoroutineScope()
     var errorMessage by remember { mutableStateOf<String?>(null) }
 
+    // Each mode has its own photo limit; the multi-picker needs at least 2.
+    val maxPhotos = mode.maxPhotos
     val picker = rememberLauncherForActivityResult(
-        ActivityResultContracts.PickMultipleVisualMedia(maxItems = CreateFormViewModel.MAX_PHOTOS),
+        ActivityResultContracts.PickMultipleVisualMedia(maxItems = maxPhotos.coerceAtLeast(2)),
     ) { uris -> viewModel.addPhotos(uris) }
-    val pickPhotos = { picker.launch(PickVisualMediaRequest(PickVisualMedia.ImageOnly)) }
+    val singlePicker = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        uri?.let { viewModel.addPhotos(listOf(it)) }
+    }
+    val pickPhotos = {
+        val request = PickVisualMediaRequest(PickVisualMedia.ImageOnly)
+        if (maxPhotos - photos.size <= 1) singlePicker.launch(request) else picker.launch(request)
+    }
 
     val missing = buildList {
-        if (photos.isEmpty()) add("a photo")
-        if (foodInfo.dishNames.isBlank()) add(f(FieldSlot.SUBJECT).label.lowercase())
-        if (foodInfo.restaurantName.isBlank()) add(f(FieldSlot.PLACE).label.lowercase())
+        if (photos.isEmpty()) add(tr("a photo", "照片"))
+        if (foodInfo.dishNames.isBlank()) add(f(FieldSlot.SUBJECT).label.let { tr(it.lowercase(), it) })
+        if (foodInfo.restaurantName.isBlank()) add(f(FieldSlot.PLACE).label.let { tr(it.lowercase(), it) })
     }
-    val canGenerate = missing.isEmpty() && !isSaving && !isImporting
+    val tooMany = (photos.size - maxPhotos).coerceAtLeast(0)
+    val canGenerate = missing.isEmpty() && tooMany == 0 && !isSaving && !isImporting
 
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("New ${mode.name.lowercase()} note") },
+                title = { Text(tr("New ${mode.name.lowercase()} note", "新${mode.name}笔记")) },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("Back", "返回"))
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -114,7 +124,10 @@ fun CreateFormScreen(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     ModelChip(onOpenSettings = onOpenSettings)
-                    val hint = errorMessage ?: if (missing.isNotEmpty()) "Add ${missing.joinToString(", ")} to continue" else null
+                    val hint = errorMessage
+                        ?: if (missing.isNotEmpty()) tr("Add ${missing.joinToString(", ")} to continue", "请先填写：${missing.joinToString("、")}")
+                        else if (tooMany > 0) tr("This mode takes up to $maxPhotos photos — remove $tooMany", "这个模式最多 $maxPhotos 张照片，请删掉 $tooMany 张")
+                        else null
                     if (hint != null) {
                         Text(hint, style = MaterialTheme.typography.bodySmall,
                             color = if (errorMessage != null) MaterialTheme.colorScheme.error
@@ -127,7 +140,7 @@ fun CreateFormScreen(
                                     errorMessage = null
                                     viewModel.saveDraftSuspend()?.let(onDraftSaved)
                                 } catch (e: Exception) {
-                                    errorMessage = e.message ?: "Couldn't save the note"
+                                    errorMessage = e.message ?: tr("Couldn't save the note", "笔记没能保存")
                                 }
                             }
                         },
@@ -141,7 +154,7 @@ fun CreateFormScreen(
                         } else {
                             Icon(Icons.Filled.AutoAwesome, null, Modifier.size(20.dp))
                             Spacer(Modifier.width(10.dp))
-                            Text("Write my note", style = MaterialTheme.typography.titleMedium)
+                            Text(tr("Write my note", "帮我写笔记"), style = MaterialTheme.typography.titleMedium)
                         }
                     }
                 }
@@ -170,31 +183,31 @@ fun CreateFormScreen(
                 if (photos.isEmpty()) selecting = false
             }
             SectionCard(
-                title = "Photos",
+                title = tr("Photos", "照片"),
                 subtitle = when {
-                    photos.isEmpty() -> "Date and place are filled in from the photos"
-                    selecting -> "${selected.size} selected"
-                    else -> "Tap a photo for cover, order and remove"
+                    photos.isEmpty() -> tr("Date and place are filled in from the photos", "日期和地点会从照片里自动读取")
+                    selecting -> tr("${selected.size} selected", "已选 ${selected.size} 张")
+                    else -> tr("Tap a photo for cover, order and remove", "点照片可设封面、调顺序、删除")
                 },
                 trailing = {
                     if (photos.size > 1 || selecting) {
                         TextButton(onClick = { selecting = !selecting; selected = emptySet() }) {
-                            Text(if (selecting) "Done" else "Select")
+                            Text(if (selecting) tr("Done", "完成") else tr("Select", "选择"))
                         }
                     } else if (photos.isNotEmpty()) {
-                        Text("${photos.size}/${CreateFormViewModel.MAX_PHOTOS}",
+                        Text("${photos.size}/$maxPhotos",
                             style = MaterialTheme.typography.labelLarge,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 },
             ) {
                 if (photos.isEmpty() && !isImporting) {
-                    BigAddPhotos(onClick = pickPhotos)
+                    BigAddPhotos(maxPhotos, onClick = pickPhotos)
                 } else {
                     PhotoStrip(
                         photos = photos,
                         importing = isImporting,
-                        canAddMore = photos.size < CreateFormViewModel.MAX_PHOTOS && !selecting,
+                        canAddMore = photos.size < maxPhotos && !selecting,
                         selecting = selecting,
                         selected = selected,
                         onToggleSelect = { uri -> selected = if (uri in selected) selected - uri else selected + uri },
@@ -207,12 +220,12 @@ fun CreateFormScreen(
                         Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
                             TextButton(onClick = {
                                 selected = if (selected.size == photos.size) emptySet() else photos.toSet()
-                            }) { Text(if (selected.size == photos.size) "Select none" else "Select all") }
+                            }) { Text(if (selected.size == photos.size) tr("Select none", "全不选") else tr("Select all", "全选")) }
                             Spacer(Modifier.weight(1f))
                             FilledTonalButton(
                                 onClick = { selected.single().let(viewModel::makeCover); selected = emptySet() },
                                 enabled = selected.size == 1,
-                            ) { Text("Set as cover") }
+                            ) { Text(tr("Set as cover", "设为封面")) }
                             Button(
                                 onClick = { viewModel.removePhotos(selected); selected = emptySet(); selecting = false },
                                 enabled = selected.isNotEmpty(),
@@ -220,12 +233,12 @@ fun CreateFormScreen(
                                     containerColor = MaterialTheme.colorScheme.error,
                                     contentColor = MaterialTheme.colorScheme.onError,
                                 ),
-                            ) { Text(if (selected.isEmpty()) "Remove" else "Remove ${selected.size}") }
+                            ) { Text(if (selected.isEmpty()) tr("Remove", "删除") else tr("Remove ${selected.size}", "删除 ${selected.size} 张")) }
                         }
                     } else if (photos.isNotEmpty()) {
-                        Text("${photos.size}/${CreateFormViewModel.MAX_PHOTOS} photos",
+                        Text(tr("${photos.size}/$maxPhotos photos", "${photos.size}/$maxPhotos 张"),
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            color = if (tooMany > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 photoMessage?.let {
@@ -234,24 +247,27 @@ fun CreateFormScreen(
                 photoPlace?.takeIf { it.isKnown }?.let { place ->
                     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         Icon(Icons.Outlined.Place, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.secondary)
-                        Text("${place.fullAddress} · from photo", style = MaterialTheme.typography.bodySmall,
+                        Text(tr("${place.fullAddress} · from photo", "${place.fullAddress} · 来自照片"), style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
                 if (canUnlockPlaces) {
                     Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.secondaryContainer) {
                         Column(Modifier.padding(14.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Read where these photos were taken?", style = MaterialTheme.typography.titleSmall,
+                            Text(tr("Read where these photos were taken?", "读取照片的拍摄地点？"), style = MaterialTheme.typography.titleSmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer)
                             Text(
-                                "Android hides photo locations from apps unless you allow photo access. " +
-                                    "The place is used to fill in the area and organize notes by city.",
+                                tr(
+                                    "Android hides photo locations from apps unless you allow photo access. " +
+                                        "The place is used to fill in the area and organize notes by city.",
+                                    "除非允许访问照片，Android 不会把照片的位置交给 App。地点用来填写区域、按城市整理笔记。",
+                                ),
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSecondaryContainer,
                             )
                             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                Button(onClick = { placePermission.launch(PhotoLocation.permissions()) }) { Text("Allow") }
-                                TextButton(onClick = viewModel::dismissPhotoPlaceOffer) { Text("Not now") }
+                                Button(onClick = { placePermission.launch(PhotoLocation.permissions()) }) { Text(tr("Allow", "允许")) }
+                                TextButton(onClick = viewModel::dismissPhotoPlaceOffer) { Text(tr("Not now", "暂不")) }
                             }
                         }
                     }
@@ -259,7 +275,10 @@ fun CreateFormScreen(
             }
 
             // ---- Facts ----
-            SectionCard(title = if (mode.key == BuiltInModes.FOOD) "The meal" else "Details", subtitle = mode.rootTag.takeIf { it.isNotBlank() }?.let { "Tagged #$it" }) {
+            SectionCard(
+                title = if (mode.key == BuiltInModes.FOOD) tr("The meal", "这一餐") else tr("Details", "内容"),
+                subtitle = mode.rootTag.takeIf { it.isNotBlank() }?.let { tr("Tagged $it", "标签：$it") },
+            ) {
                 SoftTextField(
                     value = foodInfo.dishNames,
                     onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(dishNames = it)) },
@@ -279,14 +298,14 @@ fun CreateFormScreen(
                     SoftTextField(
                         value = foodInfo.location,
                         onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(location = it)) },
-                        label = "Area", singleLine = true, placeholder = "City / area",
+                        label = tr("Area", "区域"), singleLine = true, placeholder = tr("City / area", "城市 / 区域"),
                         leadingIcon = Icons.Outlined.Place,
                         modifier = Modifier.weight(1f),
                     )
                     SoftTextField(
                         value = foodInfo.mealDate,
                         onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(mealDate = it)) },
-                        label = "When", singleLine = true, placeholder = "yyyy-MM-dd",
+                        label = tr("When", "时间"), singleLine = true, placeholder = "yyyy-MM-dd",
                         leadingIcon = Icons.Outlined.CalendarToday,
                         modifier = Modifier.weight(1f),
                     )
@@ -295,11 +314,11 @@ fun CreateFormScreen(
 
             // ---- The human part ----
             SectionCard(
-                title = "In your own words",
-                subtitle = "Optional, but this is what makes it sound like you — your phrasing is kept almost as-is.",
+                title = tr("In your own words", "用你自己的话"),
+                subtitle = tr("Optional, but this is what makes it sound like you — your phrasing is kept almost as-is.", "选填，但这部分让笔记更像你写的——你的说法会几乎原样保留。"),
             ) {
                 Column {
-                    Text("Your rating", style = MaterialTheme.typography.labelLarge,
+                    Text(tr("Your rating", "你的评分"), style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         RatingBar(rating, onRate = viewModel::setRating)
@@ -331,7 +350,7 @@ fun CreateFormScreen(
             }
 
             // ---- Style ----
-            SectionCard(title = "Favorite style", subtitle = "All four get written — this one shows first") {
+            SectionCard(title = tr("Favorite style", "偏好风格"), subtitle = tr("All four get written — this one shows first", "四种都会写，这一种排在最前")) {
                 NoteStyle.entries.chunked(2).forEach { row ->
                     Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                         row.forEach { style ->
@@ -351,7 +370,7 @@ fun CreateFormScreen(
 }
 
 @Composable
-private fun BigAddPhotos(onClick: () -> Unit) {
+private fun BigAddPhotos(maxPhotos: Int, onClick: () -> Unit) {
     Column(
         Modifier
             .fillMaxWidth()
@@ -365,8 +384,8 @@ private fun BigAddPhotos(onClick: () -> Unit) {
     ) {
         Icon(Icons.Outlined.AddPhotoAlternate, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.height(8.dp))
-        Text("Add photos", style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
-        Text("Up to ${CreateFormViewModel.MAX_PHOTOS}", style = MaterialTheme.typography.bodySmall,
+        Text(tr("Add photos", "添加照片"), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Text(tr("Up to $maxPhotos", "最多 $maxPhotos 张"), style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
@@ -404,7 +423,7 @@ private fun PhotoStrip(
                         modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh))
                     if (index == 0) {
                         Text(
-                            "Cover",
+                            tr("Cover", "封面"),
                             style = MaterialTheme.typography.labelSmall,
                             color = MaterialTheme.colorScheme.onPrimary,
                             modifier = Modifier
@@ -440,29 +459,29 @@ private fun PhotoStrip(
                                 .clickable { onRemove(uri) },
                             contentAlignment = Alignment.Center,
                         ) {
-                            Icon(Icons.Filled.Close, contentDescription = "Remove photo", tint = Color.White,
+                            Icon(Icons.Filled.Close, contentDescription = tr("Remove photo", "删除照片"), tint = Color.White,
                                 modifier = Modifier.size(14.dp))
                         }
                     }
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                     if (index != 0) DropdownMenuItem(
-                        text = { Text("Set as cover") },
+                        text = { Text(tr("Set as cover", "设为封面")) },
                         leadingIcon = { Icon(Icons.Outlined.Star, null) },
                         onClick = { menu = false; onMakeCover(uri) },
                     )
                     if (index > 0) DropdownMenuItem(
-                        text = { Text("Move left") },
+                        text = { Text(tr("Move left", "左移")) },
                         leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) },
                         onClick = { menu = false; onMove(uri, -1) },
                     )
                     if (index < photos.lastIndex) DropdownMenuItem(
-                        text = { Text("Move right") },
+                        text = { Text(tr("Move right", "右移")) },
                         leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowForward, null) },
                         onClick = { menu = false; onMove(uri, +1) },
                     )
                     DropdownMenuItem(
-                        text = { Text("Remove", color = MaterialTheme.colorScheme.error) },
+                        text = { Text(tr("Remove", "删除"), color = MaterialTheme.colorScheme.error) },
                         leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = MaterialTheme.colorScheme.error) },
                         onClick = { menu = false; onRemove(uri) },
                     )
@@ -482,7 +501,7 @@ private fun PhotoStrip(
                     if (importing) {
                         CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
                     } else {
-                        Icon(Icons.Outlined.Add, contentDescription = "Add photos",
+                        Icon(Icons.Outlined.Add, contentDescription = tr("Add photos", "添加照片"),
                             tint = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -545,7 +564,7 @@ private fun ModePicker(modes: List<WritingMode>, selected: String, onSelect: (St
         item(key = "manage") {
             AssistChip(
                 onClick = onManage,
-                label = { Text("Modes") },
+                label = { Text(tr("Modes", "模式")) },
                 leadingIcon = { Icon(Icons.Outlined.Tune, null, Modifier.size(16.dp)) },
                 shape = CircleShape,
             )

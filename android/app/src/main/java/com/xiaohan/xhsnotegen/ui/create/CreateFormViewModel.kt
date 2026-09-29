@@ -13,16 +13,16 @@ import com.xiaohan.xhsnotegen.util.PhotoLocation
 import com.xiaohan.xhsnotegen.util.PlaceResolver
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
+import com.xiaohan.xhsnotegen.i18n.tr
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 
 class CreateFormViewModel(application: Application) : AndroidViewModel(application) {
-
-    companion object {
-        const val MAX_PHOTOS = 20
-    }
 
     private val app = application as XhsNoteGenApp
     private val draftRepo = app.draftRepository
@@ -66,30 +66,35 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
     val canUnlockPhotoPlaces: StateFlow<Boolean> = _canUnlockPhotoPlaces.asStateFlow()
 
     /** The writing mode (Food, Travel, …); starts at the last one you used. */
-    private val _mode = MutableStateFlow(ModeStore.lastUsed())
-    val mode: StateFlow<WritingMode> = _mode.asStateFlow()
+    /** Follows edits to the mode (and the app language) while the form is open. */
+    private val _modeKey = MutableStateFlow(ModeStore.lastUsed().key)
     val modes: StateFlow<List<WritingMode>> = ModeStore.modes
+    val mode: StateFlow<WritingMode> = combine(_modeKey, ModeStore.modes) { key, _ -> ModeStore.get(key) }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, ModeStore.get(_modeKey.value))
 
     init {
         viewModelScope.launch {
-            _selectedStyle.value = styleRepo.resolveStyle(_mode.value.key)
+            _selectedStyle.value = styleRepo.resolveStyle(_modeKey.value)
         }
     }
 
     fun setMode(key: String) {
-        _mode.value = ModeStore.get(key)
+        _modeKey.value = key
         ModeStore.setLastUsed(key)
         // Each mode remembers its own favorite style.
         viewModelScope.launch { _selectedStyle.value = styleRepo.resolveStyle(key) }
     }
 
-    val remainingPhotoSlots: Int get() = MAX_PHOTOS - _photoUris.value.size
+    private val maxPhotos: Int get() = ModeStore.get(_modeKey.value).maxPhotos
+    val remainingPhotoSlots: Int get() = maxPhotos - _photoUris.value.size
 
     /** Adds picked photos to the current selection (the "+" tile used to replace it). */
     fun addPhotos(picked: List<Uri>) {
         if (picked.isEmpty()) return
         val accepted = picked.take(remainingPhotoSlots.coerceAtLeast(0))
-        _photoMessage.value = if (accepted.size < picked.size) "Only $MAX_PHOTOS photos per note — kept the first ${accepted.size}." else null
+        _photoMessage.value = if (accepted.size < picked.size) {
+            tr("Only $maxPhotos photos per note in this mode — kept the first ${accepted.size}.", "这个模式每篇最多 $maxPhotos 张照片，保留了前 ${accepted.size} 张。")
+        } else null
         if (accepted.isEmpty()) return
 
         viewModelScope.launch {
@@ -99,7 +104,7 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
                     accepted.map { ImageCleanup.copyToLocal(getApplication(), it) }
                 }
                 val failed = copies.count { it == null }
-                if (failed > 0) _photoMessage.value = "$failed photo(s) couldn't be read and were skipped."
+                if (failed > 0) _photoMessage.value = tr("$failed photo(s) couldn't be read and were skipped.", "$failed 张照片读取失败，已跳过。")
                 accepted.zip(copies).forEach { (orig, copy) -> if (copy != null) originals[copy] = orig }
                 _photoUris.value = _photoUris.value + copies.filterNotNull()
                 resolvePhotoPlace()
@@ -174,20 +179,24 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
     fun setStyle(style: NoteStyle) {
         _selectedStyle.value = style
         // Persist so the next draft defaults to this style.
-        viewModelScope.launch { styleRepo.setStyleForType(_mode.value.key, style) }
+        viewModelScope.launch { styleRepo.setStyleForType(_modeKey.value, style) }
     }
 
     /** Returns the new draft id, or null if a save is already in flight. */
     suspend fun saveDraftSuspend(): Long? {
         if (_isSaving.value) return null // double-tap guard
-        if (!_foodInfo.value.isValid()) throw IllegalStateException("Dish and restaurant name required")
+        val mode = ModeStore.get(_modeKey.value)
+        if (!_foodInfo.value.isValid()) {
+            throw IllegalStateException(tr("${mode.field(FieldSlot.SUBJECT).label} and ${mode.field(FieldSlot.PLACE).label.lowercase()} are required",
+                "${mode.field(FieldSlot.SUBJECT).label}和${mode.field(FieldSlot.PLACE).label}必填"))
+        }
         val count = _photoUris.value.size
-        if (count < 1 || count > MAX_PHOTOS) throw IllegalStateException("Select 1-$MAX_PHOTOS photos")
+        if (count < 1 || count > mode.maxPhotos) throw IllegalStateException(tr("Select 1–${mode.maxPhotos} photos", "请选 1–${mode.maxPhotos} 张照片"))
 
         _isSaving.value = true
         try {
             val draft = NoteDraft(
-                type = _mode.value.key,
+                type = mode.key,
                 status = NoteStatus.DRAFT,
                 photoUris = _photoUris.value.map { it.toString() },
                 styleLabel = _selectedStyle.value.key,
@@ -196,7 +205,7 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
             )
             val id = draftRepo.insert(draft).also { saved = true }
             // Every note starts with its mode's root tag (e.g. 美食, 旅行).
-            draftRepo.rootTag(_mode.value.rootTag)?.let { draftRepo.addTag(listOf(id), it.id) }
+            draftRepo.rootTag(mode.rootTag)?.let { draftRepo.addTag(listOf(id), it.id) }
             // No photo GPS: work out the place from the text, without delaying generation.
             if (_photoPlace.value?.isKnown != true) {
                 val app = getApplication<Application>()

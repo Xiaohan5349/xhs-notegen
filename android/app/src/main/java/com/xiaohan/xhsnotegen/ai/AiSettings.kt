@@ -3,6 +3,7 @@ package com.xiaohan.xhsnotegen.ai
 import android.content.Context
 import android.content.SharedPreferences
 import androidx.core.content.edit
+import com.xiaohan.xhsnotegen.i18n.tr
 
 /** Everything needed for one generation request. */
 data class AiConfig(
@@ -19,9 +20,9 @@ data class AiConfig(
 
     /** Human-readable reason this config can't be used yet, or null if it's ready. */
     fun problem(): String? = when {
-        provider == AiProvider.CUSTOM && baseUrl.isBlank() -> "Set the API address for your custom model in Settings."
-        model.isBlank() -> "Choose a model in Settings."
-        apiKey.isBlank() && provider != AiProvider.CUSTOM -> "Add your ${provider.displayName} API key in Settings first."
+        provider == AiProvider.CUSTOM && baseUrl.isBlank() -> tr("Set the API address for your custom model in Settings.", "请在设置中填写自定义模型的 API 地址。")
+        model.isBlank() -> tr("Choose a model in Settings.", "请在设置中选择模型。")
+        apiKey.isBlank() && provider != AiProvider.CUSTOM -> tr("Add your ${provider.displayName} API key in Settings first.", "请先在设置中添加 ${provider.displayName} API 密钥。")
         else -> null
     }
 }

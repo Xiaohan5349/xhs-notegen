@@ -5,6 +5,7 @@ import com.xiaohan.xhsnotegen.domain.FieldSlot
 import com.xiaohan.xhsnotegen.domain.FoodInfo
 import com.xiaohan.xhsnotegen.domain.WritingMode
 import com.xiaohan.xhsnotegen.domain.NoteStyle
+import com.xiaohan.xhsnotegen.domain.PromptLanguage
 import java.text.SimpleDateFormat
 import java.util.Calendar
 import java.util.Locale
@@ -86,9 +87,20 @@ object FoodPrompts {
 {"variants":[{"style":"casual_story","title":"标题","body":"正文","hashtags":["标签"],"warnings":[]}]}
 """.trimIndent()
 
+    /** The same rules for English notes. */
+    val OUTPUT_RULES_EN = """
+## Output
+Return only JSON, no other text. Write one note for each requested style and put the style's key in the style field. Make the notes genuinely different: change the angle, the length and the opening, not just a few words. Write the title, body, hashtags and warnings in English.
+Format:
+{"variants":[{"style":"casual_story","title":"Title","body":"Body","hashtags":["tag"],"warnings":[]}]}
+""".trimIndent()
+
+    fun outputRules(language: PromptLanguage): String =
+        if (language == PromptLanguage.EN) OUTPUT_RULES_EN else OUTPUT_RULES
+
     /** Final system prompt: the user's (or default) instructions + the fixed output rules. */
-    fun systemPrompt(instructions: String = DEFAULT_SYSTEM_PROMPT): String =
-        instructions.trim() + "\n\n" + OUTPUT_RULES
+    fun systemPrompt(instructions: String = DEFAULT_SYSTEM_PROMPT, language: PromptLanguage = PromptLanguage.ZH): String =
+        instructions.trim() + "\n\n" + outputRules(language)
 
     /** Default per-style instructions, in Chinese to match the system prompt. */
     fun defaultStyleInstruction(style: NoteStyle): String = when (style) {
@@ -113,7 +125,9 @@ object FoodPrompts {
         rating: Int = 0,
         /** Labels for the facts; defaults to the Food mode's (菜 / 店 / 味道 …). */
         mode: WritingMode = BuiltInModes.food,
-    ): String = buildString {
+    ): String = if (mode.language == PromptLanguage.EN) {
+        buildUserPromptEn(foodInfo, styles, voiceSamples, photoCount, photosHidden, styleInstruction, rating, mode)
+    } else buildString {
         fun key(slot: FieldSlot) = mode.field(slot).promptKey
         if (voiceSamples.isNotEmpty()) {
             appendLine("## 我以前写的几篇（学我的语气和用词习惯，不要抄内容）")
@@ -152,6 +166,50 @@ object FoodPrompts {
         if (foodInfo.location.isNotBlank()) appendLine("地点在自然的时候提一下就行，不用放在开头。")
     }
 
+    /** The same facts for a mode whose notes are written in English. */
+    private fun buildUserPromptEn(
+        foodInfo: FoodInfo, styles: List<NoteStyle>, voiceSamples: List<String>, photoCount: Int,
+        photosHidden: Boolean, styleInstruction: (NoteStyle) -> String, rating: Int, mode: WritingMode,
+    ): String = buildString {
+        fun key(slot: FieldSlot) = mode.field(slot).promptKey
+        if (voiceSamples.isNotEmpty()) {
+            appendLine("## A few notes I wrote before (learn my tone and word choices, don't copy the content)")
+            voiceSamples.forEach { sample ->
+                appendLine("---")
+                appendLine(sample.take(600).trim())
+            }
+            appendLine("---")
+            appendLine()
+        }
+
+        appendLine("## ${mode.promptHeading}")
+        appendLine("${key(FieldSlot.SUBJECT)}: ${foodInfo.dishNames.trim()}")
+        appendLine("${key(FieldSlot.PLACE)}: ${foodInfo.restaurantName.trim()}")
+        if (foodInfo.location.isNotBlank()) appendLine("Area: ${foodInfo.location.trim()}")
+        val date = describeMealDate(foodInfo.mealDate, language = PromptLanguage.EN)
+        if (date != null) appendLine("When: ${date.spoken}")
+        if (foodInfo.tasteNotes.isNotBlank()) appendLine("${key(FieldSlot.FEELING)} (my words): ${foodInfo.tasteNotes.trim()}")
+        if (foodInfo.priceOrRating.isNotBlank()) appendLine("${key(FieldSlot.COST)} (my words): ${foodInfo.priceOrRating.trim()}")
+        if (rating in 1..5) appendLine("My rating: $rating/5 (match the tone to it; don't write stars or a score in the note)")
+        if (foodInfo.vibeNotes.isNotBlank()) appendLine("${key(FieldSlot.SCENE)} (my words): ${foodInfo.vibeNotes.trim()}")
+        if (foodInfo.personalNotes.isNotBlank()) appendLine("${key(FieldSlot.OTHER)} (my words): ${foodInfo.personalNotes.trim()}")
+        if (photoCount > 0) appendLine("Photos: $photoCount, attached below.")
+        if (photosHidden) appendLine("You can't see the photos this time. Write only from the text above; don't describe or guess what's in the photos.")
+        appendLine()
+
+        appendLine("## Styles to write (one note each)")
+        styles.forEach { appendLine("- ${it.key}: ${styleInstruction(it)}") }
+        appendLine()
+
+        if (date != null) {
+            appendLine("Start every body with the line \"${date.headerLine}\" on its own. Don't repeat the full date after it.")
+        } else {
+            appendLine("There's no date, so don't write one in the body.")
+        }
+        if (foodInfo.location.isNotBlank()) appendLine("Mention the area only where it comes up naturally, not at the start.")
+        appendLine("Write everything in English. Keep names of places, dishes and products as I wrote them.")
+    }
+
     data class MealDate(val headerLine: String, val spoken: String)
 
     /**
@@ -159,7 +217,11 @@ object FoodPrompts {
      * Computed here so the model never does calendar arithmetic. Unparseable
      * input is passed through as-is.
      */
-    fun describeMealDate(raw: String, now: Calendar = Calendar.getInstance()): MealDate? {
+    fun describeMealDate(
+        raw: String,
+        now: Calendar = Calendar.getInstance(),
+        language: PromptLanguage = PromptLanguage.ZH,
+    ): MealDate? {
         val text = raw.trim()
         if (text.isEmpty()) return null
 
@@ -170,6 +232,17 @@ object FoodPrompts {
         val year = cal.get(Calendar.YEAR)
         val weekday = WEEKDAYS[cal.get(Calendar.DAY_OF_WEEK) - 1]
         val part = if (hasTime) " " + timeOfDay(cal.get(Calendar.HOUR_OF_DAY)) else ""
+
+        if (language == PromptLanguage.EN) {
+            // "Sat, Mar 8 · lunch" / "Saturday, March 8, 2026, lunch"
+            val partEn = if (hasTime) timeOfDayEn(cal.get(Calendar.HOUR_OF_DAY)) else null
+            val dayEn = SimpleDateFormat("EEE, MMM d", Locale.US).format(cal.time)
+            val yearEn = if (year != now.get(Calendar.YEAR)) ", $year" else ""
+            return MealDate(
+                headerLine = "$dayEn$yearEn" + (partEn?.let { " · $it" } ?: ""),
+                spoken = SimpleDateFormat("EEEE, MMMM d, yyyy", Locale.US).format(cal.time) + (partEn?.let { ", $it" } ?: ""),
+            )
+        }
 
         val yearPrefix = if (year != now.get(Calendar.YEAR)) "$year." else ""
         return MealDate(
@@ -186,6 +259,14 @@ object FoodPrompts {
         in 14..16 -> "下午"
         in 17..20 -> "晚上"
         else -> "夜宵"
+    }
+
+    private fun timeOfDayEn(hour: Int): String = when (hour) {
+        in 5..9 -> "morning"
+        in 10..13 -> "lunch"
+        in 14..16 -> "afternoon"
+        in 17..20 -> "evening"
+        else -> "late night"
     }
 
     private fun parse(text: String): Calendar? {

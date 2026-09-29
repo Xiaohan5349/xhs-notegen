@@ -44,6 +44,7 @@ import com.xiaohan.xhsnotegen.domain.NoteDraft
 import com.xiaohan.xhsnotegen.domain.NoteStatus
 import com.xiaohan.xhsnotegen.domain.NoteStyle
 import com.xiaohan.xhsnotegen.domain.NoteVariant
+import com.xiaohan.xhsnotegen.i18n.tr
 import com.xiaohan.xhsnotegen.ui.components.EmptyState
 import com.xiaohan.xhsnotegen.ui.components.Eyebrow
 import com.xiaohan.xhsnotegen.ui.components.ModelChip
@@ -83,7 +84,7 @@ fun ReviewScreen(
                 is ReviewEvent.HandedOff -> handoff = event
                 is ReviewEvent.Published -> {
                     val result = snackbarHostState.showSnackbar(
-                        "Posted to Xiaohongshu", actionLabel = "View", duration = SnackbarDuration.Long,
+                        tr("Posted to Xiaohongshu", "已发布到小红书"), actionLabel = tr("View", "查看"), duration = SnackbarDuration.Long,
                     )
                     if (result == SnackbarResult.ActionPerformed) {
                         runCatching {
@@ -100,7 +101,7 @@ fun ReviewScreen(
             TopAppBar(
                 title = {
                     Column {
-                        Text("Review", style = MaterialTheme.typography.titleLarge)
+                        Text(tr("Review", "预览"), style = MaterialTheme.typography.titleLarge)
                         draft?.foodInfo?.restaurantName?.takeIf { it.isNotBlank() }?.let {
                             Text(it, style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
@@ -109,13 +110,13 @@ fun ReviewScreen(
                 },
                 navigationIcon = {
                     IconButton(onClick = onNavigateBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = tr("Back", "返回"))
                     }
                 },
                 actions = {
                     draft?.let { StatusPill(it.status, Modifier.padding(end = 4.dp)) }
                     if (draft?.variants?.isNotEmpty() == true && draft?.status != NoteStatus.SHARED) {
-                        TextButton(onClick = viewModel::saveChanges) { Text("Mark ready") }
+                        TextButton(onClick = viewModel::saveChanges) { Text(tr("Mark ready", "标为待发布")) }
                     }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
@@ -140,8 +141,8 @@ fun ReviewScreen(
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
                 EmptyState(
                     icon = Icons.Outlined.EditNote,
-                    title = "Not written yet",
-                    body = "This note's photos and details are saved. Let's write it.",
+                    title = tr("Not written yet", "还没写"),
+                    body = tr("This note's photos and details are saved. Let's write it.", "照片和信息都已保存，现在就来写吧。"),
                     action = {
                       Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(12.dp)) {
                         ModelChip(onOpenSettings = onOpenSettings)
@@ -150,11 +151,11 @@ fun ReviewScreen(
                                 CircularProgressIndicator(Modifier.size(18.dp), strokeWidth = 2.dp,
                                     color = MaterialTheme.colorScheme.onPrimary)
                                 Spacer(Modifier.width(10.dp))
-                                Text("Writing…")
+                                Text(tr("Writing…", "写作中…"))
                             } else {
                                 Icon(Icons.Filled.AutoAwesome, null, Modifier.size(18.dp))
                                 Spacer(Modifier.width(8.dp))
-                                Text("Write it now")
+                                Text(tr("Write it now", "现在就写"))
                             }
                         }
                       }
@@ -200,7 +201,7 @@ fun ReviewScreen(
                 )
 
                 if (v.model.isNotBlank()) {
-                    Text("Written by ${v.model}", style = MaterialTheme.typography.labelMedium,
+                    Text(tr("Written by ${v.model}", "写作模型：${v.model}"), style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
                 }
                 ModelChip(onOpenSettings = onOpenSettings)
@@ -216,7 +217,7 @@ fun ReviewScreen(
                             Icon(Icons.Outlined.Refresh, null, Modifier.size(18.dp))
                         }
                         Spacer(Modifier.width(8.dp))
-                        Text("Rewrite this one")
+                        Text(tr("Rewrite this one", "重写这篇"))
                     }
                     TextButton(
                         onClick = { confirmRegenerate = true },
@@ -226,7 +227,7 @@ fun ReviewScreen(
                             CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
                             Spacer(Modifier.width(8.dp))
                         }
-                        Text("Rewrite all")
+                        Text(tr("Rewrite all", "全部重写"))
                     }
                 }
             }
@@ -255,12 +256,12 @@ fun ReviewScreen(
         AlertDialog(
             onDismissRequest = { confirmRegenerate = false },
             icon = { Icon(Icons.Filled.AutoAwesome, null) },
-            title = { Text("Rewrite all four?") },
-            text = { Text("Every style gets a fresh version. Edits you made to any of them will be replaced.") },
+            title = { Text(tr("Rewrite all four?", "四篇全部重写？")) },
+            text = { Text(tr("Every style gets a fresh version. Edits you made to any of them will be replaced.", "每种风格都会重新生成，你做过的修改将被覆盖。")) },
             confirmButton = {
-                TextButton(onClick = { confirmRegenerate = false; viewModel.regenerateAll() }) { Text("Rewrite all") }
+                TextButton(onClick = { confirmRegenerate = false; viewModel.regenerateAll() }) { Text(tr("Rewrite all", "全部重写")) }
             },
-            dismissButton = { TextButton(onClick = { confirmRegenerate = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { confirmRegenerate = false }) { Text(tr("Cancel", "取消")) } },
         )
     }
 
@@ -268,15 +269,15 @@ fun ReviewScreen(
         AlertDialog(
             onDismissRequest = { loginPrompt = null },
             icon = { Icon(Icons.Outlined.Link, null) },
-            title = { Text(if (prompt.expired) "Your XHS login expired" else "Connect Xiaohongshu") },
+            title = { Text(if (prompt.expired) tr("Your XHS login expired", "小红书登录已过期") else tr("Connect Xiaohongshu", "连接小红书")) },
             text = {
-                Text("Log in to post directly from here. Or post it yourself: the text is copied and the photos are saved to your gallery, then Xiaohongshu opens.")
+                Text(tr("Log in to post directly from here. Or post it yourself: the text is copied and the photos are saved to your gallery, then Xiaohongshu opens.", "登录后可直接在这里发布。也可以手动发布：文字会被复制，照片会存到相册，然后打开小红书。"))
             },
             confirmButton = {
-                Button(onClick = { loginPrompt = null; onNavigateToLogin() }) { Text("Log in") }
+                Button(onClick = { loginPrompt = null; onNavigateToLogin() }) { Text(tr("Log in", "登录")) }
             },
             dismissButton = {
-                TextButton(onClick = { loginPrompt = null; viewModel.publishManually() }) { Text("Post manually") }
+                TextButton(onClick = { loginPrompt = null; viewModel.publishManually() }) { Text(tr("Post manually", "手动发布")) }
             },
         )
     }
@@ -285,26 +286,26 @@ fun ReviewScreen(
         AlertDialog(
             onDismissRequest = { handoff = null },
             icon = { Icon(Icons.Outlined.ContentPaste, null) },
-            title = { Text("Ready to paste") },
+            title = { Text(tr("Ready to paste", "可以粘贴了")) },
             text = {
                 Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
                     if (h.reason != null) {
-                        Text("Direct posting didn't work (${h.reason}), so here's the manual route.",
+                        Text(tr("Direct posting didn't work (${h.reason}), so here's the manual route.", "直接发布没成功（${h.reason}），请手动发布。"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                    Text("1. The text is on your clipboard\n2. Photos are in Pictures/XHSNoteGen, in order\n3. In Xiaohongshu, tap + → pick the photos → paste")
+                    Text(tr("1. The text is on your clipboard\n2. Photos are in Pictures/XHSNoteGen, in order\n3. In Xiaohongshu, tap + → pick the photos → paste", "1. 文字已复制到剪贴板\n2. 照片已按顺序存到 Pictures/XHSNoteGen\n3. 在小红书点 + → 选照片 → 粘贴"))
                     if (!h.openedXhs) {
-                        Text("Open Xiaohongshu yourself — it couldn't be launched from here.",
+                        Text(tr("Open Xiaohongshu yourself — it couldn't be launched from here.", "无法从这里打开小红书，请手动打开。"),
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.error)
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { handoff = null; viewModel.markShared() }) { Text("I posted it") }
+                TextButton(onClick = { handoff = null; viewModel.markShared() }) { Text(tr("I posted it", "我已发布")) }
             },
-            dismissButton = { TextButton(onClick = { handoff = null }) { Text("Not yet") } },
+            dismissButton = { TextButton(onClick = { handoff = null }) { Text(tr("Not yet", "还没有")) } },
         )
     }
 }
@@ -326,15 +327,18 @@ private fun PhotoPicker(
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         Row(Modifier.padding(start = 20.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
-                Eyebrow("Photos")
+                Eyebrow(tr("Photos", "照片"))
                 Text(
-                    "${selected.size} of ${draft.photoUris.size} in the post · tap to include, hold for cover & order",
+                    tr(
+                        "${selected.size} of ${draft.photoUris.size} in the post · tap to include, hold for cover & order",
+                        "已选 ${selected.size}/${draft.photoUris.size} 张 · 点按选择，长按设封面和顺序",
+                    ),
                     style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             if (selected.size < draft.photoUris.size) {
-                TextButton(onClick = onIncludeAll) { Text("Include all") }
+                TextButton(onClick = onIncludeAll) { Text(tr("Include all", "全选")) }
             }
         }
         LazyRow(
@@ -364,7 +368,7 @@ private fun PhotoPicker(
                         if (!isIn) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)))
                         if (order == 0) {
                             Text(
-                                "Cover",
+                                tr("Cover", "封面"),
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onPrimary,
                                 modifier = Modifier
@@ -393,22 +397,22 @@ private fun PhotoPicker(
                     }
                     DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
                         if (order != 0) DropdownMenuItem(
-                            text = { Text("Set as cover") },
+                            text = { Text(tr("Set as cover", "设为封面")) },
                             leadingIcon = { Icon(Icons.Outlined.Star, null) },
                             onClick = { menu = false; onSetCover(uri) },
                         )
                         if (isIn && order > 0) DropdownMenuItem(
-                            text = { Text("Move earlier") },
+                            text = { Text(tr("Move earlier", "前移")) },
                             leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) },
                             onClick = { menu = false; onMove(uri, -1) },
                         )
                         if (isIn && order < selected.lastIndex) DropdownMenuItem(
-                            text = { Text("Move later") },
+                            text = { Text(tr("Move later", "后移")) },
                             leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowForward, null) },
                             onClick = { menu = false; onMove(uri, +1) },
                         )
                         DropdownMenuItem(
-                            text = { Text(if (isIn) "Leave out of post" else "Include in post") },
+                            text = { Text(if (isIn) tr("Leave out of post", "不放进笔记") else tr("Include in post", "放进笔记")) },
                             leadingIcon = { Icon(if (isIn) Icons.Outlined.HideImage else Icons.Outlined.AddPhotoAlternate, null) },
                             onClick = { menu = false; onToggle(uri) },
                         )
@@ -445,19 +449,19 @@ private fun MealInfoRow(draft: NoteDraft, onRate: (Int) -> Unit, onEditPlace: ()
             Icon(Icons.Outlined.Place, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
             Column(Modifier.weight(1f)) {
                 Text(
-                    place.fullAddress.ifBlank { draft.foodInfo.location.ifBlank { "Add a place" } },
+                    place.fullAddress.ifBlank { draft.foodInfo.location.ifBlank { tr("Add a place", "添加地点") } },
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurface,
                 )
                 val source = when (place.source) {
-                    PlaceSource.GPS -> "From photo location"
-                    PlaceSource.TEXT -> "Found from the restaurant / area — tap to correct"
-                    PlaceSource.MANUAL -> "Set by you"
-                    null -> "Tap to set, or use Organize by place on the home screen"
+                    PlaceSource.GPS -> tr("From photo location", "来自照片定位")
+                    PlaceSource.TEXT -> tr("Found from the restaurant / area — tap to correct", "根据店名 / 区域查到 — 点按修改")
+                    PlaceSource.MANUAL -> tr("Set by you", "手动设置")
+                    null -> tr("Tap to set, or use Organize by place on the home screen", "点按设置，或在首页用“按地点整理”")
                 }
                 Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            Icon(Icons.Outlined.Edit, "Edit place", Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(Icons.Outlined.Edit, tr("Edit place", "编辑地点"), Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
         }
     }
 }
@@ -482,7 +486,7 @@ private fun StyleTabs(draft: NoteDraft, onSelect: (Int) -> Unit) {
                 onClick = { onSelect(index) },
                 label = { Text(style.displayName) },
                 leadingIcon = if (style == preferred) {
-                    { Icon(Icons.Filled.Star, contentDescription = "Your favorite style", Modifier.size(16.dp)) }
+                    { Icon(Icons.Filled.Star, contentDescription = tr("Your favorite style", "你最喜欢的风格"), Modifier.size(16.dp)) }
                 } else null,
                 shape = CircleShape,
                 colors = FilterChipDefaults.filterChipColors(
@@ -505,7 +509,7 @@ private fun WarningsCard(warnings: List<String>) {
         Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(Icons.Outlined.Info, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onTertiaryContainer)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                Text("Double-check", style = MaterialTheme.typography.labelLarge,
+                Text(tr("Double-check", "请核对"), style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onTertiaryContainer)
                 warnings.forEach {
                     Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onTertiaryContainer)
@@ -543,13 +547,13 @@ private fun NoteEditor(
                     modifier = Modifier.fillMaxWidth(),
                     decorationBox = { inner ->
                         if (variant.title.isEmpty()) {
-                            Text("Title", style = MaterialTheme.typography.headlineSmall, color = c.onSurfaceVariant.copy(alpha = 0.5f))
+                            Text(tr("Title", "标题"), style = MaterialTheme.typography.headlineSmall, color = c.onSurfaceVariant.copy(alpha = 0.5f))
                         }
                         inner()
                     },
                 )
                 Text(
-                    if (over) "${variant.title.length}/$TITLE_LIMIT · XHS allows $TITLE_LIMIT characters"
+                    if (over) tr("${variant.title.length}/$TITLE_LIMIT · XHS allows $TITLE_LIMIT characters", "${variant.title.length}/$TITLE_LIMIT · 小红书标题最多 $TITLE_LIMIT 字")
                     else "${variant.title.length}/$TITLE_LIMIT",
                     style = MaterialTheme.typography.labelSmall,
                     color = if (over) c.error else c.onSurfaceVariant,
@@ -582,7 +586,7 @@ private fun NoteEditor(
                                 Modifier.padding(start = 2.dp).size(22.dp).clip(CircleShape).clickable { onRemoveTag(tag) },
                                 contentAlignment = Alignment.Center,
                             ) {
-                                Icon(Icons.Filled.Close, contentDescription = "Remove #$tag",
+                                Icon(Icons.Filled.Close, contentDescription = tr("Remove #$tag", "删除 #$tag"),
                                     Modifier.size(14.dp), tint = c.onPrimaryContainer)
                             }
                         }
@@ -597,7 +601,7 @@ private fun NoteEditor(
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
                         CircularProgressIndicator()
-                        Text("Rewriting…", style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center)
+                        Text(tr("Rewriting…", "重写中…"), style = MaterialTheme.typography.labelLarge, textAlign = TextAlign.Center)
                     }
                 }
             }
@@ -636,7 +640,7 @@ private fun TagInput(onAdd: (String) -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Box {
-                    if (text.isEmpty()) Text("+ tag", style = MaterialTheme.typography.labelLarge, color = c.onSurfaceVariant)
+                    if (text.isEmpty()) Text(tr("+ tag", "+ 话题"), style = MaterialTheme.typography.labelLarge, color = c.onSurfaceVariant)
                     inner()
                 }
             }
@@ -663,7 +667,7 @@ private fun PublishBar(
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             if (titleTooLong) {
-                Text("Shorten the title to post", style = MaterialTheme.typography.bodySmall,
+                Text(tr("Shorten the title to post", "标题太长，缩短后才能发布"), style = MaterialTheme.typography.bodySmall,
                     color = MaterialTheme.colorScheme.error)
             }
             Button(
@@ -676,12 +680,12 @@ private fun PublishBar(
                     CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp,
                         color = MaterialTheme.colorScheme.onPrimary)
                     Spacer(Modifier.width(12.dp))
-                    Text("Posting…", style = MaterialTheme.typography.titleMedium)
+                    Text(tr("Posting…", "发布中…"), style = MaterialTheme.typography.titleMedium)
                 } else {
                     Icon(Icons.AutoMirrored.Filled.Send, null, Modifier.size(18.dp))
                     Spacer(Modifier.width(10.dp))
                     Text(
-                        if (draft.status == NoteStatus.SHARED) "Post again" else "Post to Xiaohongshu",
+                        if (draft.status == NoteStatus.SHARED) tr("Post again", "再次发布") else tr("Post to Xiaohongshu", "发布到小红书"),
                         style = MaterialTheme.typography.titleMedium,
                     )
                 }

@@ -8,7 +8,9 @@ import com.xiaohan.xhsnotegen.data.json.JsonCodec
 import com.xiaohan.xhsnotegen.data.json.ModeDto
 import com.xiaohan.xhsnotegen.domain.BuiltInModes
 import com.xiaohan.xhsnotegen.domain.NoteStyle
+import com.xiaohan.xhsnotegen.domain.PromptLanguage
 import com.xiaohan.xhsnotegen.domain.WritingMode
+import com.xiaohan.xhsnotegen.i18n.LanguageStore
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -36,6 +38,8 @@ object ModeStore {
         prefs = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
         migrateOldFoodPrompt(context)
         reload()
+        // Built-in names and form labels follow the app language.
+        LanguageStore.onChange { reload() }
     }
 
     fun get(key: String?): WritingMode = _modes.value.firstOrNull { it.key == key } ?: BuiltInModes.food
@@ -43,16 +47,18 @@ object ModeStore {
     fun lastUsed(): WritingMode = get(prefs.getString(KEY_LAST, null))
     fun setLastUsed(key: String) = prefs.edit { putString(KEY_LAST, key) }
 
-    fun isCustomized(key: String): Boolean = overrides().containsKey(key)
+    /** A built-in mode that differs from its defaults. */
+    fun isCustomized(key: String): Boolean = BuiltInModes.builtIn(key)?.let { it != get(key) } ?: false
 
     /** Saves a mode (built-in → as an override, custom → in full). */
     fun save(mode: WritingMode) {
         if (BuiltInModes.builtIn(mode.key) != null) {
             val o = overrides().toMutableMap()
-            o[mode.key] = ModeDto.from(mode)
+            val zh = LanguageStore.isZh
+            o[mode.key] = ModeDto.from(mode, BuiltInModes.builtIn(mode.key, zh), BuiltInModes.builtIn(mode.key, !zh))
             prefs.edit { putString(KEY_OVERRIDES, JsonCodec.toJson(o)) }
         } else {
-            val list = customs().filter { it.key != mode.key } + ModeDto.from(mode)
+            val list = customs().filter { it.key != mode.key } + ModeDto.from(mode, BuiltInModes.blank(mode.key, mode.name), BuiltInModes.blank(mode.key, mode.name, !LanguageStore.isZh))
             prefs.edit { putString(KEY_CUSTOM, JsonCodec.toJson(list)) }
         }
         reload()
@@ -78,10 +84,12 @@ object ModeStore {
 
     private fun reload() {
         val o = overrides()
-        val builtIns = BuiltInModes.all.map { b -> o[b.key]?.toDomain(b) ?: b }
+        val zh = LanguageStore.isZh
+        val builtIns = BuiltInModes.all(zh).map { b -> o[b.key]?.toDomain(b, BuiltInModes.builtIn(b.key, !zh)) ?: b }
         val custom = customs().mapNotNull { d ->
             val key = d.key ?: return@mapNotNull null
-            d.toDomain(BuiltInModes.blank(key, d.name ?: "Custom"))
+            val name = d.name ?: "Custom"
+            d.toDomain(BuiltInModes.blank(key, name), BuiltInModes.blank(key, name, !zh))
         }
         _modes.value = builtIns + custom
     }
@@ -98,12 +106,12 @@ object ModeStore {
     private fun migrateOldFoodPrompt(context: Context) {
         val old = context.getSharedPreferences("prompts", Context.MODE_PRIVATE)
         if (old.all.isEmpty() || overrides().containsKey(BuiltInModes.FOOD)) return
-        val base = BuiltInModes.food
-        val migrated = base.copy(
+        val base = BuiltInModes.food.copy(language = PromptLanguage.ZH)
+        val migrated = base.withPrompt(base.prompt.copy(
             instructions = old.getString("system", null)?.takeIf { it.isNotBlank() } ?: base.instructions,
             styles = NoteStyle.entries.associate { s -> s.key to (old.getString("style_${s.key}", null)?.takeIf { it.isNotBlank() } ?: base.style(s)) },
-        )
-        val o = overrides() + (BuiltInModes.FOOD to ModeDto.from(migrated))
+        ))
+        val o = overrides() + (BuiltInModes.FOOD to ModeDto.from(migrated, base, BuiltInModes.builtIn(BuiltInModes.FOOD, !LanguageStore.isZh)))
         prefs.edit { putString(KEY_OVERRIDES, JsonCodec.toJson(o)) }
         old.edit { clear() }
     }

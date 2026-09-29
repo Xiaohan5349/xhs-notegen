@@ -4,31 +4,76 @@ package com.xiaohan.xhsnotegen.domain
 enum class FieldSlot { SUBJECT, PLACE, FEELING, COST, SCENE, OTHER }
 
 /**
- * How one form field looks in a mode.
+ * How one form field looks in a mode (a read-only view for the active note language).
  * @param label shown in the form ("What did you eat")
- * @param hint placeholder text
- * @param promptKey how the field is named for the AI (Chinese, e.g. "菜")
+ * @param hint placeholder text, an example in the note's language
+ * @param promptKey how the field is named for the AI ("菜" / "Dishes")
  */
 data class FieldSpec(val label: String, val hint: String, val promptKey: String)
 
-/**
- * A kind of note — food, travel, or one you define. Each mode has its own
- * form labels, AI instructions and style descriptions, and a root tag that
- * every note written in it gets (the "upper" tag other tags can sit under).
- */
-data class WritingMode(
-    val key: String,
-    val name: String,
-    val rootTag: String,
+/** The language a mode's prompt is written in — and so the language of its notes. */
+enum class PromptLanguage(val key: String, val label: String) {
+    ZH("zh", "中文"), EN("en", "English");
+
+    companion object {
+        fun fromKey(key: String?): PromptLanguage? = entries.firstOrNull { it.key == key }
+    }
+}
+
+/** How a fact is named for the AI, and the example shown in the empty field. */
+data class PromptField(val key: String, val hint: String)
+
+/** Everything the AI sees for one mode in one language. */
+data class PromptSet(
     /** Heading above the facts in the AI prompt, e.g. "这次吃的". */
-    val promptHeading: String,
-    val fields: Map<FieldSlot, FieldSpec>,
+    val heading: String,
+    val fields: Map<FieldSlot, PromptField>,
     /** Main AI instructions (the fixed JSON output rules are appended automatically). */
     val instructions: String,
     /** Per-style instructions, keyed by NoteStyle.key. */
     val styles: Map<String, String>,
+)
+
+/**
+ * A kind of note — food, travel, or one you define. Each mode has its own
+ * form labels, AI instructions in Chinese and English (one of them in use),
+ * a photo limit, and a root tag that every note written in it gets.
+ */
+data class WritingMode(
+    val key: String,
+    val name: String,
+    /** Root tag; may be a path ("生活/咖啡") to sit under other tags. */
+    val rootTag: String,
+    /** Form labels, in the app's language. */
+    val labels: Map<FieldSlot, String>,
+    val prompts: Map<PromptLanguage, PromptSet>,
+    val language: PromptLanguage = PromptLanguage.ZH,
+    /** Most photos a note in this mode can have. */
+    val maxPhotos: Int = DEFAULT_MAX_PHOTOS,
     val builtIn: Boolean = false,
 ) {
-    fun field(slot: FieldSlot): FieldSpec = fields[slot] ?: BuiltInModes.genericField(slot)
-    fun style(style: NoteStyle): String = styles[style.key]?.takeIf { it.isNotBlank() } ?: BuiltInModes.genericStyle(style)
+    /** The prompt in use. */
+    val prompt: PromptSet
+        get() = prompts[language] ?: prompts[PromptLanguage.ZH] ?: BuiltInModes.genericPrompt(language)
+
+    val instructions: String get() = prompt.instructions
+    val promptHeading: String get() = prompt.heading
+    val styles: Map<String, String> get() = prompt.styles
+
+    fun field(slot: FieldSlot): FieldSpec {
+        val p = prompt.fields[slot] ?: BuiltInModes.genericPromptField(slot, language)
+        return FieldSpec(labels[slot] ?: BuiltInModes.genericLabel(slot), p.hint, p.key.ifBlank { BuiltInModes.genericPromptField(slot, language).key })
+    }
+
+    fun style(style: NoteStyle): String = styles[style.key]?.takeIf { it.isNotBlank() } ?: BuiltInModes.genericStyle(style, language)
+
+    /** A copy with the prompt in use replaced. */
+    fun withPrompt(p: PromptSet): WritingMode = copy(prompts = prompts + (language to p))
+
+    companion object {
+        const val DEFAULT_MAX_PHOTOS = 20
+        const val MIN_PHOTOS = 1
+        /** Upper bound for any mode's limit (the app's limit before per-mode limits). */
+        const val MAX_PHOTOS_LIMIT = 20
+    }
 }

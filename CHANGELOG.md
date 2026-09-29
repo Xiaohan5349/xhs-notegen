@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.8.0 — 2026-09-29
+
+### Added
+- Chinese app language: every screen now has a 中文 version. Settings → Language: System / English / 中文, switches instantly (no restart)
+- Note language per writing mode (Settings → Writing modes → a mode → Notes): 中文 or English. Each mode now has its own Chinese and English prompt, form hints and styles; English notes get English output rules and date lines like "Sun, Mar 8 · lunch". Separate from the app language
+- Photo limit per writing mode (1–20, default 20); the create screen and photo picker follow it
+- Tags at any depth (旅行 › 日本 › 京都), like Country → City for places: Group by Tag shows the full tree (notes sit under their deepest tag, "General" for notes with only an upper tag), filter chips open one level at a time, Manage tags shows the tree and moves a tag with everything under it. Type "日本/京都" to create two levels at once
+- A mode's root tag can be a path too, e.g. 生活/咖啡
+
+### Changed
+- Places in the US, Canada and Australia group as Country → State (e.g. 美国 › 加利福尼亚州); other countries stay Country → City
+- Rating groups show a level meter in the theme color and words ("Loved it" / 超喜欢) instead of ★★★★★ — stars stay on the note cards
+- Tags show without "#" in the app (XHS post hashtags are unchanged)
+- Settings left the ⋮ menu; it is the button at the top right
+- Deleting a tag moves the tags under it up one level (not to the top)
+
+### Notes
+- No database change (still schema v4). Mode edits from v1.7 are kept; built-in names and labels now follow the app language unless you renamed them
+- Backups keep the whole tag tree
+
 ## v1.7.0 — 2026-09-28
 
 ### Added

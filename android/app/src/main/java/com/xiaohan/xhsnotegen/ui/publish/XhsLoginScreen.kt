@@ -27,6 +27,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.view.drawToBitmap
+import com.xiaohan.xhsnotegen.i18n.tr
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
@@ -56,9 +57,9 @@ fun XhsLoginScreen(
         topBar = {
             Column {
                 TopAppBar(
-                    title = { Text("Log in to Xiaohongshu") },
+                    title = { Text(tr("Log in to Xiaohongshu", "登录小红书")) },
                     navigationIcon = {
-                        IconButton(onClick = onCancel) { Icon(Icons.Filled.Close, contentDescription = "Cancel") }
+                        IconButton(onClick = onCancel) { Icon(Icons.Filled.Close, contentDescription = tr("Cancel", "取消")) }
                     },
                     actions = {
                         // XHS may ask to scan a QR code with the XHS app — impossible on the
@@ -70,12 +71,12 @@ fun XhsLoginScreen(
                                 Toast.makeText(
                                     context,
                                     if (saved) "已保存到相册。打开小红书 → 扫一扫 → 相册，选这张图"
-                                    else "Couldn't save the screenshot",
+                                    else tr("Couldn't save the screenshot", "截图保存失败"),
                                     Toast.LENGTH_LONG,
                                 ).show()
                             }
                         }) {
-                            Icon(Icons.Outlined.QrCode2, contentDescription = "Save QR code to gallery")
+                            Icon(Icons.Outlined.QrCode2, contentDescription = tr("Save QR code to gallery", "保存二维码到相册"))
                         }
                         Button(
                             onClick = {
@@ -90,7 +91,7 @@ fun XhsLoginScreen(
                             modifier = Modifier.padding(end = 8.dp),
                             colors = if (looksLoggedIn) ButtonDefaults.buttonColors()
                                      else ButtonDefaults.filledTonalButtonColors(),
-                        ) { Text("Done") }
+                        ) { Text(tr("Done", "完成")) }
                     },
                     colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background),
                 )
@@ -111,13 +112,18 @@ fun XhsLoginScreen(
                 ) {
                     Icon(Icons.Outlined.Info, null, Modifier.size(18.dp))
                     Text(
-                        if (looksLoggedIn) "You're logged in — tap Done."
+                        if (looksLoggedIn) tr("You're logged in — tap Done.", "已登录，点“完成”。")
                         // Verified on a real phone: SMS login from an in-app browser is answered
                         // with XHS risk control (HTTP 471 → a "scan to verify" QR that keeps
                         // waiting). QR login goes straight through.
-                        else "Tip: QR login works best. Tap the QR corner of the login card, tap the QR icon " +
-                            "above to save it, then in the XHS app: 扫一扫 → 相册 → pick it. Tap Done once logged in. " +
-                            "SMS login may get stuck on an extra verification step.",
+                        else tr(
+                            "Tip: QR login works best. Tap the QR corner of the login card, tap the QR icon " +
+                                "above to save it, then in the XHS app: 扫一扫 → 相册 → pick it. Tap Done once logged in. " +
+                                "SMS login may get stuck on an extra verification step.",
+                            "提示：扫码登录最稳。点登录框角上的二维码，再点上方的二维码图标保存，" +
+                                "然后在小红书 App 里：扫一扫 → 相册 → 选这张图。登录后点“完成”。" +
+                                "短信登录可能卡在额外的验证步骤。",
+                        ),
                         style = MaterialTheme.typography.bodySmall,
                     )
                 }
@@ -185,18 +191,18 @@ fun XhsLoginScreen(
     confirmUnverified?.let { cookies ->
         AlertDialog(
             onDismissRequest = { confirmUnverified = null },
-            title = { Text("Not logged in yet?") },
+            title = { Text(tr("Not logged in yet?", "还没登录？")) },
             text = {
                 Text(
-                    if (cookies.isBlank()) "No login was found. Finish logging in on the page first."
-                    else "This doesn't look like a finished login. If you did log in, save it anyway."
+                    if (cookies.isBlank()) tr("No login was found. Finish logging in on the page first.", "没有检测到登录。请先在页面上完成登录。")
+                    else tr("This doesn't look like a finished login. If you did log in, save it anyway.", "看起来登录还没完成。如果你确实已登录，可以直接保存。")
                 )
             },
             confirmButton = {
-                TextButton(onClick = { confirmUnverified = null }) { Text("Keep trying") }
+                TextButton(onClick = { confirmUnverified = null }) { Text(tr("Keep trying", "继续登录")) }
             },
             dismissButton = if (cookies.isNotBlank()) {
-                { TextButton(onClick = { confirmUnverified = null; finish(cookies) }) { Text("Save anyway") } }
+                { TextButton(onClick = { confirmUnverified = null; finish(cookies) }) { Text(tr("Save anyway", "仍然保存")) } }
             } else null,
         )
     }

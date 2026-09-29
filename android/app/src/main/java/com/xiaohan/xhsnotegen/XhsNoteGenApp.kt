@@ -9,6 +9,7 @@ import com.xiaohan.xhsnotegen.data.repository.StylePreferencesRepository
 import com.xiaohan.xhsnotegen.ui.publish.XhsAuthStore
 import com.xiaohan.xhsnotegen.ui.theme.AppearanceStore
 import com.xiaohan.xhsnotegen.ai.ModeStore
+import com.xiaohan.xhsnotegen.i18n.LanguageStore
 import androidx.core.content.edit
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.CoroutineScope
@@ -39,6 +40,7 @@ class XhsNoteGenApp : Application() {
         stylePrefsRepository = StylePreferencesRepository(database)
         XhsAuthStore.init(this)
         AppearanceStore.init(this)
+        LanguageStore.init(this)
         ModeStore.init(this)
         // Once, after the update that added modes: tag existing notes with their mode's root tag.
         val flags = getSharedPreferences("migrations", MODE_PRIVATE)

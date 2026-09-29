@@ -20,6 +20,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.xiaohan.xhsnotegen.domain.NoteStatus
+import com.xiaohan.xhsnotegen.i18n.tr
 
 // ---------------------------------------------------------------------------
 // Status
@@ -31,10 +32,10 @@ data class StatusLook(val label: String, val container: Color, val content: Colo
 fun statusLook(status: NoteStatus): StatusLook {
     val c = MaterialTheme.colorScheme
     return when (status) {
-        NoteStatus.DRAFT -> StatusLook("Draft", c.surfaceContainerHighest, c.onSurfaceVariant)
-        NoteStatus.GENERATED -> StatusLook("To review", c.tertiaryContainer, c.onTertiaryContainer)
-        NoteStatus.REVIEWED -> StatusLook("Ready", c.secondaryContainer, c.onSecondaryContainer)
-        NoteStatus.SHARED -> StatusLook("Posted", c.primaryContainer, c.onPrimaryContainer)
+        NoteStatus.DRAFT -> StatusLook(tr("Draft", "草稿"), c.surfaceContainerHighest, c.onSurfaceVariant)
+        NoteStatus.GENERATED -> StatusLook(tr("To review", "待查看"), c.tertiaryContainer, c.onTertiaryContainer)
+        NoteStatus.REVIEWED -> StatusLook(tr("Ready", "待发布"), c.secondaryContainer, c.onSecondaryContainer)
+        NoteStatus.SHARED -> StatusLook(tr("Posted", "已发布"), c.primaryContainer, c.onPrimaryContainer)
     }
 }
 

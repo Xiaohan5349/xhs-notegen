@@ -1,5 +1,6 @@
 package com.xiaohan.xhsnotegen.ui.publish
 
+import com.xiaohan.xhsnotegen.i18n.tr
 import com.xiaohan.xhsnotegen.util.HttpClientFactory
 import com.xiaohan.xhsnotegen.util.ImageCompressor
 import kotlinx.coroutines.Dispatchers
@@ -79,12 +80,12 @@ object XhsApiClient {
             .get().build()
         ).execute().use { resp ->
             val raw = resp.body?.string().orEmpty()
-            checkResponse("Upload permit", resp.code, raw)
+            checkResponse(tr("Upload permit", "上传许可"), resp.code, raw)
         }
 
         @Suppress("UNCHECKED_CAST")
         val permits = ((permitData["data"] as? Map<String, Any?>)?.get("uploadTempPermits") as? List<Map<String, Any?>>)
-            ?: throw ApiFailure("Upload permit: unexpected response")
+            ?: throw ApiFailure(tr("Upload permit: unexpected response", "上传许可：返回内容异常"))
 
         // Flatten: each permit entry can carry several file ids.
         val slots = permits.flatMap { entry ->
@@ -94,7 +95,7 @@ object XhsApiClient {
             (entry["fileIds"] as? List<String>).orEmpty().map { Triple(it, addr, token) }
         }
         if (slots.size < images.size) {
-            throw ApiFailure("Only got ${slots.size} upload slots for ${images.size} photos")
+            throw ApiFailure(tr("Only got ${slots.size} upload slots for ${images.size} photos", "${images.size} 张照片只拿到 ${slots.size} 个上传位"))
         }
 
         return images.mapIndexed { i, img ->
@@ -106,7 +107,7 @@ object XhsApiClient {
                 .addHeader("Origin", "https://creator.xiaohongshu.com")
                 .build()
             ).execute().use { resp ->
-                if (resp.code !in listOf(200, 204)) throw ApiFailure("Photo ${i + 1} upload failed (HTTP ${resp.code})")
+                if (resp.code !in listOf(200, 204)) throw ApiFailure(tr("Photo ${i + 1} upload failed (HTTP ${resp.code})", "第 ${i + 1} 张照片上传失败（HTTP ${resp.code}）"))
             }
             fileId
         }
@@ -135,7 +136,7 @@ object XhsApiClient {
             .addHeader("Cookie", cookies)
             .post(gson.toJson(data).toRequestBody("application/json".toMediaType()))
             .build()
-        ).execute().use { resp -> checkResponse("Topic search", resp.code, resp.body?.string().orEmpty()) }
+        ).execute().use { resp -> checkResponse(tr("Topic search", "话题搜索"), resp.code, resp.body?.string().orEmpty()) }
 
         @Suppress("UNCHECKED_CAST")
         val dtos = ((json["data"] as? Map<String, Any?>)?.get("topic_info_dtos") as? List<Map<String, Any?>>).orEmpty()
@@ -176,7 +177,7 @@ object XhsApiClient {
             .build()
         ).execute().use { resp ->
             val raw = resp.body?.string().orEmpty()
-            checkResponse("Create note", resp.code, raw)
+            checkResponse(tr("Create note", "发布笔记"), resp.code, raw)
         }
 
         @Suppress("UNCHECKED_CAST")
@@ -201,10 +202,10 @@ object XhsApiClient {
 
         val authExpired = httpCode == 401 || httpCode == 403 ||
             code == -100 || code == -101 || msg.contains("登录")
-        if (authExpired) throw ApiFailure("$step: XHS login has expired", authExpired = true)
-        if (httpCode != 200 || json == null) throw ApiFailure("$step failed (HTTP $httpCode) ${raw.take(120)}")
+        if (authExpired) throw ApiFailure(tr("$step: XHS login has expired", "$step：小红书登录已过期"), authExpired = true)
+        if (httpCode != 200 || json == null) throw ApiFailure(tr("$step failed (HTTP $httpCode) ${raw.take(120)}", "$step 失败（HTTP $httpCode）${raw.take(120)}"))
         if (success == false || (code != null && code != 0)) {
-            throw ApiFailure("$step failed: ${msg.ifBlank { "code $code" }}")
+            throw ApiFailure(tr("$step failed: ${msg.ifBlank { "code $code" }}", "$step 失败：${msg.ifBlank { "错误码 $code" }}"))
         }
         return json
     }

@@ -2,12 +2,20 @@ package com.xiaohan.xhsnotegen.ui.theme
 
 import android.content.Context
 import androidx.core.content.edit
+import com.xiaohan.xhsnotegen.i18n.tr
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 
-enum class DarkMode(val id: String, val label: String) {
-    SYSTEM("system", "System"), LIGHT("light", "Light"), DARK("dark", "Dark");
+enum class DarkMode(val id: String) {
+    SYSTEM("system"), LIGHT("light"), DARK("dark");
+
+    val label: String
+        get() = when (this) {
+            SYSTEM -> tr("System", "跟随系统")
+            LIGHT -> tr("Light", "浅色")
+            DARK -> tr("Dark", "深色")
+        }
 
     companion object {
         fun fromId(id: String?): DarkMode = entries.firstOrNull { it.id == id } ?: SYSTEM
