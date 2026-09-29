@@ -61,6 +61,19 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
     private val _photoPlace = MutableStateFlow<Place?>(null)
     val photoPlace: StateFlow<Place?> = _photoPlace.asStateFlow()
 
+    /** A place you chose from the lists; wins over the one read from the photo. */
+    private val _manualPlace = MutableStateFlow<Place?>(null)
+
+    /** The place this note will get: yours if you chose one, else the photo's. */
+    val place: StateFlow<Place?> = combine(_manualPlace, _photoPlace) { manual, photo -> manual ?: photo }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, null)
+
+    fun setPlace(p: Place) {
+        _manualPlace.value = p.copy(source = PlaceSource.MANUAL)
+        // The AI is told the area in words too.
+        _foodInfo.value = _foodInfo.value.copy(location = p.label)
+    }
+
     /** True when photos were added but their GPS can't be read without permission. */
     private val _canUnlockPhotoPlaces = MutableStateFlow(false)
     val canUnlockPhotoPlaces: StateFlow<Boolean> = _canUnlockPhotoPlaces.asStateFlow()
@@ -143,7 +156,7 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
                 ?: Place(latitude = latLng[0], longitude = latLng[1], source = PlaceSource.GPS)
             _photoPlace.value = place
             val current = _foodInfo.value
-            if (current.location.isBlank() && place.city.isNotBlank()) {
+            if (current.location.isBlank() && place.city.isNotBlank() && _manualPlace.value == null) {
                 _foodInfo.value = current.copy(location = place.city)
             }
         }
@@ -190,6 +203,7 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
             throw IllegalStateException(tr("${mode.field(FieldSlot.SUBJECT).label} and ${mode.field(FieldSlot.PLACE).label.lowercase()} are required",
                 "${mode.field(FieldSlot.SUBJECT).label}和${mode.field(FieldSlot.PLACE).label}必填"))
         }
+        val chosenPlace = _manualPlace.value ?: _photoPlace.value
         val count = _photoUris.value.size
         if (count < 1 || count > mode.maxPhotos) throw IllegalStateException(tr("Select 1–${mode.maxPhotos} photos", "请选 1–${mode.maxPhotos} 张照片"))
 
@@ -200,14 +214,14 @@ class CreateFormViewModel(application: Application) : AndroidViewModel(applicati
                 status = NoteStatus.DRAFT,
                 photoUris = _photoUris.value.map { it.toString() },
                 styleLabel = _selectedStyle.value.key,
-                foodInfo = _foodInfo.value.copy(place = _photoPlace.value ?: Place()),
+                foodInfo = _foodInfo.value.copy(place = chosenPlace ?: Place()),
                 rating = _rating.value,
             )
             val id = draftRepo.insert(draft).also { saved = true }
             // Every note starts with its mode's root tag (e.g. 美食, 旅行).
             draftRepo.rootTag(mode.rootTag)?.let { draftRepo.addTag(listOf(id), it.id) }
             // No photo GPS: work out the place from the text, without delaying generation.
-            if (_photoPlace.value?.isKnown != true) {
+            if (chosenPlace?.isKnown != true) {
                 val app = getApplication<Application>()
                 val info = draft.foodInfo
                 this.app.applicationScope.launch {

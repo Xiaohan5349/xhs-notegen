@@ -81,6 +81,22 @@ fun GeneratingScreen(
                             }
                         },
                     )
+                    state.errorDetail?.let { detail ->
+                        Spacer(Modifier.height(12.dp))
+                        androidx.compose.foundation.text.selection.SelectionContainer {
+                            Text(
+                                detail,
+                                style = MaterialTheme.typography.bodySmall.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Monospace),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier
+                                    .padding(horizontal = 24.dp)
+                                    .fillMaxWidth()
+                                    .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.small)
+                                    .padding(10.dp),
+                            )
+                        }
+                        Spacer(Modifier.height(12.dp))
+                    }
                     Text(
                         tr("Your note is saved as a draft — you can come back to it anytime.", "笔记已存为草稿，随时可以回来继续。"),
                         style = MaterialTheme.typography.bodySmall,

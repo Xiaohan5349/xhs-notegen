@@ -15,6 +15,7 @@ import com.xiaohan.xhsnotegen.ui.drafts.DraftListScreen
 import com.xiaohan.xhsnotegen.ui.generate.GeneratingScreen
 import com.xiaohan.xhsnotegen.ui.publish.XhsLoginScreen
 import com.xiaohan.xhsnotegen.ui.review.ReviewScreen
+import com.xiaohan.xhsnotegen.ui.settings.AiSettingsScreen
 import com.xiaohan.xhsnotegen.ui.settings.ModeEditorScreen
 import com.xiaohan.xhsnotegen.ui.settings.ModesScreen
 import com.xiaohan.xhsnotegen.ui.settings.SettingsScreen
@@ -26,6 +27,7 @@ object Routes {
     const val REVIEW = "review/{draftId}"
     const val XHS_LOGIN = "xhs_login"
     const val SETTINGS = "settings"
+    const val AI_SETTINGS = "ai_settings"
     const val MODES = "modes"
     const val MODE_EDITOR = "mode/{key}"
     fun modeEditor(key: String) = "mode/$key"
@@ -60,7 +62,12 @@ fun AppNavigation(navController: NavHostController) {
                 onNavigateBack = { navController.popBackStack() },
                 onLogin = { navController.navigate(Routes.XHS_LOGIN) },
                 onEditPrompt = { navController.navigate(Routes.MODES) },
+                onOpenAi = { navController.navigate(Routes.AI_SETTINGS) },
             )
+        }
+
+        composable(Routes.AI_SETTINGS) {
+            AiSettingsScreen(onNavigateBack = { navController.popBackStack() })
         }
 
         composable(Routes.MODES) {
@@ -80,7 +87,7 @@ fun AppNavigation(navController: NavHostController) {
         composable(Routes.CREATE_FORM) {
             CreateFormScreen(
                 onNavigateBack = { navController.popBackStack() },
-                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                onOpenSettings = { navController.navigate(Routes.AI_SETTINGS) },
                 onManageModes = { navController.navigate(Routes.MODES) },
                 onDraftSaved = { draftId ->
                     navController.navigate(Routes.generating(draftId)) {
@@ -115,7 +122,7 @@ fun AppNavigation(navController: NavHostController) {
                 draftId = draftId,
                 onNavigateBack = { navController.popBackStack() },
                 onNavigateToLogin = { navController.navigate(Routes.XHS_LOGIN) },
-                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                onOpenSettings = { navController.navigate(Routes.AI_SETTINGS) },
             )
         }
 

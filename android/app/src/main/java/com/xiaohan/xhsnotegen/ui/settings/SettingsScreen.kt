@@ -49,6 +49,7 @@ fun SettingsScreen(
     onNavigateBack: () -> Unit,
     onLogin: () -> Unit,
     onEditPrompt: () -> Unit = {},
+    onOpenAi: () -> Unit = {},
 ) {
     Scaffold(
         topBar = {
@@ -75,7 +76,7 @@ fun SettingsScreen(
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             AppearanceSection()
-            AiSection(onEditPrompt)
+            AiSection(onOpenAi, onEditPrompt)
             AccountSection(onLogin)
             Spacer(Modifier.height(16.dp))
         }
@@ -198,165 +199,64 @@ private fun Color.luminance(): Float = 0.2126f * red + 0.7152f * green + 0.0722f
 // AI writing
 // ---------------------------------------------------------------------------
 
-@OptIn(ExperimentalLayoutApi::class, ExperimentalMaterial3Api::class)
+/** Shows which AI is set up and opens its page; the details live on their own screen. */
 @Composable
-private fun AiSection(onEditPrompt: () -> Unit) {
+private fun AiSection(onOpenAi: () -> Unit, onEditPrompt: () -> Unit) {
     val context = LocalContext.current
-    var provider by remember { mutableStateOf(AiSettings.provider(context)) }
-    // Re-read per provider so each keeps its own key and model.
-    var apiKey by remember(provider) { mutableStateOf(AiSettings.apiKey(context, provider)) }
-    var model by remember(provider) { mutableStateOf(AiSettings.model(context, provider)) }
-    var baseUrl by remember { mutableStateOf(AiSettings.customBaseUrl(context)) }
-    var vision by remember { mutableStateOf(AiSettings.customVision(context)) }
-    var showKey by remember { mutableStateOf(false) }
-
-    val builtIn = provider.findModel(model)
-    // The free-text field shows only ids that aren't one of the listed options.
-    var otherModel by remember(provider) { mutableStateOf(if (provider.findModel(model) == null) model else "") }
+    // Re-read when coming back from the AI page.
+    var config by remember { mutableStateOf(AiSettings.current(context)) }
+    LifecycleResumeEffect(Unit) {
+        config = AiSettings.current(context)
+        onPauseOrDispose {}
+    }
+    val problem = config.problem()
+    val modeCount = com.xiaohan.xhsnotegen.ai.ModeStore.modes.collectAsState().value.size
 
     SectionCard(
         title = tr("AI writing", "AI 写作"),
         subtitle = tr("Which model writes your notes. Keys stay on this phone.", "选择用哪个模型写笔记。密钥只保存在这台手机上。"),
     ) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            AiProvider.entries.forEach { p ->
-                FilterChip(
-                    selected = p == provider,
-                    onClick = { provider = p; AiSettings.setProvider(context, p) },
-                    label = { Text(p.displayName) },
-                    shape = CircleShape,
-                )
-            }
-        }
-
-        if (provider.models.isNotEmpty()) {
-            Column(Modifier.clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainer)) {
-                provider.models.forEach { m ->
-                    val selected = m.id == model && otherModel.isBlank()
-                    Row(
-                        Modifier
-                            .fillMaxWidth()
-                            .selectable(selected = selected, role = Role.RadioButton, onClick = {
-                                model = m.id; otherModel = ""
-                                AiSettings.setModel(context, provider, m.id)
-                            })
-                            .padding(horizontal = 12.dp, vertical = 10.dp),
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        RadioButton(selected = selected, onClick = null)
-                        Spacer(Modifier.width(12.dp))
-                        Column(Modifier.weight(1f)) {
-                            Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(m.label, style = MaterialTheme.typography.titleSmall)
-                                if (m.id == provider.defaultModel) {
-                                    Spacer(Modifier.width(8.dp))
-                                    Text(tr("Recommended", "推荐"), style = MaterialTheme.typography.labelSmall,
-                                        color = MaterialTheme.colorScheme.primary)
-                                }
-                            }
-                            Text(m.note, style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-            }
-        }
-
-        if (provider == AiProvider.CUSTOM) {
-            TextField(
-                value = baseUrl,
-                onValueChange = { baseUrl = it; AiSettings.setCustomBaseUrl(context, it) },
-                modifier = Modifier.fillMaxWidth(),
-                label = { Text(tr("API address", "API 地址")) },
-                placeholder = { Text("https://example.com/v1") },
-                leadingIcon = { Icon(Icons.Outlined.Link, null) },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri),
-                shape = MaterialTheme.shapes.medium,
-                colors = softFieldColors(),
-                supportingText = { Text(tr("OpenAI-compatible base URL; /chat/completions is added for you", "兼容 OpenAI 的基础地址，会自动加上 /chat/completions")) },
-            )
-        }
-
-        TextField(
-            value = if (provider == AiProvider.CUSTOM) model else otherModel,
-            onValueChange = { v ->
-                if (provider == AiProvider.CUSTOM) model = v else otherModel = v
-                val chosen = v.ifBlank { if (provider == AiProvider.CUSTOM) "" else provider.defaultModel }
-                if (provider != AiProvider.CUSTOM && v.isBlank()) model = provider.defaultModel
-                AiSettings.setModel(context, provider, chosen)
-            },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text(if (provider == AiProvider.CUSTOM) tr("Model", "模型") else tr("Other model (optional)", "其他模型（选填）")) },
-            placeholder = { Text(if (provider == AiProvider.CUSTOM) tr("e.g. qwen-vl-max", "例如 qwen-vl-max") else tr("Any ${provider.displayName} model id", "任意 ${provider.displayName} 模型 ID")) },
-            leadingIcon = { Icon(Icons.Outlined.Memory, null) },
-            singleLine = true,
-            shape = MaterialTheme.shapes.medium,
-            colors = softFieldColors(),
-            supportingText = if (provider != AiProvider.CUSTOM) {
-                { Text(tr("Overrides the list above — for models released after this app version", "会覆盖上面的选择，用于本版本之后发布的新模型")) }
-            } else null,
+        SettingsRow(
+            icon = Icons.Outlined.AutoAwesome,
+            title = config.label,
+            subtitle = problem ?: tr("Ready — tap to change the model or test it", "已就绪，点击可更换模型或测试"),
+            subtitleColor = if (problem != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            onClick = onOpenAi,
         )
-
-        TextField(
-            value = apiKey,
-            onValueChange = { apiKey = it; AiSettings.setApiKey(context, provider, it) },
-            modifier = Modifier.fillMaxWidth(),
-            label = { Text(tr("${provider.displayName} API key", "${provider.displayName} API 密钥")) },
-            leadingIcon = { Icon(Icons.Outlined.Key, null) },
-            trailingIcon = {
-                IconButton(onClick = { showKey = !showKey }) {
-                    Icon(if (showKey) Icons.Outlined.VisibilityOff else Icons.Outlined.Visibility,
-                        contentDescription = if (showKey) tr("Hide key", "隐藏密钥") else tr("Show key", "显示密钥"))
-                }
-            },
-            visualTransformation = if (showKey) VisualTransformation.None else PasswordVisualTransformation(),
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-            singleLine = true,
-            shape = MaterialTheme.shapes.medium,
-            colors = softFieldColors(),
-            supportingText = { Text(provider.keyHint) },
+        // Entry to the prompt editor.
+        SettingsRow(
+            icon = Icons.Outlined.EditNote,
+            title = tr("Writing modes & prompts", "写作模式与提示词"),
+            subtitle = tr("$modeCount modes — Food, Travel, Outfit… each with its own prompt and root tag", "$modeCount 个模式：美食、旅行、穿搭…… 各有自己的提示词和一级标签"),
+            onClick = onEditPrompt,
         )
+    }
+}
 
-        if (provider == AiProvider.CUSTOM) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Column(Modifier.weight(1f)) {
-                    Text(tr("Model can see photos", "模型能看图片"), style = MaterialTheme.typography.titleSmall)
-                    Text(tr("Turn off for text-only models — only your notes are sent", "纯文本模型请关闭，只会发送你写的文字"),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant)
-                }
-                Switch(checked = vision, onCheckedChange = { vision = it; AiSettings.setCustomVision(context, it) })
-            }
-        } else if (builtIn != null && !builtIn.vision) {
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.HideImage, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.tertiary)
-                Text(tr("This model can't see images, so notes are written from your text only.", "这个模型看不了图片，笔记只根据你写的文字生成。"),
-                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
+@Composable
+private fun SettingsRow(
+    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    title: String,
+    subtitle: String,
+    onClick: () -> Unit,
+    subtitleColor: Color = MaterialTheme.colorScheme.onSurfaceVariant,
+) {
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clickable(onClick = onClick)
+            .padding(horizontal = 16.dp, vertical = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        Icon(icon, null, tint = MaterialTheme.colorScheme.primary)
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.titleSmall)
+            Text(subtitle, style = MaterialTheme.typography.bodySmall, color = subtitleColor)
         }
-
-        // Entry to the prompt editor; "Customized" reminds you when you've changed it.
-        val modeCount = com.xiaohan.xhsnotegen.ai.ModeStore.modes.collectAsState().value.size
-        Row(
-            Modifier
-                .fillMaxWidth()
-                .clip(MaterialTheme.shapes.medium)
-                .background(MaterialTheme.colorScheme.surfaceContainer)
-                .clickable(onClick = onEditPrompt)
-                .padding(horizontal = 16.dp, vertical = 14.dp),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(12.dp),
-        ) {
-            Icon(Icons.Outlined.EditNote, null, tint = MaterialTheme.colorScheme.primary)
-            Column(Modifier.weight(1f)) {
-                Text(tr("Writing modes & prompts", "写作模式与提示词"), style = MaterialTheme.typography.titleSmall)
-                Text(tr("$modeCount modes — Food, Travel, Outfit… each with its own prompt and root tag", "$modeCount 个模式：美食、旅行、穿搭…… 各有自己的提示词和一级标签"),
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
+        Icon(Icons.Outlined.ChevronRight, null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

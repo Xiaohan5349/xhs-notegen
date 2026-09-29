@@ -1,5 +1,25 @@
 # Changelog
 
+## v1.9.0 — 2026-09-29
+
+### Added
+- Choose the date and place from lists instead of typing (create screen; the place list also on the home and review screens)
+  - When: year, month and day wheels, plus an optional time. It starts from the photo's date when there is one
+  - Place: Country → Province/State → City lists, in your app language with the other name underneath, with search and "Not listed? Type it". Works offline and without Google services, so it works on phones in mainland China. Includes every country; provinces and cities for China (all prefecture-level cities), the US, Japan, Korea, Thailand, the UK, France, Italy, Germany, Spain, Australia, Canada and many more. A place read from the photo still fills it in first
+- AI writing page (Settings → AI writing): provider, model, API key and, for Custom, the address and "Model can see photos" — all on their own screen. **Test connection** sends one tiny request and tells you if it worked, how long it took, whether the model takes photos, or exactly why not (address, HTTP code and the server's reply under "Show details"). **Save** saves and runs the same test; leaving with unsaved changes asks first
+- Custom models: "Load models from this address" reads the model list from the server (`/models`) so you can pick the id instead of typing it
+- Debug builds show the technical details (address, HTTP code, server reply) on the "Couldn't write the note" screen
+
+### Changed
+- Custom (OpenAI-compatible) models get a larger output limit (16,000 tokens, stepping down to 4,096 if the server refuses), because reasoning models such as StepFun's spend part of it thinking. If a model still uses it all on thinking, the message says so
+- When a model refuses photos the message now tells you to turn off "Model can see photos"
+- Error messages for a custom address name the address (api.stepfun.com) instead of "Custom"
+- Settings shows the chosen model as one row that opens the AI page
+
+### Notes
+- Places you pick are stored under their Chinese names, like places found by the phone, so groups stay together
+- StepFun Step Plan: address `https://api.stepfun.com/step_plan/v1` and model `step-5-preview` match StepFun's docs; the test shows the server's real answer
+
 ## v1.8.0 — 2026-09-29
 
 ### Added

@@ -19,6 +19,10 @@ data class Place(
     val label: String
         get() = listOf(city, region, country).filter { it.isNotBlank() }.distinct().joinToString(", ")
 
+    /** For showing: "南京市 · 江苏省 · 中国" (each level once). */
+    val display: String
+        get() = listOf(city, region, country).filter { it.isNotBlank() }.distinct().joinToString(" · ")
+
     /** Most detailed text available: the street address, else "city, region, country". */
     val fullAddress: String get() = address.ifBlank { label }
 }

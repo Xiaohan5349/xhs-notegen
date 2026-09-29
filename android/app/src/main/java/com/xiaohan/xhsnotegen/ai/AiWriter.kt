@@ -19,7 +19,13 @@ import okhttp3.RequestBody.Companion.toRequestBody
 import java.io.IOException
 import java.util.concurrent.TimeUnit
 
-class AiException(message: String, val retryable: Boolean = false, val badRequest: Boolean = false) : Exception(message)
+/** [detail] is the technical side (address, HTTP code, server reply), shown in debug builds and the connection test. */
+class AiException(
+    message: String,
+    val retryable: Boolean = false,
+    val badRequest: Boolean = false,
+    val detail: String? = null,
+) : Exception(message)
 
 /**
  * Sends one "write these styles" request to whichever provider is configured
@@ -60,19 +66,32 @@ object AiWriter {
             AiProvider.DEEPSEEK, AiProvider.CUSTOM -> listOf(OutputMode.JSON, OutputMode.PLAIN)
         }
 
+        // Custom servers often run reasoning models, whose thinking counts against the output limit —
+        // give them room first, and step down if the server says that limit is too high.
+        val budgets = if (config.provider == AiProvider.CUSTOM) listOf(MAX_OUTPUT_TOKENS_REASONING, 4096) else listOf<Int?>(null)
         var lastBadRequest: AiException? = null
-        for (mode in modes) {
-            try {
-                val request = buildRequest(config, systemPrompt, userPrompt, imagesBase64, styles, mode)
-                return@withContext retrying { parseVariants(execute(config, request), styles) }
-                    .map { it.copy(model = config.label) }
-            } catch (e: AiException) {
-                // A 400 at a stricter mode is usually "I don't support that response format".
-                if (!e.badRequest) throw e
-                lastBadRequest = e
+        for (budget in budgets) {
+            var tokenLimitHit = false
+            for (mode in modes) {
+                try {
+                    val request = buildRequest(config, systemPrompt, userPrompt, imagesBase64, styles, mode, budget)
+                    return@withContext retrying { parseVariants(execute(config, request), styles) }
+                        .map { it.copy(model = config.label) }
+                } catch (e: AiException) {
+                    // A 400 at a stricter mode is usually "I don't support that response format".
+                    if (!e.badRequest) throw e
+                    lastBadRequest = e
+                    if (isTokenLimitError(e.message)) { tokenLimitHit = true; break }
+                }
             }
+            if (!tokenLimitHit) break
         }
         throw lastBadRequest ?: AiException(tr("The model rejected the request", "模型拒绝了这个请求"))
+    }
+
+    internal fun isTokenLimitError(message: String?): Boolean {
+        val m = message?.lowercase().orEmpty()
+        return "max_tokens" in m || "max_completion_tokens" in m || "max tokens" in m || "maximum context" in m
     }
 
     /** One retry for transient failures (rate limits, 5xx, network, truncated JSON). */
@@ -104,9 +123,10 @@ object AiWriter {
         imagesBase64: List<String>,
         styles: List<NoteStyle>,
         mode: OutputMode,
+        maxTokens: Int? = null,
     ): HttpCall = when (config.provider.protocol) {
         AiProtocol.GEMINI -> geminiRequest(config, systemPrompt, userPrompt, imagesBase64, styles, mode)
-        AiProtocol.OPENAI_CHAT -> openAiRequest(config, systemPrompt, userPrompt, imagesBase64, styles, mode)
+        AiProtocol.OPENAI_CHAT -> openAiRequest(config, systemPrompt, userPrompt, imagesBase64, styles, mode, maxTokens)
         AiProtocol.ANTHROPIC -> anthropicRequest(config, systemPrompt, userPrompt, imagesBase64, styles, mode)
     }
 
@@ -139,6 +159,7 @@ object AiWriter {
 
     private fun openAiRequest(
         c: AiConfig, system: String, user: String, images: List<String>, styles: List<NoteStyle>, mode: OutputMode,
+        maxTokens: Int? = null,
     ): HttpCall {
         val userContent = JsonArray().apply {
             add(obj("type" to "text", "text" to user))
@@ -158,7 +179,7 @@ object AiWriter {
                 addProperty("max_completion_tokens", MAX_OUTPUT_TOKENS_REASONING)
                 addProperty("reasoning_effort", "low")
             } else {
-                addProperty("max_tokens", MAX_OUTPUT_TOKENS)
+                addProperty("max_tokens", maxTokens ?: MAX_OUTPUT_TOKENS)
             }
             when (mode) {
                 OutputMode.SCHEMA -> add("response_format", obj(
@@ -250,7 +271,7 @@ object AiWriter {
             .build()
         client.newCall(request).execute().use { resp ->
             val raw = resp.body?.string().orEmpty()
-            if (!resp.isSuccessful) throw httpError(c, resp.code, raw)
+            if (!resp.isSuccessful) throw httpError(c, resp.code, raw, call.url)
             return extractText(c.provider.protocol, raw)
         }
     }
@@ -299,7 +320,12 @@ object AiWriter {
             }
         }
         when (stop) {
-            Stop.TRUNCATED -> throw AiException(tr("The answer was cut off. Try fewer photos or shorter notes.", "回答被截断了。试试少放几张照片或写短一点。"), retryable = true)
+            Stop.TRUNCATED -> throw if (text.isBlank()) AiException(
+                tr(
+                    "The model used up its whole output limit thinking, before writing anything. Try a model that thinks less, or one with a larger limit.",
+                    "模型把输出额度全用在“思考”上，还没开始写就用完了。请换一个思考较少的模型，或额度更大的模型。",
+                ),
+            ) else AiException(tr("The answer was cut off. Try fewer photos or shorter notes.", "回答被截断了。试试少放几张照片或写短一点。"), retryable = true)
             Stop.BLOCKED -> throw AiException(tr("The model blocked this content. Try different photos or wording.", "模型拦截了这些内容。换几张照片或换个说法试试。"))
             Stop.OK -> Unit
         }
@@ -309,7 +335,12 @@ object AiWriter {
 
     private enum class Stop { OK, TRUNCATED, BLOCKED }
 
-    internal fun httpError(c: AiConfig, code: Int, raw: String): AiException {
+    internal fun httpError(c: AiConfig, code: Int, raw: String, url: String? = null): AiException {
+        val detail = "${url ?: "?"}\nHTTP $code\n${raw.trim().take(800)}"
+        return mapHttpError(c, code, raw).let { AiException(it.message.orEmpty(), it.retryable, it.badRequest, detail) }
+    }
+
+    private fun mapHttpError(c: AiConfig, code: Int, raw: String): AiException {
         // Providers put the reason in error.message and a machine-readable
         // error.code / error.type (OpenAI) or error.status (Gemini).
         val err = runCatching { JsonParser.parseString(raw).asJsonObject }.getOrNull()?.let { json ->
@@ -319,7 +350,9 @@ object AiWriter {
             ?: runCatching { JsonParser.parseString(raw).asJsonObject.let { it.str("message") ?: it.str("error") } }.getOrNull())
             ?.takeIf { it.isNotBlank() } ?: raw.take(200)
         val errCode = listOfNotNull(err?.str("code"), err?.str("type"), err?.str("status")).joinToString(" ").lowercase()
-        val name = c.provider.displayName
+        // A custom address is best named by its host ("api.stepfun.com"), not "Custom".
+        val name = if (c.provider == AiProvider.CUSTOM) runCatching { java.net.URI(c.baseUrl).host }.getOrNull() ?: c.provider.displayName
+                   else c.provider.displayName
         val keyProblem = message.contains("api key", ignoreCase = true) || message.contains("api_key", ignoreCase = true) ||
             message.contains("authentication", ignoreCase = true)
         val noCredit = "insufficient_quota" in errCode || message.contains("insufficient", ignoreCase = true) ||
@@ -348,10 +381,142 @@ object AiWriter {
             code == 403 -> AiException(tr("This key can't use \"${c.model}\": $message", "这个密钥无法使用“${c.model}”：$message"))
             code == 404 -> AiException(tr("Model \"${c.model}\" wasn't found at $name. Check the model in Settings.", "$name 上找不到模型“${c.model}”，请在设置中检查模型。"))
             code >= 500 -> AiException(tr("$name is having trouble ($code). Retrying may help.", "$name 出了点问题（$code），重试也许能解决。"), retryable = true)
+            (code == 400 || code == 422) && c.vision && mentionsImages(message) -> AiException(
+                tr(
+                    "$name says this model can't take photos ($message). In Settings → AI writing, turn off \"Model can see photos\" — your notes will be written from your text.",
+                    "$name 表示这个模型不能接收图片（$message）。请在 设置 → AI 写作 里关闭“模型能看图片”，笔记会只根据你的文字生成。",
+                ), badRequest = true,
+            )
             code == 400 || code == 422 -> AiException(tr("$name couldn't handle the request: $message", "$name 无法处理这个请求：$message"), badRequest = true)
             else -> AiException(tr("$name error $code: $message", "$name 错误 $code：$message"))
         }
     }
+
+    private fun mentionsImages(message: String): Boolean = listOf("image", "vision", "multimodal", "multi-modal", "图片", "图像")
+        .any { message.contains(it, ignoreCase = true) }
+
+    // ---------------------------------------------------------------------
+    // Connection test & model list
+    // ---------------------------------------------------------------------
+
+    /** A raw HTTP answer; never throws for HTTP errors (network errors still throw IOException). */
+    data class RawResult(val url: String, val code: Int, val body: String, val millis: Long)
+
+    private fun timed(request: Request): RawResult {
+        val start = System.currentTimeMillis()
+        client.newCall(request).execute().use { resp ->
+            return RawResult(request.url.toString(), resp.code, resp.body?.string().orEmpty(), System.currentTimeMillis() - start)
+        }
+    }
+
+    internal fun post(call: HttpCall): RawResult = timed(
+        Request.Builder().url(call.url)
+            .apply { call.headers.forEach { (k, v) -> addHeader(k, v) } }
+            .post(call.body.toString().toRequestBody("application/json".toMediaType()))
+            .build()
+    )
+
+    private fun get(url: String, headers: Map<String, String>): RawResult = timed(
+        Request.Builder().url(url).apply { headers.forEach { (k, v) -> addHeader(k, v) } }.get().build()
+    )
+
+    /**
+     * The smallest request that proves the key, address and model work: one short
+     * question, optionally with a tiny picture to see whether the model takes photos.
+     */
+    internal fun pingCall(c: AiConfig, imageBase64: String? = null): HttpCall {
+        val question = if (imageBase64 == null) "Reply with just the word OK." else "What is the main color of this image? Answer in one word."
+        val images = listOfNotNull(imageBase64)
+        return when (c.provider.protocol) {
+            AiProtocol.GEMINI -> {
+                val parts = JsonArray().apply {
+                    add(obj("text" to question))
+                    images.forEach { add(obj("inlineData" to obj("mimeType" to "image/jpeg", "data" to it))) }
+                }
+                val generation = JsonObject().apply {
+                    addProperty("maxOutputTokens", 512)
+                    if (c.model.startsWith("gemini-3")) add("thinkingConfig", obj("thinkingLevel" to "low"))
+                }
+                HttpCall(
+                    url = "${c.baseUrl.trimEnd('/')}/models/${c.model}:generateContent",
+                    headers = mapOf("x-goog-api-key" to c.apiKey),
+                    body = JsonObject().apply {
+                        add("contents", arr(obj("role" to "user", "parts" to parts)))
+                        add("generationConfig", generation)
+                    },
+                )
+            }
+            AiProtocol.OPENAI_CHAT -> {
+                val content = JsonArray().apply {
+                    add(obj("type" to "text", "text" to question))
+                    images.forEach { add(obj("type" to "image_url", "image_url" to obj("url" to "data:image/jpeg;base64,$it"))) }
+                }
+                val body = JsonObject().apply {
+                    addProperty("model", c.model)
+                    add("messages", arr(obj("role" to "user", "content" to if (images.isEmpty()) JsonCodec.gson.toJsonTree(question) else content)))
+                    // Reasoning models spend tokens thinking first; leave room for an answer.
+                    addProperty(if (c.provider == AiProvider.OPENAI) "max_completion_tokens" else "max_tokens", 1024)
+                }
+                val base = c.baseUrl.trimEnd('/')
+                HttpCall(
+                    url = if (base.endsWith("/chat/completions")) base else "$base/chat/completions",
+                    headers = if (c.apiKey.isBlank()) emptyMap() else mapOf("Authorization" to "Bearer ${c.apiKey}"),
+                    body = body,
+                )
+            }
+            AiProtocol.ANTHROPIC -> {
+                val content = JsonArray().apply {
+                    images.forEach { add(obj("type" to "image", "source" to obj("type" to "base64", "media_type" to "image/jpeg", "data" to it))) }
+                    add(obj("type" to "text", "text" to question))
+                }
+                HttpCall(
+                    url = "${c.baseUrl.trimEnd('/')}/messages",
+                    headers = mapOf("x-api-key" to c.apiKey, "anthropic-version" to "2023-06-01"),
+                    body = JsonObject().apply {
+                        addProperty("model", c.model)
+                        addProperty("max_tokens", 256)
+                        add("messages", arr(obj("role" to "user", "content" to content)))
+                    },
+                )
+            }
+        }
+    }
+
+    /** Address of the models list for this provider, plus the headers it needs. */
+    private fun modelsCall(c: AiConfig): Pair<String, Map<String, String>> {
+        val base = c.baseUrl.trimEnd('/').removeSuffix("/chat/completions").removeSuffix("/messages")
+        return when (c.provider.protocol) {
+            AiProtocol.GEMINI -> "$base/models?pageSize=200" to mapOf("x-goog-api-key" to c.apiKey)
+            AiProtocol.OPENAI_CHAT -> "$base/models" to
+                if (c.apiKey.isBlank()) emptyMap() else mapOf("Authorization" to "Bearer ${c.apiKey}")
+            AiProtocol.ANTHROPIC -> "$base/models?limit=200" to mapOf("x-api-key" to c.apiKey, "anthropic-version" to "2023-06-01")
+        }
+    }
+
+    /** What the server says it has — used to pick a model for a custom address. */
+    suspend fun listModels(c: AiConfig): List<String> = withContext(Dispatchers.IO) {
+        val (url, headers) = modelsCall(c)
+        val raw = try { get(url, headers) } catch (e: IOException) {
+            throw AiException(tr("Couldn't reach ${c.baseUrl}: ${e.message ?: "connection failed"}", "连接不上 ${c.baseUrl}：${e.message ?: "连接失败"}"),
+                detail = "GET $url\n${e.javaClass.simpleName}: ${e.message}")
+        }
+        if (raw.code !in 200..299) throw httpError(c, raw.code, raw.body, "GET $url")
+        parseModelIds(c.provider.protocol, raw.body)
+    }
+
+    internal fun parseModelIds(protocol: AiProtocol, body: String): List<String> {
+        val json = runCatching { JsonParser.parseString(body).asJsonObject }.getOrNull() ?: return emptyList()
+        return when (protocol) {
+            AiProtocol.GEMINI -> json.getAsJsonArray("models").orEmpty()
+                .mapNotNull { it.asJsonObject }
+                .filter { m -> m.getAsJsonArray("supportedGenerationMethods")?.any { it.asString == "generateContent" } != false }
+                .mapNotNull { it.str("name")?.removePrefix("models/") }
+            else -> (json.getAsJsonArray("data") ?: json.getAsJsonArray("models")).orEmpty()
+                .mapNotNull { e -> if (e.isJsonObject) e.asJsonObject.str("id") ?: e.asJsonObject.str("name") else e.takeIf { it.isJsonPrimitive }?.asString }
+        }.distinct().sorted()
+    }
+
+    private fun JsonArray?.orEmpty(): List<com.google.gson.JsonElement> = this?.toList().orEmpty()
 
     /** Parses the model's JSON answer; tolerates code fences and stray prose around it. */
     fun parseVariants(text: String, styles: List<NoteStyle>): List<NoteVariant> {

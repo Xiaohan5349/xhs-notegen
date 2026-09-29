@@ -42,6 +42,7 @@ class XhsNoteGenApp : Application() {
         AppearanceStore.init(this)
         LanguageStore.init(this)
         ModeStore.init(this)
+        com.xiaohan.xhsnotegen.domain.PlaceCatalog.init(this)
         // Once, after the update that added modes: tag existing notes with their mode's root tag.
         val flags = getSharedPreferences("migrations", MODE_PRIVATE)
         if (!flags.getBoolean("root_tags_backfilled", false)) {

@@ -242,8 +242,12 @@ fun ReviewScreen(
                 noteCount = 1,
                 initial = d.foodInfo.place,
                 onSave = { country, region, city, address ->
-                    viewModel.setPlace(d.foodInfo.place.copy(
+                    val old = d.foodInfo.place
+                    val moved = old.country != country.trim() || old.city != city.trim()
+                    viewModel.setPlace(old.copy(
                         country = country.trim(), region = region.trim(), city = city.trim(), address = address.trim(),
+                        // Coordinates from the photo would point at the old place.
+                        latitude = if (moved) null else old.latitude, longitude = if (moved) null else old.longitude,
                         source = PlaceSource.MANUAL,
                     ))
                 },

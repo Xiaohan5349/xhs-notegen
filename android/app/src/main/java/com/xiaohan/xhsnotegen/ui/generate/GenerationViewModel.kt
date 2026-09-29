@@ -19,6 +19,8 @@ data class GenerationState(
     val phase: NoteGenerator.Phase = NoteGenerator.Phase.PREPARING_PHOTOS,
     val photoUris: List<String> = emptyList(),
     val error: String? = null,
+    /** Address, HTTP code and server reply — only filled in debug builds. */
+    val errorDetail: String? = null,
     val isComplete: Boolean = false,
 )
 
@@ -43,7 +45,7 @@ class GenerationViewModel(application: Application) : AndroidViewModel(applicati
 
     fun retry(draftId: Long) {
         if (job?.isActive == true) return
-        _state.update { it.copy(error = null, phase = NoteGenerator.Phase.PREPARING_PHOTOS) }
+        _state.update { it.copy(error = null, errorDetail = null, phase = NoteGenerator.Phase.PREPARING_PHOTOS) }
         run(draftId)
     }
 
@@ -72,7 +74,13 @@ class GenerationViewModel(application: Application) : AndroidViewModel(applicati
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
-                _state.update { it.copy(error = e.message ?: tr("Something went wrong", "出错了")) }
+                val debuggable = getApplication<Application>().applicationInfo.flags and android.content.pm.ApplicationInfo.FLAG_DEBUGGABLE != 0
+                _state.update {
+                    it.copy(
+                        error = e.message ?: tr("Something went wrong", "出错了"),
+                        errorDetail = (e as? com.xiaohan.xhsnotegen.ai.AiException)?.detail?.takeIf { debuggable },
+                    )
+                }
             }
         }
     }

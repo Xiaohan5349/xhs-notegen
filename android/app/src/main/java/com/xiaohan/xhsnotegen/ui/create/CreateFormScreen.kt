@@ -44,6 +44,12 @@ import com.xiaohan.xhsnotegen.domain.WritingMode
 import com.xiaohan.xhsnotegen.ui.components.ModelChip
 import com.xiaohan.xhsnotegen.ui.components.RatingBar
 import com.xiaohan.xhsnotegen.ui.components.ratingWords
+import com.xiaohan.xhsnotegen.domain.Place
+import com.xiaohan.xhsnotegen.domain.PlaceSource
+import com.xiaohan.xhsnotegen.ui.components.DateWheelDialog
+import com.xiaohan.xhsnotegen.ui.components.PickerField
+import com.xiaohan.xhsnotegen.ui.components.PlacePickerDialog
+import com.xiaohan.xhsnotegen.ui.components.formatDateForDisplay
 import com.xiaohan.xhsnotegen.ui.components.SectionCard
 import com.xiaohan.xhsnotegen.ui.components.SoftTextField
 import com.xiaohan.xhsnotegen.ui.components.dashedBorder
@@ -68,6 +74,9 @@ fun CreateFormScreen(
     val isSaving by viewModel.isSaving.collectAsState()
     val photoPlace by viewModel.photoPlace.collectAsState()
     val rating by viewModel.rating.collectAsState()
+    val place by viewModel.place.collectAsState()
+    var showPlacePicker by remember { mutableStateOf(false) }
+    var showDatePicker by remember { mutableStateOf(false) }
     val mode by viewModel.mode.collectAsState()
     val modes by viewModel.modes.collectAsState()
     fun f(slot: FieldSlot) = mode.field(slot)
@@ -294,22 +303,27 @@ fun CreateFormScreen(
                     leadingIcon = if (mode.key == BuiltInModes.FOOD) Icons.Outlined.Storefront else Icons.Outlined.PinDrop,
                     keyboardOptions = KeyboardOptions(capitalization = KeyboardCapitalization.Words, imeAction = ImeAction.Next),
                 )
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    SoftTextField(
-                        value = foodInfo.location,
-                        onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(location = it)) },
-                        label = tr("Area", "区域"), singleLine = true, placeholder = tr("City / area", "城市 / 区域"),
-                        leadingIcon = Icons.Outlined.Place,
-                        modifier = Modifier.weight(1f),
-                    )
-                    SoftTextField(
-                        value = foodInfo.mealDate,
-                        onValueChange = { viewModel.updateFoodInfo(foodInfo.copy(mealDate = it)) },
-                        label = tr("When", "时间"), singleLine = true, placeholder = "yyyy-MM-dd",
-                        leadingIcon = Icons.Outlined.CalendarToday,
-                        modifier = Modifier.weight(1f),
-                    )
-                }
+                // Chosen from lists, not typed — works without internet or Google services.
+                PickerField(
+                    value = place?.takeIf { it.isKnown }?.display.orEmpty(),
+                    label = tr("Place", "地点"),
+                    placeholder = tr("Choose country, province, city", "选择国家、省份、城市"),
+                    icon = Icons.Outlined.Place,
+                    onClick = { showPlacePicker = true },
+                    supporting = when {
+                        place?.isKnown != true -> null
+                        place?.source == PlaceSource.GPS -> tr("Read from the photo — tap to change", "来自照片，点按可修改")
+                        else -> null
+                    },
+                )
+                PickerField(
+                    value = formatDateForDisplay(foodInfo.mealDate),
+                    label = tr("When", "时间"),
+                    placeholder = tr("Choose a date", "选择日期"),
+                    icon = Icons.Outlined.CalendarToday,
+                    onClick = { showDatePicker = true },
+                    supporting = if (foodInfo.mealDate.isNotBlank() && photos.isNotEmpty()) tr("From the photo unless you change it", "默认取自照片，可以修改") else null,
+                )
             }
 
             // ---- The human part ----
@@ -366,6 +380,23 @@ fun CreateFormScreen(
             }
             Spacer(Modifier.height(8.dp))
         }
+    }
+
+    if (showPlacePicker) {
+        PlacePickerDialog(
+            initial = place ?: Place(),
+            showAddress = false,
+            onConfirm = { viewModel.setPlace(it); showPlacePicker = false },
+            onDismiss = { showPlacePicker = false },
+        )
+    }
+    if (showDatePicker) {
+        DateWheelDialog(
+            initial = foodInfo.mealDate,
+            onConfirm = { viewModel.updateFoodInfo(foodInfo.copy(mealDate = it)); showDatePicker = false },
+            onClear = if (foodInfo.mealDate.isNotBlank()) ({ viewModel.updateFoodInfo(foodInfo.copy(mealDate = "")); showDatePicker = false }) else null,
+            onDismiss = { showDatePicker = false },
+        )
     }
 }
 

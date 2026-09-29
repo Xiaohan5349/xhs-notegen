@@ -148,7 +148,7 @@ private fun ModelPickerSheet(
             OutlinedButton(onClick = onOpenSettings, modifier = Modifier.fillMaxWidth()) {
                 Icon(Icons.Outlined.Settings, null, Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(tr("Keys, custom models & prompt", "密钥、自定义模型和提示词"))
+                Text(tr("API keys, custom models & test", "密钥、自定义模型和测试"))
             }
         }
     }

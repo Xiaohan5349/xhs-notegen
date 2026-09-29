@@ -23,6 +23,7 @@ import com.xiaohan.xhsnotegen.domain.NoteTag
 import com.xiaohan.xhsnotegen.domain.Place
 import com.xiaohan.xhsnotegen.domain.TagTree
 import com.xiaohan.xhsnotegen.i18n.tr
+import com.xiaohan.xhsnotegen.ui.components.PlacePickerDialog
 import com.xiaohan.xhsnotegen.ui.components.softFieldColors
 
 /**
@@ -137,7 +138,7 @@ private fun TagRow(name: String, state: ToggleableState, note: String?, depth: I
     }
 }
 
-/** Set a place by hand (country / region / city). Auto-organize won't overwrite it. */
+/** Set a place by choosing country → region → city (works offline). Auto-organize won't overwrite it. */
 @Composable
 fun PlaceDialog(
     noteCount: Int,
@@ -145,37 +146,11 @@ fun PlaceDialog(
     onSave: (country: String, region: String, city: String, address: String) -> Unit,
     onDismiss: () -> Unit,
 ) {
-    var country by remember { mutableStateOf(initial.country) }
-    var region by remember { mutableStateOf(initial.region) }
-    var city by remember { mutableStateOf(initial.city) }
-    var address by remember { mutableStateOf(initial.address) }
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Outlined.Place, null) },
-        title = { Text(if (noteCount == 1) tr("Place", "地点") else tr("Place for $noteCount notes", "$noteCount 篇笔记的地点")) },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                listOf(
-                    Triple(tr("Country", "国家"), country) { v: String -> country = v },
-                    Triple(tr("Province / state", "省 / 州"), region) { v: String -> region = v },
-                    Triple(tr("City", "城市"), city) { v: String -> city = v },
-                ).plus(if (noteCount == 1) listOf(Triple(tr("Street address (optional)", "详细地址（选填）"), address) { v: String -> address = v }) else emptyList())
-                .forEach { (label, value, set) ->
-                    TextField(
-                        value = value, onValueChange = set, label = { Text(label) },
-                        singleLine = true, modifier = Modifier.fillMaxWidth(),
-                        shape = MaterialTheme.shapes.medium, colors = softFieldColors(),
-                    )
-                }
-                Text(tr("Organize won't change places you set by hand.", "整理地点不会改动你手动设置的地点。"), style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(country, region, city, address); onDismiss() },
-                enabled = country.isNotBlank() || city.isNotBlank()) { Text(tr("Save", "保存")) }
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(tr("Cancel", "取消")) } },
+    PlacePickerDialog(
+        initial = initial,
+        showAddress = noteCount == 1,
+        onConfirm = { p -> onSave(p.country, p.region, p.city, p.address); onDismiss() },
+        onDismiss = onDismiss,
     )
 }
 

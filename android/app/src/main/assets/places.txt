@@ -1,0 +1,1722 @@
+# Offline place list: Country > Region > City. Format: C|zh|en|ISO  R|zh|en  T|zh|en
+C|中国|China|CN
+R|北京市|Beijing
+T|北京市|Beijing
+R|天津市|Tianjin
+T|天津市|Tianjin
+R|上海市|Shanghai
+T|上海市|Shanghai
+R|重庆市|Chongqing
+T|重庆市|Chongqing
+R|河北省|Hebei
+T|石家庄市|Shijiazhuang
+T|唐山市|Tangshan
+T|秦皇岛市|Qinhuangdao
+T|邯郸市|Handan
+T|邢台市|Xingtai
+T|保定市|Baoding
+T|张家口市|Zhangjiakou
+T|承德市|Chengde
+T|沧州市|Cangzhou
+T|廊坊市|Langfang
+T|衡水市|Hengshui
+R|山西省|Shanxi
+T|太原市|Taiyuan
+T|大同市|Datong
+T|阳泉市|Yangquan
+T|长治市|Changzhi
+T|晋城市|Jincheng
+T|朔州市|Shuozhou
+T|晋中市|Jinzhong
+T|运城市|Yuncheng
+T|忻州市|Xinzhou
+T|临汾市|Linfen
+T|吕梁市|Lyliang
+R|内蒙古自治区|Inner Mongolia
+T|呼和浩特市|Hohhot
+T|包头市|Baotou
+T|乌海市|Wuhai
+T|赤峰市|Chifeng
+T|通辽市|Tongliao
+T|鄂尔多斯市|Ordos
+T|呼伦贝尔市|Hulunbuir
+T|巴彦淖尔市|Bayannur
+T|乌兰察布市|Ulanqab
+T|兴安盟|Hinggan League
+T|锡林郭勒盟|Xilingol League
+T|阿拉善盟|Alxa League
+R|辽宁省|Liaoning
+T|沈阳市|Shenyang
+T|大连市|Dalian
+T|鞍山市|Anshan
+T|抚顺市|Fushun
+T|本溪市|Benxi
+T|丹东市|Dandong
+T|锦州市|Jinzhou
+T|营口市|Yingkou
+T|阜新市|Fuxin
+T|辽阳市|Liaoyang
+T|盘锦市|Panjin
+T|铁岭市|Tieling
+T|朝阳市|Chaoyang
+T|葫芦岛市|Huludao
+R|吉林省|Jilin
+T|长春市|Changchun
+T|吉林市|Jilin City
+T|四平市|Siping
+T|辽源市|Liaoyuan
+T|通化市|Tonghua
+T|白山市|Baishan
+T|松原市|Songyuan
+T|白城市|Baicheng
+T|延边朝鲜族自治州|Yanbian
+R|黑龙江省|Heilongjiang
+T|哈尔滨市|Harbin
+T|齐齐哈尔市|Qiqihar
+T|鸡西市|Jixi
+T|鹤岗市|Hegang
+T|双鸭山市|Shuangyashan
+T|大庆市|Daqing
+T|伊春市|Yichun
+T|佳木斯市|Jiamusi
+T|七台河市|Qitaihe
+T|牡丹江市|Mudanjiang
+T|黑河市|Heihe
+T|绥化市|Suihua
+T|大兴安岭地区|Daxing'anling
+R|江苏省|Jiangsu
+T|南京市|Nanjing
+T|无锡市|Wuxi
+T|徐州市|Xuzhou
+T|常州市|Changzhou
+T|苏州市|Suzhou
+T|南通市|Nantong
+T|连云港市|Lianyungang
+T|淮安市|Huai'an
+T|盐城市|Yancheng
+T|扬州市|Yangzhou
+T|镇江市|Zhenjiang
+T|泰州市|Taizhou Jiangsu
+T|宿迁市|Suqian
+R|浙江省|Zhejiang
+T|杭州市|Hangzhou
+T|宁波市|Ningbo
+T|温州市|Wenzhou
+T|嘉兴市|Jiaxing
+T|湖州市|Huzhou
+T|绍兴市|Shaoxing
+T|金华市|Jinhua
+T|衢州市|Quzhou
+T|舟山市|Zhoushan
+T|台州市|Taizhou Zhejiang
+T|丽水市|Lishui
+R|安徽省|Anhui
+T|合肥市|Hefei
+T|芜湖市|Wuhu
+T|蚌埠市|Bengbu
+T|淮南市|Huainan
+T|马鞍山市|Ma'anshan
+T|淮北市|Huaibei
+T|铜陵市|Tongling
+T|安庆市|Anqing
+T|黄山市|Huangshan
+T|滁州市|Chuzhou
+T|阜阳市|Fuyang
+T|宿州市|Suzhou Anhui
+T|六安市|Lu'an
+T|亳州市|Bozhou
+T|池州市|Chizhou
+T|宣城市|Xuancheng
+R|福建省|Fujian
+T|福州市|Fuzhou
+T|厦门市|Xiamen
+T|莆田市|Putian
+T|三明市|Sanming
+T|泉州市|Quanzhou
+T|漳州市|Zhangzhou
+T|南平市|Nanping
+T|龙岩市|Longyan
+T|宁德市|Ningde
+R|江西省|Jiangxi
+T|南昌市|Nanchang
+T|景德镇市|Jingdezhen
+T|萍乡市|Pingxiang
+T|九江市|Jiujiang
+T|新余市|Xinyu
+T|鹰潭市|Yingtan
+T|赣州市|Ganzhou
+T|吉安市|Ji'an
+T|宜春市|Yichun Jiangxi
+T|抚州市|Fuzhou Jiangxi
+T|上饶市|Shangrao
+R|山东省|Shandong
+T|济南市|Jinan
+T|青岛市|Qingdao
+T|淄博市|Zibo
+T|枣庄市|Zaozhuang
+T|东营市|Dongying
+T|烟台市|Yantai
+T|潍坊市|Weifang
+T|济宁市|Jining
+T|泰安市|Tai'an
+T|威海市|Weihai
+T|日照市|Rizhao
+T|临沂市|Linyi
+T|德州市|Dezhou
+T|聊城市|Liaocheng
+T|滨州市|Binzhou
+T|菏泽市|Heze
+R|河南省|Henan
+T|郑州市|Zhengzhou
+T|开封市|Kaifeng
+T|洛阳市|Luoyang
+T|平顶山市|Pingdingshan
+T|安阳市|Anyang
+T|鹤壁市|Hebi
+T|新乡市|Xinxiang
+T|焦作市|Jiaozuo
+T|濮阳市|Puyang
+T|许昌市|Xuchang
+T|漯河市|Luohe
+T|三门峡市|Sanmenxia
+T|南阳市|Nanyang
+T|商丘市|Shangqiu
+T|信阳市|Xinyang
+T|周口市|Zhoukou
+T|驻马店市|Zhumadian
+T|济源市|Jiyuan
+R|湖北省|Hubei
+T|武汉市|Wuhan
+T|黄石市|Huangshi
+T|十堰市|Shiyan
+T|宜昌市|Yichang
+T|襄阳市|Xiangyang
+T|鄂州市|Ezhou
+T|荆门市|Jingmen
+T|孝感市|Xiaogan
+T|荆州市|Jingzhou
+T|黄冈市|Huanggang
+T|咸宁市|Xianning
+T|随州市|Suizhou
+T|恩施土家族苗族自治州|Enshi
+T|仙桃市|Xiantao
+T|潜江市|Qianjiang
+T|天门市|Tianmen
+T|神农架林区|Shennongjia
+R|湖南省|Hunan
+T|长沙市|Changsha
+T|株洲市|Zhuzhou
+T|湘潭市|Xiangtan
+T|衡阳市|Hengyang
+T|邵阳市|Shaoyang
+T|岳阳市|Yueyang
+T|常德市|Changde
+T|张家界市|Zhangjiajie
+T|益阳市|Yiyang
+T|郴州市|Chenzhou
+T|永州市|Yongzhou
+T|怀化市|Huaihua
+T|娄底市|Loudi
+T|湘西土家族苗族自治州|Xiangxi
+R|广东省|Guangdong
+T|广州市|Guangzhou
+T|韶关市|Shaoguan
+T|深圳市|Shenzhen
+T|珠海市|Zhuhai
+T|汕头市|Shantou
+T|佛山市|Foshan
+T|江门市|Jiangmen
+T|湛江市|Zhanjiang
+T|茂名市|Maoming
+T|肇庆市|Zhaoqing
+T|惠州市|Huizhou
+T|梅州市|Meizhou
+T|汕尾市|Shanwei
+T|河源市|Heyuan
+T|阳江市|Yangjiang
+T|清远市|Qingyuan
+T|东莞市|Dongguan
+T|中山市|Zhongshan
+T|潮州市|Chaozhou
+T|揭阳市|Jieyang
+T|云浮市|Yunfu
+R|广西壮族自治区|Guangxi
+T|南宁市|Nanning
+T|柳州市|Liuzhou
+T|桂林市|Guilin
+T|梧州市|Wuzhou
+T|北海市|Beihai
+T|防城港市|Fangchenggang
+T|钦州市|Qinzhou
+T|贵港市|Guigang
+T|玉林市|Yulin Guangxi
+T|百色市|Baise
+T|贺州市|Hezhou
+T|河池市|Hechi
+T|来宾市|Laibin
+T|崇左市|Chongzuo
+R|海南省|Hainan
+T|海口市|Haikou
+T|三亚市|Sanya
+T|三沙市|Sansha
+T|儋州市|Danzhou
+T|琼海市|Qionghai
+T|文昌市|Wenchang
+T|万宁市|Wanning
+T|五指山市|Wuzhishan
+T|东方市|Dongfang
+T|陵水黎族自治县|Lingshui
+R|四川省|Sichuan
+T|成都市|Chengdu
+T|自贡市|Zigong
+T|攀枝花市|Panzhihua
+T|泸州市|Luzhou
+T|德阳市|Deyang
+T|绵阳市|Mianyang
+T|广元市|Guangyuan
+T|遂宁市|Suining
+T|内江市|Neijiang
+T|乐山市|Leshan
+T|南充市|Nanchong
+T|眉山市|Meishan
+T|宜宾市|Yibin
+T|广安市|Guang'an
+T|达州市|Dazhou
+T|雅安市|Ya'an
+T|巴中市|Bazhong
+T|资阳市|Ziyang
+T|阿坝藏族羌族自治州|Aba
+T|甘孜藏族自治州|Garze
+T|凉山彝族自治州|Liangshan
+R|贵州省|Guizhou
+T|贵阳市|Guiyang
+T|六盘水市|Liupanshui
+T|遵义市|Zunyi
+T|安顺市|Anshun
+T|毕节市|Bijie
+T|铜仁市|Tongren
+T|黔西南布依族苗族自治州|Qianxinan
+T|黔东南苗族侗族自治州|Qiandongnan
+T|黔南布依族苗族自治州|Qiannan
+R|云南省|Yunnan
+T|昆明市|Kunming
+T|曲靖市|Qujing
+T|玉溪市|Yuxi
+T|保山市|Baoshan
+T|昭通市|Zhaotong
+T|丽江市|Lijiang
+T|普洱市|Pu'er
+T|临沧市|Lincang
+T|楚雄彝族自治州|Chuxiong
+T|红河哈尼族彝族自治州|Honghe
+T|文山壮族苗族自治州|Wenshan
+T|西双版纳傣族自治州|Xishuangbanna
+T|大理白族自治州|Dali
+T|德宏傣族景颇族自治州|Dehong
+T|怒江傈僳族自治州|Nujiang
+T|迪庆藏族自治州|Diqing
+R|西藏自治区|Tibet
+T|拉萨市|Lhasa
+T|日喀则市|Shigatse
+T|昌都市|Qamdo
+T|林芝市|Nyingchi
+T|山南市|Shannan
+T|那曲市|Nagqu
+T|阿里地区|Ngari
+R|陕西省|Shaanxi
+T|西安市|Xi'an
+T|铜川市|Tongchuan
+T|宝鸡市|Baoji
+T|咸阳市|Xianyang
+T|渭南市|Weinan
+T|延安市|Yan'an
+T|汉中市|Hanzhong
+T|榆林市|Yulin Shaanxi
+T|安康市|Ankang
+T|商洛市|Shangluo
+R|甘肃省|Gansu
+T|兰州市|Lanzhou
+T|嘉峪关市|Jiayuguan
+T|金昌市|Jinchang
+T|白银市|Baiyin
+T|天水市|Tianshui
+T|武威市|Wuwei
+T|张掖市|Zhangye
+T|平凉市|Pingliang
+T|酒泉市|Jiuquan
+T|庆阳市|Qingyang
+T|定西市|Dingxi
+T|陇南市|Longnan
+T|临夏回族自治州|Linxia
+T|甘南藏族自治州|Gannan
+R|青海省|Qinghai
+T|西宁市|Xining
+T|海东市|Haidong
+T|海北藏族自治州|Haibei
+T|黄南藏族自治州|Huangnan
+T|海南藏族自治州|Hainan Prefecture
+T|果洛藏族自治州|Golog
+T|玉树藏族自治州|Yushu
+T|海西蒙古族藏族自治州|Haixi
+R|宁夏回族自治区|Ningxia
+T|银川市|Yinchuan
+T|石嘴山市|Shizuishan
+T|吴忠市|Wuzhong
+T|固原市|Guyuan
+T|中卫市|Zhongwei
+R|新疆维吾尔自治区|Xinjiang
+T|乌鲁木齐市|Urumqi
+T|克拉玛依市|Karamay
+T|吐鲁番市|Turpan
+T|哈密市|Hami
+T|昌吉回族自治州|Changji
+T|博尔塔拉蒙古自治州|Bortala
+T|巴音郭楞蒙古自治州|Bayingolin
+T|阿克苏地区|Aksu
+T|克孜勒苏柯尔克孜自治州|Kizilsu
+T|喀什地区|Kashgar
+T|和田地区|Hotan
+T|伊犁哈萨克自治州|Ili
+T|塔城地区|Tacheng
+T|阿勒泰地区|Altay
+T|石河子市|Shihezi
+T|阿拉尔市|Aral
+R|香港特别行政区|Hong Kong
+T|香港|Hong Kong
+R|澳门特别行政区|Macau
+T|澳门|Macau
+C|美国|United States|US
+R|加利福尼亚州|California
+T|洛杉矶|Los Angeles
+T|旧金山|San Francisco
+T|圣地亚哥|San Diego
+T|圣何塞|San Jose
+T|萨克拉门托|Sacramento
+T|奥克兰|Oakland
+T|帕洛阿尔托|Palo Alto
+T|圣塔芭芭拉|Santa Barbara
+T|尔湾|Irvine
+T|长滩|Long Beach
+R|纽约州|New York
+T|纽约|New York City
+T|布法罗|Buffalo
+T|奥尔巴尼|Albany
+T|罗切斯特|Rochester
+T|锡拉丘兹|Syracuse
+R|得克萨斯州|Texas
+T|休斯敦|Houston
+T|达拉斯|Dallas
+T|奥斯汀|Austin
+T|圣安东尼奥|San Antonio
+T|沃思堡|Fort Worth
+T|埃尔帕索|El Paso
+R|佛罗里达州|Florida
+T|迈阿密|Miami
+T|奥兰多|Orlando
+T|坦帕|Tampa
+T|杰克逊维尔|Jacksonville
+T|基韦斯特|Key West
+T|劳德代尔堡|Fort Lauderdale
+R|华盛顿州|Washington
+T|西雅图|Seattle
+T|塔科马|Tacoma
+T|斯波坎|Spokane
+T|贝尔维尤|Bellevue
+T|奥林匹亚|Olympia
+R|华盛顿哥伦比亚特区|District of Columbia
+T|华盛顿|Washington D.C.
+R|伊利诺伊州|Illinois
+T|芝加哥|Chicago
+T|斯普林菲尔德|Springfield
+T|厄巴纳-香槟|Urbana-Champaign
+T|埃文斯顿|Evanston
+R|马萨诸塞州|Massachusetts
+T|波士顿|Boston
+T|剑桥|Cambridge
+T|伍斯特|Worcester
+T|塞勒姆|Salem
+R|内华达州|Nevada
+T|拉斯维加斯|Las Vegas
+T|里诺|Reno
+T|卡森城|Carson City
+T|亨德森|Henderson
+R|亚利桑那州|Arizona
+T|凤凰城|Phoenix
+T|图森|Tucson
+T|佩吉|Page
+T|塞多纳|Sedona
+T|弗拉格斯塔夫|Flagstaff
+R|夏威夷州|Hawaii
+T|檀香山|Honolulu
+T|希洛|Hilo
+T|拉海纳|Lahaina
+T|凯卢阿-科纳|Kailua-Kona
+R|宾夕法尼亚州|Pennsylvania
+T|费城|Philadelphia
+T|匹兹堡|Pittsburgh
+T|哈里斯堡|Harrisburg
+T|伯利恒|Bethlehem
+R|新泽西州|New Jersey
+T|纽瓦克|Newark
+T|泽西城|Jersey City
+T|普林斯顿|Princeton
+T|大西洋城|Atlantic City
+R|乔治亚州|Georgia
+T|亚特兰大|Atlanta
+T|萨凡纳|Savannah
+T|奥古斯塔|Augusta
+R|北卡罗来纳州|North Carolina
+T|夏洛特|Charlotte
+T|罗利|Raleigh
+T|达勒姆|Durham
+T|阿什维尔|Asheville
+R|南卡罗来纳州|South Carolina
+T|查尔斯顿|Charleston
+T|哥伦比亚|Columbia
+T|默特尔比奇|Myrtle Beach
+R|弗吉尼亚州|Virginia
+T|里士满|Richmond
+T|弗吉尼亚海滩|Virginia Beach
+T|阿灵顿|Arlington
+T|威廉斯堡|Williamsburg
+R|马里兰州|Maryland
+T|巴尔的摩|Baltimore
+T|安纳波利斯|Annapolis
+T|贝塞斯达|Bethesda
+R|俄亥俄州|Ohio
+T|哥伦布|Columbus
+T|克利夫兰|Cleveland
+T|辛辛那提|Cincinnati
+T|托莱多|Toledo
+R|密歇根州|Michigan
+T|底特律|Detroit
+T|安阿伯|Ann Arbor
+T|大急流城|Grand Rapids
+T|兰辛|Lansing
+R|威斯康星州|Wisconsin
+T|密尔沃基|Milwaukee
+T|麦迪逊|Madison
+T|绿湾|Green Bay
+R|明尼苏达州|Minnesota
+T|明尼阿波利斯|Minneapolis
+T|圣保罗|Saint Paul
+T|罗切斯特|Rochester MN
+R|印第安纳州|Indiana
+T|印第安纳波利斯|Indianapolis
+T|西拉法叶|West Lafayette
+T|布卢明顿|Bloomington
+R|密苏里州|Missouri
+T|圣路易斯|St. Louis
+T|堪萨斯城|Kansas City
+T|杰斐逊城|Jefferson City
+R|田纳西州|Tennessee
+T|纳什维尔|Nashville
+T|孟菲斯|Memphis
+T|诺克斯维尔|Knoxville
+R|肯塔基州|Kentucky
+T|路易斯维尔|Louisville
+T|列克星敦|Lexington
+T|法兰克福|Frankfort
+R|路易斯安那州|Louisiana
+T|新奥尔良|New Orleans
+T|巴吞鲁日|Baton Rouge
+T|拉斐特|Lafayette
+R|阿拉巴马州|Alabama
+T|伯明翰|Birmingham
+T|蒙哥马利|Montgomery
+T|莫比尔|Mobile
+R|密西西比州|Mississippi
+T|杰克逊|Jackson
+T|比洛克西|Biloxi
+T|图珀洛|Tupelo
+R|阿肯色州|Arkansas
+T|小石城|Little Rock
+T|费耶特维尔|Fayetteville
+T|温泉城|Hot Springs
+R|俄克拉荷马州|Oklahoma
+T|俄克拉何马城|Oklahoma City
+T|塔尔萨|Tulsa
+T|诺曼|Norman
+R|堪萨斯州|Kansas
+T|威奇托|Wichita
+T|托皮卡|Topeka
+T|堪萨斯城|Kansas City KS
+R|内布拉斯加州|Nebraska
+T|奥马哈|Omaha
+T|林肯|Lincoln
+R|爱荷华州|Iowa
+T|得梅因|Des Moines
+T|锡达拉皮兹|Cedar Rapids
+T|爱荷华城|Iowa City
+R|南达科他州|South Dakota
+T|苏福尔斯|Sioux Falls
+T|拉皮德城|Rapid City
+T|皮尔|Pierre
+R|北达科他州|North Dakota
+T|法戈|Fargo
+T|俾斯麦|Bismarck
+T|大福克斯|Grand Forks
+R|蒙大拿州|Montana
+T|比林斯|Billings
+T|博兹曼|Bozeman
+T|米苏拉|Missoula
+T|海伦娜|Helena
+R|怀俄明州|Wyoming
+T|夏延|Cheyenne
+T|杰克逊霍尔|Jackson Hole
+T|拉勒米|Laramie
+R|科罗拉多州|Colorado
+T|丹佛|Denver
+T|博尔德|Boulder
+T|科罗拉多斯普林斯|Colorado Springs
+T|阿斯彭|Aspen
+T|柯林斯堡|Fort Collins
+R|新墨西哥州|New Mexico
+T|阿尔伯克基|Albuquerque
+T|圣达菲|Santa Fe
+T|陶斯|Taos
+T|拉斯克鲁塞斯|Las Cruces
+R|犹他州|Utah
+T|盐湖城|Salt Lake City
+T|帕克城|Park City
+T|摩押|Moab
+T|普罗沃|Provo
+T|圣乔治|St. George
+R|爱达荷州|Idaho
+T|博伊西|Boise
+T|太阳谷|Sun Valley
+T|爱达荷福尔斯|Idaho Falls
+R|俄勒冈州|Oregon
+T|波特兰|Portland
+T|塞勒姆|Salem OR
+T|尤金|Eugene
+T|本德|Bend
+R|阿拉斯加州|Alaska
+T|安克雷奇|Anchorage
+T|费尔班克斯|Fairbanks
+T|朱诺|Juneau
+T|锡特卡|Sitka
+R|康涅狄格州|Connecticut
+T|哈特福德|Hartford
+T|纽黑文|New Haven
+T|斯坦福|Stamford
+R|罗德岛州|Rhode Island
+T|普罗维登斯|Providence
+T|纽波特|Newport
+R|佛蒙特州|Vermont
+T|伯灵顿|Burlington
+T|蒙彼利埃|Montpelier
+T|斯托|Stowe
+R|新罕布什尔州|New Hampshire
+T|曼彻斯特|Manchester NH
+T|康科德|Concord
+T|朴茨茅斯|Portsmouth NH
+R|缅因州|Maine
+T|波特兰|Portland ME
+T|巴港|Bar Harbor
+T|奥古斯塔|Augusta ME
+R|特拉华州|Delaware
+T|威尔明顿|Wilmington
+T|多佛|Dover
+T|纽瓦克|Newark DE
+R|西弗吉尼亚州|West Virginia
+T|查尔斯顿|Charleston WV
+T|摩根敦|Morgantown
+T|亨廷顿|Huntington
+C|日本|Japan|JP
+R|北海道|Hokkaido
+T|札幌市|Sapporo
+T|函馆市|Hakodate
+T|小樽市|Otaru
+T|旭川市|Asahikawa
+T|富良野市|Furano
+T|钏路市|Kushiro
+R|青森县|Aomori
+T|青森市|Aomori
+T|弘前市|Hirosaki
+T|八户市|Hachinohe
+R|岩手县|Iwate
+T|盛冈市|Morioka
+T|平泉町|Hiraizumi
+T|花卷市|Hanamaki
+R|宫城县|Miyagi
+T|仙台市|Sendai
+T|松岛町|Matsushima
+T|石卷市|Ishinomaki
+R|秋田县|Akita
+T|秋田市|Akita
+T|仙北市|Semboku
+T|大馆市|Odate
+R|山形县|Yamagata
+T|山形市|Yamagata
+T|酒田市|Sakata
+T|米泽市|Yonezawa
+R|福岛县|Fukushima
+T|福岛市|Fukushima
+T|会津若松市|Aizuwakamatsu
+T|郡山市|Koriyama
+T|磐城市|Iwaki
+R|茨城县|Ibaraki
+T|水户市|Mito
+T|筑波市|Tsukuba
+T|大洗町|Oarai
+R|栃木县|Tochigi
+T|宇都宫市|Utsunomiya
+T|日光市|Nikko
+T|那须塩原市|Nasushiobara
+R|群马县|Gunma
+T|前桥市|Maebashi
+T|高崎市|Takasaki
+T|草津町|Kusatsu
+R|埼玉县|Saitama
+T|埼玉市|Saitama
+T|川越市|Kawagoe
+T|秩父市|Chichibu
+R|千叶县|Chiba
+T|千叶市|Chiba
+T|成田市|Narita
+T|浦安市|Urayasu
+T|船桥市|Funabashi
+R|东京都|Tokyo
+T|东京|Tokyo
+T|八王子市|Hachioji
+R|神奈川县|Kanagawa
+T|横滨市|Yokohama
+T|镰仓市|Kamakura
+T|川崎市|Kawasaki
+T|箱根町|Hakone
+T|藤泽市|Fujisawa
+R|新潟县|Niigata
+T|新潟市|Niigata
+T|汤泽町|Yuzawa
+T|佐渡市|Sado
+R|富山县|Toyama
+T|富山市|Toyama
+T|黑部市|Kurobe
+T|高冈市|Takaoka
+R|石川县|Ishikawa
+T|金泽市|Kanazawa
+T|七尾市|Nanao
+T|轮岛市|Wajima
+R|福井县|Fukui
+T|福井市|Fukui
+T|敦贺市|Tsuruga
+T|越前市|Echizen
+R|山梨县|Yamanashi
+T|甲府市|Kofu
+T|富士吉田市|Fujiyoshida
+T|河口湖町|Kawaguchiko
+R|长野县|Nagano
+T|长野市|Nagano
+T|松本市|Matsumoto
+T|轻井泽町|Karuizawa
+T|白马村|Hakuba
+R|岐阜县|Gifu
+T|岐阜市|Gifu
+T|高山市|Takayama
+T|白川村|Shirakawa
+R|静冈县|Shizuoka
+T|静冈市|Shizuoka
+T|热海市|Atami
+T|滨松市|Hamamatsu
+T|伊东市|Ito
+R|爱知县|Aichi
+T|名古屋市|Nagoya
+T|丰田市|Toyota
+T|犬山市|Inuyama
+R|三重县|Mie
+T|津市|Tsu
+T|伊势市|Ise
+T|四日市市|Yokkaichi
+R|滋贺县|Shiga
+T|大津市|Otsu
+T|彦根市|Hikone
+T|长滨市|Nagahama
+R|京都府|Kyoto
+T|京都市|Kyoto
+T|宇治市|Uji
+R|大阪府|Osaka
+T|大阪市|Osaka
+T|堺市|Sakai
+R|兵库县|Hyogo
+T|神户市|Kobe
+T|姬路市|Himeji
+T|西宫市|Nishinomiya
+T|有马温泉|Arima Onsen
+R|奈良县|Nara
+T|奈良市|Nara
+T|樱井市|Sakurai
+T|吉野町|Yoshino
+R|和歌山县|Wakayama
+T|和歌山市|Wakayama
+T|白浜町|Shirahama
+T|高野町|Koya
+R|鸟取县|Tottori
+T|鸟取市|Tottori
+T|米子市|Yonago
+T|境港市|Sakaiminato
+R|岛根县|Shimane
+T|松江市|Matsue
+T|出云市|Izumo
+T|浜田市|Hamada
+R|冈山县|Okayama
+T|冈山市|Okayama
+T|仓敷市|Kurashiki
+R|广岛县|Hiroshima
+T|广岛市|Hiroshima
+T|尾道市|Onomichi
+T|廿日市市|Hatsukaichi
+T|宫岛|Miyajima
+R|山口县|Yamaguchi
+T|山口市|Yamaguchi
+T|下关市|Shimonoseki
+T|萩市|Hagi
+R|德岛县|Tokushima
+T|德岛市|Tokushima
+T|鸣门市|Naruto
+T|三好市|Miyoshi
+R|香川县|Kagawa
+T|高松市|Takamatsu
+T|丸龟市|Marugame
+T|小豆岛町|Shodoshima
+R|爱媛县|Ehime
+T|松山市|Matsuyama
+T|今治市|Imabari
+T|宇和岛市|Uwajima
+R|高知县|Kochi
+T|高知市|Kochi
+T|四万十市|Shimanto
+T|室户市|Muroto
+R|福冈县|Fukuoka
+T|福冈市|Fukuoka
+T|北九州市|Kitakyushu
+T|太宰府市|Dazaifu
+T|柳川市|Yanagawa
+R|佐贺县|Saga
+T|佐贺市|Saga
+T|唐津市|Karatsu
+T|嬉野市|Ureshino
+R|长崎县|Nagasaki
+T|长崎市|Nagasaki
+T|佐世保市|Sasebo
+T|云仙市|Unzen
+R|熊本县|Kumamoto
+T|熊本市|Kumamoto
+T|阿苏市|Aso
+T|天草市|Amakusa
+R|大分县|Oita
+T|大分市|Oita
+T|别府市|Beppu
+T|由布市|Yufu
+R|宫崎县|Miyazaki
+T|宫崎市|Miyazaki
+T|日南市|Nichinan
+T|高千穗町|Takachiho
+R|鹿儿岛县|Kagoshima
+T|鹿儿岛市|Kagoshima
+T|屋久岛町|Yakushima
+T|指宿市|Ibusuki
+R|冲绳县|Okinawa
+T|那霸市|Naha
+T|石垣市|Ishigaki
+T|宫古岛市|Miyakojima
+T|冲绳市|Okinawa City
+T|名护市|Nago
+C|韩国|South Korea|KR
+R|首尔特别市|Seoul
+T|首尔|Seoul
+R|釜山广域市|Busan
+T|釜山|Busan
+R|大邱广域市|Daegu
+T|大邱|Daegu
+R|仁川广域市|Incheon
+T|仁川|Incheon
+R|光州广域市|Gwangju
+T|光州|Gwangju
+R|大田广域市|Daejeon
+T|大田|Daejeon
+R|蔚山广域市|Ulsan
+T|蔚山|Ulsan
+R|世宗特别自治市|Sejong
+T|世宗|Sejong
+R|京畿道|Gyeonggi
+T|水原市|Suwon
+T|城南市|Seongnam
+T|龙仁市|Yongin
+T|坡州市|Paju
+T|加平郡|Gapyeong
+R|江原道|Gangwon
+T|春川市|Chuncheon
+T|江陵市|Gangneung
+T|束草市|Sokcho
+T|平昌郡|Pyeongchang
+R|忠清北道|North Chungcheong
+T|清州市|Cheongju
+T|忠州市|Chungju
+T|丹阳郡|Danyang
+R|忠清南道|South Chungcheong
+T|天安市|Cheonan
+T|公州市|Gongju
+T|扶余郡|Buyeo
+T|保宁市|Boryeong
+R|全罗北道|North Jeolla
+T|全州市|Jeonju
+T|群山市|Gunsan
+T|南原市|Namwon
+R|全罗南道|South Jeolla
+T|木浦市|Mokpo
+T|丽水市|Yeosu
+T|顺天市|Suncheon
+T|潭阳郡|Damyang
+R|庆尚北道|North Gyeongsang
+T|庆州市|Gyeongju
+T|安东市|Andong
+T|浦项市|Pohang
+R|庆尚南道|South Gyeongsang
+T|昌原市|Changwon
+T|统营市|Tongyeong
+T|巨济市|Geoje
+T|晋州市|Jinju
+R|济州特别自治道|Jeju
+T|济州市|Jeju City
+T|西归浦市|Seogwipo
+C|泰国|Thailand|TH
+R|曼谷|Bangkok
+T|曼谷|Bangkok
+R|清迈府|Chiang Mai
+T|清迈|Chiang Mai
+T|拜县|Pai
+R|清莱府|Chiang Rai
+T|清莱|Chiang Rai
+R|普吉府|Phuket
+T|普吉岛|Phuket
+R|甲米府|Krabi
+T|甲米|Krabi
+T|奥南|Ao Nang
+R|春武里府|Chonburi
+T|芭提雅|Pattaya
+R|北碧府|Kanchanaburi
+T|北碧|Kanchanaburi
+R|大城府|Ayutthaya
+T|大城|Ayutthaya
+R|巴蜀府|Prachuap Khiri Khan
+T|华欣|Hua Hin
+R|夜丰颂府|Mae Hong Son
+T|夜丰颂|Mae Hong Son
+R|攀牙府|Phang Nga
+T|攀牙|Phang Nga
+R|素叻他尼府|Surat Thani
+T|素叻他尼|Surat Thani
+T|苏梅岛|Koh Samui
+T|帕岸岛|Koh Phangan
+T|龟岛|Koh Tao
+R|素可泰府|Sukhothai
+T|素可泰|Sukhothai
+C|新加坡|Singapore|SG
+T|新加坡|Singapore
+T|圣淘沙|Sentosa
+T|乌敏岛|Pulau Ubin
+C|英国|United Kingdom|GB
+R|英格兰|England
+T|伦敦|London
+T|曼彻斯特|Manchester
+T|利物浦|Liverpool
+T|伯明翰|Birmingham
+T|牛津|Oxford
+T|剑桥|Cambridge
+T|约克|York
+T|巴斯|Bath
+T|布莱顿|Brighton
+T|布里斯托尔|Bristol
+T|利兹|Leeds
+T|纽卡斯尔|Newcastle
+T|诺丁汉|Nottingham
+T|坎特伯雷|Canterbury
+T|温莎|Windsor
+R|苏格兰|Scotland
+T|爱丁堡|Edinburgh
+T|格拉斯哥|Glasgow
+T|阿伯丁|Aberdeen
+T|因弗内斯|Inverness
+T|圣安德鲁斯|St Andrews
+R|威尔士|Wales
+T|加的夫|Cardiff
+T|斯旺西|Swansea
+T|班戈|Bangor
+R|北爱尔兰|Northern Ireland
+T|贝尔法斯特|Belfast
+T|德里|Derry
+C|法国|France|FR
+R|法兰西岛大区|Ile-de-France
+T|巴黎|Paris
+T|凡尔赛|Versailles
+T|枫丹白露|Fontainebleau
+R|普罗旺斯-阿尔卑斯-蓝色海岸大区|Provence-Alpes-Cote d'Azur
+T|尼斯|Nice
+T|马赛|Marseille
+T|戛纳|Cannes
+T|阿维尼翁|Avignon
+T|艾克斯|Aix-en-Provence
+T|圣特罗佩|Saint-Tropez
+T|摩纳哥|Monaco
+R|奥弗涅-罗讷-阿尔卑斯大区|Auvergne-Rhone-Alpes
+T|里昂|Lyon
+T|尚贝里|Chambery
+T|安纳西|Annecy
+T|霞慕尼|Chamonix
+T|格勒诺布尔|Grenoble
+R|新阿基坦大区|Nouvelle-Aquitaine
+T|波尔多|Bordeaux
+T|比亚里茨|Biarritz
+T|拉罗谢尔|La Rochelle
+T|圣埃美隆|Saint-Emilion
+R|奥克西塔尼大区|Occitanie
+T|图卢兹|Toulouse
+T|蒙彼利埃|Montpellier
+T|卡尔卡松|Carcassonne
+T|尼姆|Nimes
+R|大东部大区|Grand Est
+T|斯特拉斯堡|Strasbourg
+T|科尔马|Colmar
+T|兰斯|Reims
+T|南锡|Nancy
+R|诺曼底大区|Normandy
+T|鲁昂|Rouen
+T|埃特尔塔|Etretat
+T|圣米歇尔山|Mont-Saint-Michel
+T|翁弗勒尔|Honfleur
+R|布列塔尼大区|Brittany
+T|雷恩|Rennes
+T|圣马洛|Saint-Malo
+T|布雷斯特|Brest
+R|卢瓦尔河地区大区|Pays de la Loire
+T|南特|Nantes
+T|昂热|Angers
+R|中央-卢瓦尔河谷大区|Centre-Val de Loire
+T|图尔|Tours
+T|布卢瓦|Blois
+T|奥尔良|Orleans
+R|上法兰西大区|Hauts-de-France
+T|里尔|Lille
+T|亚眠|Amiens
+R|勃艮第-弗朗什-孔泰大区|Bourgogne-Franche-Comte
+T|第戎|Dijon
+T|博恩|Beaune
+R|科西嘉大区|Corsica
+T|阿雅克肖|Ajaccio
+T|巴斯蒂亚|Bastia
+C|意大利|Italy|IT
+R|拉齐奥大区|Lazio
+T|罗马|Rome
+T|梵蒂冈|Vatican City
+R|威尼托大区|Veneto
+T|威尼斯|Venice
+T|维罗纳|Verona
+T|帕多瓦|Padua
+R|托斯卡纳大区|Tuscany
+T|佛罗伦萨|Florence
+T|比萨|Pisa
+T|锡耶纳|Siena
+T|卢卡|Lucca
+R|伦巴第大区|Lombardy
+T|米兰|Milan
+T|科莫|Como
+T|贝加莫|Bergamo
+T|曼托瓦|Mantua
+R|坎帕尼亚大区|Campania
+T|那不勒斯|Naples
+T|庞贝|Pompeii
+T|索伦托|Sorrento
+T|阿马尔菲|Amalfi
+T|卡普里岛|Capri
+R|西西里大区|Sicily
+T|巴勒莫|Palermo
+T|卡塔尼亚|Catania
+T|锡拉库萨|Syracuse
+T|陶尔米纳|Taormina
+R|艾米利亚-罗马涅大区|Emilia-Romagna
+T|博洛尼亚|Bologna
+T|摩德纳|Modena
+T|帕尔马|Parma
+T|拉文纳|Ravenna
+R|皮埃蒙特大区|Piedmont
+T|都灵|Turin
+T|阿尔巴|Alba
+R|利古里亚大区|Liguria
+T|热那亚|Genoa
+T|五渔村|Cinque Terre
+T|波托菲诺|Portofino
+R|翁布里亚大区|Umbria
+T|佩鲁贾|Perugia
+T|阿西西|Assisi
+T|奥维多|Orvieto
+R|普利亚大区|Puglia
+T|巴里|Bari
+T|莱切|Lecce
+T|阿尔贝罗贝洛|Alberobello
+R|撒丁岛大区|Sardinia
+T|卡利亚里|Cagliari
+T|阿尔盖罗|Alghero
+R|特伦蒂诺-上阿迪杰大区|Trentino-Alto Adige
+T|博尔扎诺|Bolzano
+T|特伦托|Trento
+R|马尔凯大区|Marche
+T|安科纳|Ancona
+T|乌尔比诺|Urbino
+C|德国|Germany|DE
+R|巴伐利亚州|Bavaria
+T|慕尼黑|Munich
+T|纽伦堡|Nuremberg
+T|新天鹅堡|Neuschwanstein
+T|班贝格|Bamberg
+T|加尔米施-帕滕基兴|Garmisch-Partenkirchen
+R|柏林州|Berlin
+T|柏林|Berlin
+R|汉堡州|Hamburg
+T|汉堡|Hamburg
+R|不来梅州|Bremen
+T|不来梅|Bremen
+R|巴登-符腾堡州|Baden-Wurttemberg
+T|斯图加特|Stuttgart
+T|海德堡|Heidelberg
+T|弗莱堡|Freiburg
+T|巴登-巴登|Baden-Baden
+R|北莱茵-威斯特法伦州|North Rhine-Westphalia
+T|科隆|Cologne
+T|杜塞尔多夫|Dusseldorf
+T|多特蒙德|Dortmund
+T|亚琛|Aachen
+T|波恩|Bonn
+R|黑森州|Hesse
+T|法兰克福|Frankfurt
+T|威斯巴登|Wiesbaden
+T|卡塞尔|Kassel
+R|下萨克森州|Lower Saxony
+T|汉诺威|Hanover
+T|哥廷根|Gottingen
+T|不伦瑞克|Braunschweig
+R|萨克森州|Saxony
+T|德累斯顿|Dresden
+T|莱比锡|Leipzig
+R|图林根州|Thuringia
+T|魏玛|Weimar
+T|爱尔福特|Erfurt
+T|耶拿|Jena
+R|萨克森-安哈尔特州|Saxony-Anhalt
+T|马格德堡|Magdeburg
+T|哈雷|Halle
+R|勃兰登堡州|Brandenburg
+T|波茨坦|Potsdam
+T|科特布斯|Cottbus
+R|梅克伦堡-前波美拉尼亚州|Mecklenburg-Vorpommern
+T|罗斯托克|Rostock
+T|什未林|Schwerin
+R|石勒苏益格-荷尔斯泰因州|Schleswig-Holstein
+T|基尔|Kiel
+T|吕贝克|Lubeck
+R|莱茵兰-普法尔茨州|Rhineland-Palatinate
+T|美因茨|Mainz
+T|特里尔|Trier
+T|科布伦茨|Koblenz
+R|萨尔州|Saarland
+T|萨尔布吕肯|Saarbrucken
+C|西班牙|Spain|ES
+R|马德里自治区|Community of Madrid
+T|马德里|Madrid
+T|阿尔卡拉德埃纳雷斯|Alcala de Henares
+R|加泰罗尼亚自治区|Catalonia
+T|巴塞罗那|Barcelona
+T|赫罗纳|Girona
+T|菲格拉斯|Figueres
+T|塔拉戈纳|Tarragona
+R|安达卢西亚自治区|Andalusia
+T|塞维利亚|Seville
+T|格拉纳达|Granada
+T|科尔多瓦|Cordoba
+T|马拉加|Malaga
+T|龙达|Ronda
+T|加的斯|Cadiz
+R|巴伦西亚自治区|Valencian Community
+T|巴伦西亚|Valencia
+T|阿利坎特|Alicante
+T|贝尼多姆|Benidorm
+R|巴斯克自治区|Basque Country
+T|毕尔巴鄂|Bilbao
+T|圣塞巴斯蒂安|San Sebastian
+R|加利西亚自治区|Galicia
+T|圣地亚哥-德孔波斯特拉|Santiago de Compostela
+T|拉科鲁尼亚|A Coruna
+R|卡斯蒂利亚-莱昂自治区|Castile and Leon
+T|塞戈维亚|Segovia
+T|萨拉曼卡|Salamanca
+T|布尔戈斯|Burgos
+T|莱昂|Leon
+R|卡斯蒂利亚-拉曼恰自治区|Castilla-La Mancha
+T|托莱多|Toledo
+T|昆卡|Cuenca
+R|巴利阿里群岛自治区|Balearic Islands
+T|帕尔马|Palma de Mallorca
+T|伊维萨|Ibiza
+T|马翁|Mahon
+R|加那利群岛自治区|Canary Islands
+T|拉斯帕尔马斯|Las Palmas
+T|圣克鲁斯-德特内里费|Santa Cruz de Tenerife
+T|拉古纳|La Laguna
+R|阿拉贡自治区|Aragon
+T|萨拉戈萨|Zaragoza
+T|韦斯卡|Huesca
+R|纳瓦拉自治区|Navarre
+T|潘普洛纳|Pamplona
+R|穆尔西亚自治区|Region of Murcia
+T|穆尔西亚|Murcia
+T|卡塔赫纳|Cartagena
+R|阿斯图里亚斯自治区|Asturias
+T|奥维耶多|Oviedo
+T|希洪|Gijon
+R|坎塔布里亚自治区|Cantabria
+T|桑坦德|Santander
+R|埃斯特雷马杜拉自治区|Extremadura
+T|梅里达|Merida
+T|卡塞雷斯|Caceres
+C|澳大利亚|Australia|AU
+R|新南威尔士州|New South Wales
+T|悉尼|Sydney
+T|纽卡斯尔|Newcastle
+T|蓝山|Blue Mountains
+T|拜伦湾|Byron Bay
+T|伍伦贡|Wollongong
+R|维多利亚州|Victoria
+T|墨尔本|Melbourne
+T|吉朗|Geelong
+T|巴拉瑞特|Ballarat
+T|大洋路|Great Ocean Road
+R|昆士兰州|Queensland
+T|布里斯班|Brisbane
+T|黄金海岸|Gold Coast
+T|凯恩斯|Cairns
+T|阳光海岸|Sunshine Coast
+T|汤斯维尔|Townsville
+T|圣灵群岛|Whitsundays
+R|西澳大利亚州|Western Australia
+T|珀斯|Perth
+T|弗里曼特尔|Fremantle
+T|布鲁姆|Broome
+T|玛格丽特河|Margaret River
+R|南澳大利亚州|South Australia
+T|阿德莱德|Adelaide
+T|袋鼠岛|Kangaroo Island
+T|巴罗萨谷|Barossa Valley
+R|塔斯马尼亚州|Tasmania
+T|霍巴特|Hobart
+T|朗塞斯顿|Launceston
+R|北领地|Northern Territory
+T|达尔文|Darwin
+T|爱丽斯泉|Alice Springs
+T|乌鲁鲁|Uluru
+R|澳大利亚首都领地|Australian Capital Territory
+T|堪培拉|Canberra
+C|加拿大|Canada|CA
+R|安大略省|Ontario
+T|多伦多|Toronto
+T|渥太华|Ottawa
+T|尼亚加拉瀑布城|Niagara Falls
+T|滑铁卢|Waterloo
+T|京士顿|Kingston
+T|密西沙加|Mississauga
+T|伦敦|London ON
+R|不列颠哥伦比亚省|British Columbia
+T|温哥华|Vancouver
+T|维多利亚|Victoria BC
+T|惠斯勒|Whistler
+T|基隆拿|Kelowna
+T|本拿比|Burnaby
+T|素里|Surrey
+R|魁北克省|Quebec
+T|蒙特利尔|Montreal
+T|魁北克城|Quebec City
+T|特朗布朗|Mont-Tremblant
+R|阿尔伯塔省|Alberta
+T|卡尔加里|Calgary
+T|埃德蒙顿|Edmonton
+T|班夫|Banff
+T|贾斯珀|Jasper
+T|露易斯湖|Lake Louise
+R|曼尼托巴省|Manitoba
+T|温尼伯|Winnipeg
+T|丘吉尔|Churchill
+R|萨斯喀彻温省|Saskatchewan
+T|萨斯卡通|Saskatoon
+T|里贾纳|Regina
+R|新斯科舍省|Nova Scotia
+T|哈利法克斯|Halifax
+T|卢嫩堡|Lunenburg
+R|新不伦瑞克省|New Brunswick
+T|弗雷德里克顿|Fredericton
+T|蒙克顿|Moncton
+R|爱德华王子岛省|Prince Edward Island
+T|夏洛特敦|Charlottetown
+R|纽芬兰与拉布拉多省|Newfoundland and Labrador
+T|圣约翰斯|St. John's
+R|育空地区|Yukon
+T|怀特霍斯|Whitehorse
+T|道森市|Dawson City
+R|西北地区|Northwest Territories
+T|耶洛奈夫|Yellowknife
+R|努纳武特地区|Nunavut
+T|伊卡卢伊特|Iqaluit
+C|新西兰|New Zealand|NZ
+R|北岛|North Island
+T|奥克兰|Auckland
+T|惠灵顿|Wellington
+T|罗托鲁瓦|Rotorua
+T|陶波|Taupo
+T|汉密尔顿|Hamilton
+T|拿皮尔|Napier
+T|怀托摩|Waitomo
+T|派西亚|Paihia
+R|南岛|South Island
+T|皇后镇|Queenstown
+T|基督城|Christchurch
+T|但尼丁|Dunedin
+T|瓦纳卡|Wanaka
+T|库克山|Mount Cook
+T|凯库拉|Kaikoura
+T|蒂卡波湖|Lake Tekapo
+T|皮克顿|Picton
+T|因弗卡吉尔|Invercargill
+C|中国台湾|Taiwan|TW
+T|台北市|Taipei
+T|新北市|New Taipei
+T|桃园市|Taoyuan
+T|新竹市|Hsinchu
+T|台中市|Taichung
+T|台南市|Tainan
+T|高雄市|Kaohsiung
+T|基隆市|Keelung
+T|嘉义市|Chiayi
+T|花莲县|Hualien
+T|宜兰县|Yilan
+T|台东县|Taitung
+T|南投县|Nantou
+T|屏东县|Pingtung
+T|澎湖县|Penghu
+T|金门县|Kinmen
+C|俄罗斯|Russia|RU
+R|莫斯科|Moscow
+T|莫斯科|Moscow
+R|圣彼得堡|Saint Petersburg
+T|圣彼得堡|Saint Petersburg
+R|滨海边疆区|Primorsky Krai
+T|符拉迪沃斯托克|Vladivostok
+R|伊尔库茨克州|Irkutsk Oblast
+T|伊尔库茨克|Irkutsk
+R|摩尔曼斯克州|Murmansk Oblast
+T|摩尔曼斯克|Murmansk
+R|喀山|Tatarstan
+T|喀山|Kazan
+R|新西伯利亚州|Novosibirsk Oblast
+T|新西伯利亚|Novosibirsk
+R|克拉斯诺达尔边疆区|Krasnodar Krai
+T|索契|Sochi
+R|堪察加边疆区|Kamchatka Krai
+T|彼得罗巴甫洛夫斯克|Petropavlovsk-Kamchatsky
+C|印度|India|IN
+R|德里|Delhi
+T|新德里|New Delhi
+T|德里|Delhi
+R|马哈拉施特拉邦|Maharashtra
+T|孟买|Mumbai
+T|浦那|Pune
+R|拉贾斯坦邦|Rajasthan
+T|斋浦尔|Jaipur
+T|乌代布尔|Udaipur
+T|焦特布尔|Jodhpur
+T|斋沙默尔|Jaisalmer
+R|北方邦|Uttar Pradesh
+T|阿格拉|Agra
+T|瓦拉纳西|Varanasi
+T|勒克瑙|Lucknow
+R|喀拉拉邦|Kerala
+T|科钦|Kochi
+T|蒙那尔|Munnar
+T|特里凡得琅|Thiruvananthapuram
+R|卡纳塔克邦|Karnataka
+T|班加罗尔|Bengaluru
+T|迈索尔|Mysuru
+R|泰米尔纳德邦|Tamil Nadu
+T|金奈|Chennai
+T|马杜赖|Madurai
+R|西孟加拉邦|West Bengal
+T|加尔各答|Kolkata
+T|大吉岭|Darjeeling
+R|果阿邦|Goa
+T|帕纳吉|Panaji
+T|果阿|Goa
+R|喜马偕尔邦|Himachal Pradesh
+T|西姆拉|Shimla
+T|马拉里|Manali
+T|达兰萨拉|Dharamshala
+C|巴西|Brazil|BR
+R|里约热内卢州|Rio de Janeiro
+T|里约热内卢|Rio de Janeiro
+T|佩特罗波利斯|Petropolis
+T|巴拉蒂|Paraty
+R|圣保罗州|Sao Paulo
+T|圣保罗|Sao Paulo
+T|桑托斯|Santos
+T|坎皮纳斯|Campinas
+R|联邦区|Federal District
+T|巴西利亚|Brasilia
+R|巴伊亚州|Bahia
+T|萨尔瓦多|Salvador
+T|伊列乌斯|Ilheus
+R|巴拉那州|Parana
+T|伊瓜苏|Foz do Iguacu
+T|库里蒂巴|Curitiba
+R|亚马孙州|Amazonas
+T|马瑙斯|Manaus
+R|伯南布哥州|Pernambuco
+T|累西腓|Recife
+T|奥林达|Olinda
+C|墨西哥|Mexico|MX
+R|墨西哥城|Mexico City
+T|墨西哥城|Mexico City
+R|金塔纳罗奥州|Quintana Roo
+T|坎昆|Cancun
+T|图卢姆|Tulum
+T|普拉亚德尔卡门|Playa del Carmen
+R|尤卡坦州|Yucatan
+T|梅里达|Merida
+T|奇琴伊察|Chichen Itza
+R|哈利斯科州|Jalisco
+T|瓜达拉哈拉|Guadalajara
+T|特基拉|Tequila
+T|巴亚尔塔港|Puerto Vallarta
+R|瓦哈卡州|Oaxaca
+T|瓦哈卡|Oaxaca
+R|下加利福尼亚南部州|Baja California Sur
+T|卡波圣卢卡斯|Cabo San Lucas
+T|拉巴斯|La Paz
+R|瓜纳华托州|Guanajuato
+T|瓜纳华托|Guanajuato
+T|圣米格尔-德阿连德|San Miguel de Allende
+R|恰帕斯州|Chiapas
+T|圣克里斯托瓦尔-德拉斯卡萨斯|San Cristobal de las Casas
+C|马来西亚|Malaysia|MY
+T|吉隆坡|Kuala Lumpur
+T|槟城|Penang
+T|乔治市|George Town
+T|马六甲|Malacca
+T|亚庇|Kota Kinabalu
+T|古晋|Kuching
+T|新山|Johor Bahru
+T|兰卡威|Langkawi
+T|怡保|Ipoh
+T|斗湖|Tawau
+T|仙本那|Semporna
+T|布城|Putrajaya
+C|越南|Vietnam|VN
+T|河内|Hanoi
+T|胡志明市|Ho Chi Minh City
+T|岘港|Da Nang
+T|会安|Hoi An
+T|顺化|Hue
+T|芽庄|Nha Trang
+T|大叻|Da Lat
+T|下龙湾|Ha Long
+T|沙坝|Sa Pa
+T|富国岛|Phu Quoc
+T|美奈|Mui Ne
+C|印度尼西亚|Indonesia|ID
+T|雅加达|Jakarta
+T|登巴萨|Denpasar
+T|乌布|Ubud
+T|库塔|Kuta
+T|泗水|Surabaya
+T|日惹|Yogyakarta
+T|万隆|Bandung
+T|龙目岛|Lombok
+T|梭罗|Solo
+T|纳闽巴霍|Labuan Bajo
+T|美娜多|Manado
+C|菲律宾|Philippines|PH
+T|马尼拉|Manila
+T|长滩岛|Boracay
+T|宿务|Cebu
+T|巴拉望|Palawan
+T|爱妮岛|El Nido
+T|薄荷岛|Bohol
+T|达沃|Davao
+T|碧瑶|Baguio
+C|柬埔寨|Cambodia|KH
+T|金边|Phnom Penh
+T|暹粒|Siem Reap
+T|西哈努克市|Sihanoukville
+T|贡布|Kampot
+T|马德望|Battambang
+C|老挝|Laos|LA
+T|万象|Vientiane
+T|琅勃拉邦|Luang Prabang
+T|万荣|Vang Vieng
+T|巴色|Pakse
+C|缅甸|Myanmar|MM
+T|仰光|Yangon
+T|曼德勒|Mandalay
+T|蒲甘|Bagan
+T|内比都|Naypyidaw
+T|茵莱湖|Inle Lake
+C|尼泊尔|Nepal|NP
+T|加德满都|Kathmandu
+T|博卡拉|Pokhara
+T|巴德岗|Bhaktapur
+T|奇特旺|Chitwan
+T|蓝毗尼|Lumbini
+C|斯里兰卡|Sri Lanka|LK
+T|科伦坡|Colombo
+T|康提|Kandy
+T|加勒|Galle
+T|锡吉里耶|Sigiriya
+T|埃拉|Ella
+T|汉班托塔|Hambantota
+C|马尔代夫|Maldives|MV
+T|马累|Male
+T|马富施|Maafushi
+T|阿杜环礁|Addu Atoll
+C|阿联酋|United Arab Emirates|AE
+T|迪拜|Dubai
+T|阿布扎比|Abu Dhabi
+T|沙迦|Sharjah
+T|富查伊拉|Fujairah
+T|拉斯海马|Ras Al Khaimah
+C|土耳其|Turkey|TR
+T|伊斯坦布尔|Istanbul
+T|安卡拉|Ankara
+T|卡帕多奇亚|Cappadocia
+T|安塔利亚|Antalya
+T|伊兹密尔|Izmir
+T|博德鲁姆|Bodrum
+T|棉花堡|Pamukkale
+T|费特希耶|Fethiye
+C|埃及|Egypt|EG
+T|开罗|Cairo
+T|卢克索|Luxor
+T|亚历山大|Alexandria
+T|阿斯旺|Aswan
+T|沙姆沙伊赫|Sharm El Sheikh
+T|赫尔格达|Hurghada
+T|吉萨|Giza
+C|摩洛哥|Morocco|MA
+T|马拉喀什|Marrakech
+T|卡萨布兰卡|Casablanca
+T|菲斯|Fes
+T|舍夫沙万|Chefchaouen
+T|拉巴特|Rabat
+T|丹吉尔|Tangier
+T|索维拉|Essaouira
+C|南非|South Africa|ZA
+T|开普敦|Cape Town
+T|约翰内斯堡|Johannesburg
+T|比勒陀利亚|Pretoria
+T|德班|Durban
+T|克鲁格国家公园|Kruger National Park
+T|斯坦陵布什|Stellenbosch
+T|伊丽莎白港|Gqeberha
+C|肯尼亚|Kenya|KE
+T|内罗毕|Nairobi
+T|蒙巴萨|Mombasa
+T|马赛马拉|Maasai Mara
+T|安博塞利|Amboseli
+T|纳库鲁|Nakuru
+C|以色列|Israel|IL
+T|耶路撒冷|Jerusalem
+T|特拉维夫|Tel Aviv
+T|海法|Haifa
+T|死海|Dead Sea
+T|埃拉特|Eilat
+T|拿撒勒|Nazareth
+C|约旦|Jordan|JO
+T|安曼|Amman
+T|佩特拉|Petra
+T|瓦迪拉姆|Wadi Rum
+T|亚喀巴|Aqaba
+T|杰拉什|Jerash
+C|荷兰|Netherlands|NL
+T|阿姆斯特丹|Amsterdam
+T|鹿特丹|Rotterdam
+T|海牙|The Hague
+T|乌得勒支|Utrecht
+T|羊角村|Giethoorn
+T|代尔夫特|Delft
+T|莱顿|Leiden
+T|埃因霍温|Eindhoven
+C|比利时|Belgium|BE
+T|布鲁塞尔|Brussels
+T|布鲁日|Bruges
+T|根特|Ghent
+T|安特卫普|Antwerp
+T|列日|Liege
+C|瑞士|Switzerland|CH
+T|苏黎世|Zurich
+T|日内瓦|Geneva
+T|卢塞恩|Lucerne
+T|因特拉肯|Interlaken
+T|伯尔尼|Bern
+T|采尔马特|Zermatt
+T|洛桑|Lausanne
+T|巴塞尔|Basel
+T|卢加诺|Lugano
+C|奥地利|Austria|AT
+T|维也纳|Vienna
+T|萨尔茨堡|Salzburg
+T|因斯布鲁克|Innsbruck
+T|哈尔施塔特|Hallstatt
+T|格拉茨|Graz
+T|林茨|Linz
+C|捷克|Czech Republic|CZ
+T|布拉格|Prague
+T|克鲁姆洛夫|Cesky Krumlov
+T|布尔诺|Brno
+T|卡罗维发利|Karlovy Vary
+T|库特纳霍拉|Kutna Hora
+C|匈牙利|Hungary|HU
+T|布达佩斯|Budapest
+T|德布勒森|Debrecen
+T|埃格尔|Eger
+T|巴拉顿湖|Lake Balaton
+T|佩奇|Pecs
+C|波兰|Poland|PL
+T|华沙|Warsaw
+T|克拉科夫|Krakow
+T|格但斯克|Gdansk
+T|弗罗茨瓦夫|Wroclaw
+T|波兹南|Poznan
+T|奥斯维辛|Auschwitz
+C|葡萄牙|Portugal|PT
+T|里斯本|Lisbon
+T|波尔图|Porto
+T|辛特拉|Sintra
+T|法鲁|Faro
+T|拉各斯|Lagos
+T|科英布拉|Coimbra
+T|丰沙尔|Funchal
+T|布拉加|Braga
+C|希腊|Greece|GR
+T|雅典|Athens
+T|圣托里尼|Santorini
+T|米科诺斯|Mykonos
+T|克里特岛|Crete
+T|塞萨洛尼基|Thessaloniki
+T|罗得岛|Rhodes
+T|迈泰奥拉|Meteora
+T|德尔斐|Delphi
+C|瑞典|Sweden|SE
+T|斯德哥尔摩|Stockholm
+T|哥德堡|Gothenburg
+T|马尔默|Malmo
+T|乌普萨拉|Uppsala
+T|基律纳|Kiruna
+C|挪威|Norway|NO
+T|奥斯陆|Oslo
+T|卑尔根|Bergen
+T|特罗姆瑟|Tromso
+T|斯塔万格|Stavanger
+T|罗弗敦群岛|Lofoten
+T|盖朗厄尔|Geiranger
+T|特隆赫姆|Trondheim
+C|丹麦|Denmark|DK
+T|哥本哈根|Copenhagen
+T|奥胡斯|Aarhus
+T|欧登塞|Odense
+T|奥尔堡|Aalborg
+T|赫尔辛格|Helsingor
+C|芬兰|Finland|FI
+T|赫尔辛基|Helsinki
+T|罗瓦涅米|Rovaniemi
+T|坦佩雷|Tampere
+T|图尔库|Turku
+T|萨利色尔卡|Saariselka
+T|伊瓦洛|Ivalo
+C|冰岛|Iceland|IS
+T|雷克雅未克|Reykjavik
+T|阿克雷里|Akureyri
+T|维克|Vik
+T|蓝湖|Blue Lagoon
+T|赫本|Hofn
+C|爱尔兰|Ireland|IE
+T|都柏林|Dublin
+T|科克|Cork
+T|高威|Galway
+T|基拉尼|Killarney
+T|利默里克|Limerick
+T|莫赫悬崖|Cliffs of Moher
+C|克罗地亚|Croatia|HR
+T|杜布罗夫尼克|Dubrovnik
+T|斯普利特|Split
+T|萨格勒布|Zagreb
+T|扎达尔|Zadar
+T|普利特维采湖群|Plitvice Lakes
+T|赫瓦尔|Hvar
+T|罗维尼|Rovinj
+C|阿根廷|Argentina|AR
+T|布宜诺斯艾利斯|Buenos Aires
+T|乌斯怀亚|Ushuaia
+T|门多萨|Mendoza
+T|巴里洛切|Bariloche
+T|埃尔卡拉法特|El Calafate
+T|科尔多瓦|Cordoba AR
+C|智利|Chile|CL
+T|圣地亚哥|Santiago
+T|瓦尔帕莱索|Valparaiso
+T|复活节岛|Easter Island
+T|百内国家公园|Torres del Paine
+T|阿塔卡马|San Pedro de Atacama
+T|蓬塔阿雷纳斯|Punta Arenas
+C|秘鲁|Peru|PE
+T|利马|Lima
+T|库斯科|Cusco
+T|马丘比丘|Machu Picchu
+T|阿雷基帕|Arequipa
+T|普诺|Puno
+T|圣谷|Sacred Valley
+C|古巴|Cuba|CU
+T|哈瓦那|Havana
+T|巴拉德罗|Varadero
+T|特立尼达|Trinidad
+T|圣地亚哥-德古巴|Santiago de Cuba
+T|比尼亚莱斯|Vinales
+C|蒙古|Mongolia|MN
+T|乌兰巴托|Ulaanbaatar
+T|哈拉和林|Karakorum
+T|库苏古尔湖|Khovsgol
+T|戈壁|Gobi
+T|额尔登特|Erdenet
+C|哈萨克斯坦|Kazakhstan|KZ
+T|阿拉木图|Almaty
+T|阿斯塔纳|Astana
+T|奇姆肯特|Shymkent
+T|突厥斯坦|Turkistan
+T|阿克套|Aktau
+C|乌兹别克斯坦|Uzbekistan|UZ
+T|塔什干|Tashkent
+T|撒马尔罕|Samarkand
+T|布哈拉|Bukhara
+T|希瓦|Khiva
+T|费尔干纳|Fergana
+C|格鲁吉亚|Georgia|GE
+T|第比利斯|Tbilisi
+T|巴统|Batumi
+T|卡兹别吉|Kazbegi
+T|库塔伊西|Kutaisi
+T|姆茨赫塔|Mtskheta
+C|卡塔尔|Qatar|QA
+T|多哈|Doha
+T|沃克拉|Al Wakrah
+T|鲁赛尔|Lusail
+T|豪尔|Al Khor
+C|沙特阿拉伯|Saudi Arabia|SA
+T|利雅得|Riyadh
+T|吉达|Jeddah
+T|麦加|Mecca
+T|麦地那|Medina
+T|欧拉|AlUla
+T|达曼|Dammam
