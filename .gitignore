@@ -30,6 +30,8 @@ Thumbs.db
 # AI/agent local tooling & private state — never commit
 .claude/
 .dsh-meow/
+CLAUDE.md
+CLAUDE.local.md
 
 # WSL toolchain: workspace-local Linux JDK + Android SDK — never commit
 .wsl-tools/
