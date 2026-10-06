@@ -5,12 +5,12 @@ import androidx.room.Entity
 import androidx.room.PrimaryKey
 import com.xiaohan.xhsnotegen.domain.NoteStyle
 import com.xiaohan.xhsnotegen.domain.NoteStatus
-import com.xiaohan.xhsnotegen.domain.NoteType
+import com.xiaohan.xhsnotegen.domain.BuiltInModes
 
 @Entity(tableName = "note_drafts")
 data class NoteDraftEntity(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    @ColumnInfo(name = "type") val type: String = NoteType.FOOD.key,
+    @ColumnInfo(name = "type") val type: String = BuiltInModes.FOOD,
     @ColumnInfo(name = "status") val status: String = NoteStatus.DRAFT.key,
     @ColumnInfo(name = "photo_uris") val photoUris: String = "[]",
     @ColumnInfo(name = "selected_publish_photo_uris") val selectedPublishPhotoUris: String = "[]",
@@ -22,4 +22,9 @@ data class NoteDraftEntity(
     @ColumnInfo(name = "style_label") val styleLabel: String = NoteStyle.DEFAULT.key,
     @ColumnInfo(name = "created_at") val createdAt: Long = System.currentTimeMillis(),
     @ColumnInfo(name = "updated_at") val updatedAt: Long = System.currentTimeMillis(),
+    // Added in schema v3 (MIGRATION_2_3). 0 = not rated.
+    @ColumnInfo(name = "rating", defaultValue = "0") val rating: Int = 0,
+    // Added in schema v5 (MIGRATION_4_5): "zh" / "en" = the language this note is written in;
+    // null = whatever its writing mode uses.
+    @ColumnInfo(name = "note_language") val noteLanguage: String? = null,
 )

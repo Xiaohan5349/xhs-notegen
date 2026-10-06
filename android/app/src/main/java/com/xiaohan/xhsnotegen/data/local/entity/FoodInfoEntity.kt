@@ -27,5 +27,14 @@ data class FoodInfoEntity(
     @ColumnInfo(name = "price_or_rating") val priceOrRating: String? = null,
     @ColumnInfo(name = "vibe_notes") val vibeNotes: String? = null,
     @ColumnInfo(name = "personal_notes") val personalNotes: String? = null,
-    @ColumnInfo(name = "sponsored") val sponsored: Boolean = false,
+    // Added in schema v2 (see AppDatabase.MIGRATION_1_2).
+    @ColumnInfo(name = "country") val country: String? = null,
+    @ColumnInfo(name = "region") val region: String? = null,
+    @ColumnInfo(name = "city") val city: String? = null,
+    @ColumnInfo(name = "latitude") val latitude: Double? = null,
+    @ColumnInfo(name = "longitude") val longitude: Double? = null,
+    @ColumnInfo(name = "place_source") val placeSource: String? = null,
+    // Added in schema v3 (MIGRATION_2_3).
+    @ColumnInfo(name = "district") val district: String? = null,
+    @ColumnInfo(name = "address") val address: String? = null,
 )

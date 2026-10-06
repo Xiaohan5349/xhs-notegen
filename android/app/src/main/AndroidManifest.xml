@@ -3,21 +3,42 @@
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-    <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"
-        android:maxSdkVersion="28" />
+
+    <!-- Optional, asked only when you choose to read places from photos: the photo
+         picker strips GPS, so reading where a photo was taken needs photo access
+         plus media location. -->
+    <uses-permission android:name="android.permission.READ_MEDIA_IMAGES" />
+    <uses-permission android:name="android.permission.READ_MEDIA_VISUAL_USER_SELECTED" />
+    <uses-permission android:name="android.permission.READ_EXTERNAL_STORAGE" android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.ACCESS_MEDIA_LOCATION" />
+
+    <!-- Android 11+ package visibility: without these, the XHS app is invisible
+         to PackageManager and the manual handoff can never launch it. -->
+    <queries>
+        <package android:name="com.xingin.xhs" />
+        <package android:name="com.xingin.xhs.lite" />
+        <package android:name="com.xingin.xhs.intl" />
+        <package android:name="com.xingin.xhs.global" />
+        <intent>
+            <action android:name="android.intent.action.VIEW" />
+            <data android:scheme="xhsdiscover" />
+        </intent>
+    </queries>
 
     <application
         android:name=".XhsNoteGenApp"
         android:allowBackup="false"
+        android:dataExtractionRules="@xml/data_extraction_rules"
         android:icon="@mipmap/ic_launcher"
+        android:roundIcon="@mipmap/ic_launcher"
         android:label="@string/app_name"
         android:supportsRtl="true"
-        android:theme="@style/Theme.XhsNoteGen"
-        android:requestLegacyExternalStorage="true">
+        android:theme="@style/Theme.XhsNoteGen">
 
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:windowSoftInputMode="adjustResize"
             android:theme="@style/Theme.XhsNoteGen">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
@@ -25,14 +46,5 @@
             </intent-filter>
         </activity>
 
-        <provider
-            android:name="androidx.core.content.FileProvider"
-            android:authorities="${applicationId}.fileprovider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/file_paths" />
-        </provider>
     </application>
 </manifest>

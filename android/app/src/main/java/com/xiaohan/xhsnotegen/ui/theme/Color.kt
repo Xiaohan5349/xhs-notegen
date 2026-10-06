@@ -2,15 +2,50 @@ package com.xiaohan.xhsnotegen.ui.theme
 
 import androidx.compose.ui.graphics.Color
 
-// Dark HUD-inspired palette with neon accents
-val NeonRed = Color(0xFFE94560)
-val NeonCyan = Color(0xFF4FC3F7)
-val NeonGreen = Color(0xFF66BB6A)
-val NeonPurple = Color(0xFFA78BFA)
-val DarkBg = Color(0xFF0D1117)
-val DarkSurface = Color(0xFF161B22)
-val DarkCard = Color(0xFF1A1A2E)
-val DarkBorder = Color(0xFF30363D)
-val TextPrimary = Color(0xFFE6EDF3)
-val TextSecondary = Color(0xFF8B949E)
-val TextMuted = Color(0xFF484F58)
+// "Food journal" palette: paper, ink, and three ingredients —
+// tomato (brand, a warm nod to XHS red), herb (done/ready), honey (in progress).
+
+// ---- Light ----
+val Paper = Color(0xFFFAF6F0)
+val PaperLowest = Color(0xFFFFFFFF)
+val PaperLow = Color(0xFFF6F0E8)
+val PaperMid = Color(0xFFF1EAE0)
+val PaperHigh = Color(0xFFEBE3D8)
+val PaperHighest = Color(0xFFE5DCD0)
+val Ink = Color(0xFF2B2420)
+val InkSoft = Color(0xFF6E625A)
+val Rule = Color(0xFFD6CABD)
+val RuleSoft = Color(0xFFE8DFD4)
+
+val Tomato = Color(0xFFD6453A)
+val TomatoContainer = Color(0xFFFCE3DD)
+val TomatoDeep = Color(0xFF5C1710)
+val Herb = Color(0xFF5F7A45)
+val HerbContainer = Color(0xFFE3EBD5)
+val HerbDeep = Color(0xFF1F3010)
+val Honey = Color(0xFFB7791F)
+val HoneyContainer = Color(0xFFF8E6C4)
+val HoneyDeep = Color(0xFF3F2800)
+val Chili = Color(0xFFB3261E)
+val ChiliContainer = Color(0xFFF9DEDC)
+
+// ---- Dark: warm charcoal, never pure black ----
+val Night = Color(0xFF17130F)
+val NightLowest = Color(0xFF120F0C)
+val NightLow = Color(0xFF1F1A16)
+val NightMid = Color(0xFF241E19)
+val NightHigh = Color(0xFF2E2721)
+val NightHighest = Color(0xFF39312A)
+val Cream = Color(0xFFF0E7DD)
+val CreamSoft = Color(0xFFBDB0A4)
+val NightRule = Color(0xFF574C43)
+val NightRuleSoft = Color(0xFF3A322B)
+
+val TomatoLight = Color(0xFFFF8A7A)
+val TomatoNightContainer = Color(0xFF5E1F17)
+val HerbLight = Color(0xFFB5CC96)
+val HerbNightContainer = Color(0xFF2F4220)
+val HoneyLight = Color(0xFFEDBD68)
+val HoneyNightContainer = Color(0xFF4C3508)
+val ChiliLight = Color(0xFFF2B8B5)
+val ChiliNightContainer = Color(0xFF8C1D18)

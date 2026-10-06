@@ -2,225 +2,216 @@ package com.xiaohan.xhsnotegen.ui.publish
 
 import android.content.ClipData
 import android.content.ClipboardManager
+import android.content.ContentUris
 import android.content.ContentValues
 import android.content.Context
 import android.content.Intent
+import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Environment
 import android.provider.MediaStore
-import android.widget.Toast
 import com.xiaohan.xhsnotegen.domain.NoteDraft
+import com.xiaohan.xhsnotegen.domain.NoteVariant
+import com.xiaohan.xhsnotegen.i18n.tr
 import com.xiaohan.xhsnotegen.util.ImageCompressor
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import java.io.File
 
+/**
+ * Posts a draft to XHS: direct Creator API first, manual handoff
+ * (clipboard + gallery + open the XHS app) as the fallback.
+ *
+ * Uses only the application context — publishing runs in a ViewModel and
+ * must not hold on to an Activity.
+ */
 object XiaohongshuSharePublisher {
+
+    const val TITLE_LIMIT = 20
+    private const val GALLERY_FOLDER = "XHSNoteGen"
+    private val GALLERY_RELATIVE_PATH = "${Environment.DIRECTORY_PICTURES}/$GALLERY_FOLDER/"
 
     sealed class PublishResult {
         data class Success(val shareLink: String) : PublishResult()
-        data object NeedsLogin : PublishResult()
+        /** No saved login, or XHS said the session expired. */
+        data class NeedsLogin(val expired: Boolean) : PublishResult()
         data class Error(val message: String) : PublishResult()
-        data object Handoff : PublishResult()
+        /** Handed off to the XHS app. [reason] explains why direct publish didn't happen. */
+        data class Handoff(val reason: String?, val openedXhs: Boolean) : PublishResult()
     }
 
-    /**
-     * Try direct API publish via backend (now with x-s signing), fall back to handoff.
-     */
+    /** Try direct API publish, fall back to handoff. */
     suspend fun publish(context: Context, draft: NoteDraft): PublishResult {
-        val variant = draft.variants.getOrNull(draft.selectedVariantIndex)
-            ?: return PublishResult.Error("No variant selected")
+        val variant = validate(draft) ?: return PublishResult.Error(validationError(draft))
 
-        // Compress images
-        val urisToShare = if (draft.selectedPublishPhotoUris.isNotEmpty()) {
-            draft.selectedPublishPhotoUris
-        } else {
-            draft.photoUris
-        }
-
-        val imagesBase64 = withContext(Dispatchers.IO) {
-            urisToShare.map { uriStr ->
-                val uri = Uri.parse(uriStr)
-                val compressed = ImageCompressor.compress(context, uri)
-                if (compressed.success) compressed.base64 else ""
-            }.filter { it.isNotBlank() }
-        }
-
-        if (imagesBase64.isEmpty()) {
-            return PublishResult.Error("No valid images to publish")
-        }
-
-        val shareText = buildString {
-            appendLine(variant.title)
-            appendLine()
-            appendLine(variant.body)
-            appendLine()
-            append(variant.hashtags.joinToString(" "))
-        }
-
-        // Copy text to clipboard always
-        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
-        clipboard.setPrimaryClip(ClipData.newPlainText("note", shareText))
-
-        // Try direct API publish from Android (same IP as cookies)
         val cookies = XhsAuthStore.getCookies(context)
-        if (!cookies.isNullOrBlank()) {
-            try {
-                val result = XhsApiClient.publish(
-                    cookies = cookies,
-                    title = variant.title,
-                    body = variant.body,
-                    hashtags = variant.hashtags,
-                    imagesBase64 = imagesBase64,
-                )
-                if (result.success) {
-                    deleteLocalImages(context, draft)
-                    return PublishResult.Success(result.shareLink)
-                }
-                // Show the error from the API
-                return PublishResult.Error(result.error.ifBlank { "Publish failed" })
-            } catch (e: Exception) {
-                return PublishResult.Error("Publish error: ${e.message}")
-            }
-        } else {
-            return PublishResult.NeedsLogin
+            ?: return PublishResult.NeedsLogin(expired = false)
+
+        val images = when (val loaded = loadImages(context, draft)) {
+            is Loaded.Ok -> loaded.images
+            is Loaded.Failed -> return PublishResult.Error(loaded.message)
+        }
+
+        val result = try {
+            XhsApiClient.publish(
+                cookies = cookies,
+                title = variant.title,
+                body = variant.body,
+                hashtags = variant.hashtags,
+                images = images,
+            )
+        } catch (e: Exception) {
+            XhsApiClient.PublishResult(false, error = e.message ?: tr("Unexpected error", "意外错误"))
+        }
+
+        if (result.success) {
+            // Local photos are intentionally kept: this is a diary, and the draft
+            // still shows (and may regenerate from) them. They are removed when
+            // the draft itself is deleted.
+            clearHandoffGallery(context)
+            return PublishResult.Success(result.shareLink)
+        }
+        if (result.authExpired) {
+            XhsAuthStore.clear(context)
+            return PublishResult.NeedsLogin(expired = true)
+        }
+        // Signature drift, risk control, network... the note can still be posted by hand.
+        return handoff(context, draft, images, reason = result.error)
+    }
+
+    /** Manual path, also offered directly when the user isn't logged in. */
+    suspend fun handoff(context: Context, draft: NoteDraft): PublishResult {
+        validate(draft) ?: return PublishResult.Error(validationError(draft))
+        return when (val loaded = loadImages(context, draft)) {
+            is Loaded.Ok -> handoff(context, draft, loaded.images, reason = null)
+            is Loaded.Failed -> PublishResult.Error(loaded.message)
         }
     }
 
-    /**
-     * Manual handoff: save images to public Pictures folder and open XHS.
-     */
-    private suspend fun handoffToXhs(
+    private fun validate(draft: NoteDraft): NoteVariant? {
+        val v = draft.selectedVariant ?: return null
+        if (v.title.isBlank() || v.body.isBlank()) return null
+        if (v.title.length > TITLE_LIMIT) return null
+        if (draft.publishPhotoUris.isEmpty()) return null
+        return v
+    }
+
+    private fun validationError(draft: NoteDraft): String {
+        val v = draft.selectedVariant
+        return when {
+            v == null -> tr("No note selected", "没有选中笔记")
+            v.title.isBlank() -> tr("Add a title first", "请先添加标题")
+            v.body.isBlank() -> tr("The note body is empty", "正文是空的")
+            // XHS rejects titles over 20 characters; fail early with an actionable message.
+            v.title.length > TITLE_LIMIT -> "标题超长（${v.title.length} 字，上限 $TITLE_LIMIT 字），请缩短后再发布"
+            else -> tr("Select at least one photo", "请至少选择一张照片")
+        }
+    }
+
+    private sealed class Loaded {
+        class Ok(val images: List<ImageCompressor.Compressed>) : Loaded()
+        class Failed(val message: String) : Loaded()
+    }
+
+    /** Every selected photo must load — silently posting fewer photos is worse than an error. */
+    private suspend fun loadImages(context: Context, draft: NoteDraft): Loaded = withContext(Dispatchers.IO) {
+        val uris = draft.publishPhotoUris
+        val images = uris.mapIndexed { i, uriStr ->
+            try {
+                ImageCompressor.compress(context, Uri.parse(uriStr), ImageCompressor.FOR_PUBLISH)
+            } catch (e: Exception) {
+                return@withContext Loaded.Failed(tr("Photo ${i + 1} can't be read anymore. Deselect it and try again.", "第 ${i + 1} 张照片读取不到了。取消选择后再试一次。"))
+            }
+        }
+        Loaded.Ok(images)
+    }
+
+    private fun shareText(variant: NoteVariant) = buildString {
+        appendLine(variant.title)
+        appendLine()
+        appendLine(variant.body)
+        if (variant.hashtags.isNotEmpty()) {
+            appendLine()
+            append(variant.hashtags.joinToString(" ") { "#$it" })
+        }
+    }.trim()
+
+    private suspend fun handoff(
         context: Context,
         draft: NoteDraft,
-        imagesBase64: List<String>,
+        images: List<ImageCompressor.Compressed>,
+        reason: String?,
     ): PublishResult {
+        val variant = draft.selectedVariant ?: return PublishResult.Error(tr("No note selected", "没有选中笔记"))
+
+        val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+        clipboard.setPrimaryClip(ClipData.newPlainText("note", shareText(variant)))
+
         val savedCount = withContext(Dispatchers.IO) {
-            val galleryDir = File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-                "XHSNoteGen"
-            )
-            galleryDir.mkdirs()
-            galleryDir.listFiles()?.forEach { it.delete() }
-
-            var count = 0
-            imagesBase64.forEachIndexed { i, b64 ->
+            clearHandoffGallery(context)
+            val stamp = System.currentTimeMillis()
+            images.withIndex().count { (i, img) ->
                 try {
-                    val bytes = android.util.Base64.decode(b64, android.util.Base64.NO_WRAP)
                     val values = ContentValues().apply {
-                        put(MediaStore.Images.Media.DISPLAY_NAME,
-                            "XHS_${System.currentTimeMillis()}_$i.jpg")
+                        // Zero-padded index keeps gallery order = publish order.
+                        put(MediaStore.Images.Media.DISPLAY_NAME, "XHS_${stamp}_%02d.jpg".format(i + 1))
                         put(MediaStore.Images.Media.MIME_TYPE, "image/jpeg")
-                        put(MediaStore.Images.Media.RELATIVE_PATH,
-                            "${Environment.DIRECTORY_PICTURES}/XHSNoteGen")
+                        put(MediaStore.Images.Media.RELATIVE_PATH, GALLERY_RELATIVE_PATH)
                     }
-                    context.contentResolver.insert(
-                        MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values
-                    )?.let { mediaUri ->
-                        context.contentResolver.openOutputStream(mediaUri)?.use { out ->
-                            out.write(bytes)
-                            count++
-                        }
-                    }
-                } catch (_: Exception) { }
-            }
-            count
-        }
-
-        if (savedCount == 0) {
-            return PublishResult.Error("Failed to save images for handoff")
-        }
-
-        // Open XHS app
-        val pm = context.packageManager
-        val xhsPkg = findXhsPackage(pm)
-
-        if (xhsPkg != null) {
-            for (strategy in listOf(
-                { pm.getLaunchIntentForPackage(xhsPkg) },
-                {
-                    Intent(Intent.ACTION_MAIN).apply {
-                        setPackage(xhsPkg)
-                        addCategory(Intent.CATEGORY_LAUNCHER)
-                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-                    }.takeIf { pm.resolveActivity(it, 0) != null }
-                },
-                {
-                    Intent(Intent.ACTION_VIEW, Uri.parse("xhsdiscover://")).apply {
-                        setPackage(xhsPkg)
-                    }.takeIf { pm.resolveActivity(it, 0) != null }
+                    val uri = context.contentResolver.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)
+                        ?: return@count false
+                    context.contentResolver.openOutputStream(uri)?.use { it.write(img.bytes) } != null
+                } catch (_: Exception) {
+                    false
                 }
-            )) {
-                try {
-                    val intent = strategy()
-                    if (intent != null) {
-                        context.startActivity(intent)
-                        Toast.makeText(context,
-                            "已打开小红书\n文字已复制，照片在 Pictures/XHSNoteGen",
-                            Toast.LENGTH_LONG).show()
-                        return PublishResult.Handoff
-                    }
-                } catch (_: Exception) { }
             }
         }
+        if (savedCount == 0) return PublishResult.Error(tr("Couldn't save photos to the gallery", "照片无法保存到相册"))
 
-        // Ultimate fallback: share chooser
-        try {
-            context.startActivity(Intent.createChooser(
-                Intent(Intent.ACTION_SEND).apply {
-                    type = "text/plain"
-                    putExtra(Intent.EXTRA_TEXT, "打开小红书粘贴内容\n照片在 Pictures/XHSNoteGen")
-                }, "分享到小红书"))
-        } catch (_: Exception) { }
-
-        Toast.makeText(context,
-            "文字已复制到剪贴板，照片在 Pictures/XHSNoteGen\n请打开小红书粘贴并上传",
-            Toast.LENGTH_LONG).show()
-        return PublishResult.Handoff
+        return PublishResult.Handoff(reason = reason, openedXhs = openXhs(context))
     }
 
-    /** Delete local image copies after successful publish. XHS has them now. */
-    private fun deleteLocalImages(context: Context, draft: NoteDraft) {
-        val allUris = draft.photoUris + draft.selectedPublishPhotoUris
-        for (uriStr in allUris) {
-            try {
-                val uri = Uri.parse(uriStr)
-                if (uri.scheme == "file") {
-                    File(uri.path ?: continue).delete()
+    /** Removes photos this app saved to Pictures/XHSNoteGen by an earlier handoff. */
+    private fun clearHandoffGallery(context: Context) {
+        try {
+            val collection = MediaStore.Images.Media.EXTERNAL_CONTENT_URI
+            context.contentResolver.query(
+                collection,
+                arrayOf(MediaStore.Images.Media._ID),
+                "${MediaStore.Images.Media.RELATIVE_PATH} = ?",
+                arrayOf(GALLERY_RELATIVE_PATH),
+                null,
+            )?.use { cursor ->
+                while (cursor.moveToNext()) {
+                    val uri = ContentUris.withAppendedId(collection, cursor.getLong(0))
+                    // Only our own files are deletable without a user prompt;
+                    // anything else (e.g. after a reinstall) is left alone.
+                    try { context.contentResolver.delete(uri, null, null) } catch (_: Exception) { }
                 }
+            }
+        } catch (_: Exception) { }
+    }
+
+    private fun openXhs(context: Context): Boolean {
+        val pm = context.packageManager
+        val pkg = findXhsPackage(pm) ?: return false
+        val candidates = listOfNotNull(
+            pm.getLaunchIntentForPackage(pkg),
+            Intent(Intent.ACTION_VIEW, Uri.parse("xhsdiscover://")).setPackage(pkg)
+                .takeIf { pm.resolveActivity(it, 0) != null },
+        )
+        for (intent in candidates) {
+            try {
+                context.startActivity(intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
+                return true
             } catch (_: Exception) { }
         }
-        // Also clean the Pictures/XHSNoteGen handoff directory
-        try {
-            val galleryDir = File(
-                Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES),
-                "XHSNoteGen"
-            )
-            galleryDir.listFiles()?.forEach { it.delete() }
-        } catch (_: Exception) { }
+        return false
     }
 
-    private fun findXhsPackage(pm: android.content.pm.PackageManager): String? {
-        val candidates = listOf(
-            "com.xingin.xhs", "com.xingin.xhs.lite",
-            "com.xingin.xhs.intl", "com.xingin.xhs.global",
-        )
-        for (pkg in candidates) {
-            try { pm.getPackageInfo(pkg, 0); return pkg } catch (_: Exception) { }
-        }
-        val allApps = pm.queryIntentActivities(
-            Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER),
-            android.content.pm.PackageManager.MATCH_ALL
-        )
-        for (ri in allApps) {
-            val pkg = ri.activityInfo.packageName
-            val label = ri.loadLabel(pm).toString()
-            if (pkg.contains("xingin") || pkg.contains("xhs") ||
-                label.contains("小红书") || label.contains("红书")
-            ) {
-                return pkg
+    /** Visible thanks to the <queries> block in the manifest (Android 11+ package visibility). */
+    private fun findXhsPackage(pm: PackageManager): String? =
+        listOf("com.xingin.xhs", "com.xingin.xhs.lite", "com.xingin.xhs.intl", "com.xingin.xhs.global")
+            .firstOrNull { pkg ->
+                try { pm.getPackageInfo(pkg, 0); true } catch (_: PackageManager.NameNotFoundException) { false }
             }
-        }
-        return null
-    }
 }

@@ -21,18 +21,20 @@ interface NoteDraftDao {
     @Update
     suspend fun update(draft: NoteDraftEntity)
 
-    @Query("UPDATE note_drafts SET status = :status, updated_at = :updatedAt WHERE id = :id")
-    suspend fun updateStatus(id: Long, status: String, updatedAt: Long = System.currentTimeMillis())
-
-    @Delete
-    suspend fun delete(draft: NoteDraftEntity)
-
     @Query("SELECT * FROM note_drafts ORDER BY updated_at DESC")
     suspend fun getAll(): List<NoteDraftEntity>
 
-    @Query("SELECT * FROM note_drafts WHERE status = :status ORDER BY updated_at DESC")
-    suspend fun getAllByStatus(status: String): List<NoteDraftEntity>
-
     @Query("DELETE FROM note_drafts WHERE id = :id")
     suspend fun deleteById(id: Long)
+
+    @Query("UPDATE note_drafts SET status = :status, updated_at = :now WHERE id IN (:ids)")
+    suspend fun setStatus(ids: List<Long>, status: String, now: Long = System.currentTimeMillis())
+
+    @Query("SELECT id, type FROM note_drafts")
+    suspend fun idsAndTypes(): List<IdAndType>
+
+    @Query("UPDATE note_drafts SET rating = :rating WHERE id IN (:ids)")
+    suspend fun setRating(ids: List<Long>, rating: Int)
 }
+
+data class IdAndType(val id: Long, val type: String)

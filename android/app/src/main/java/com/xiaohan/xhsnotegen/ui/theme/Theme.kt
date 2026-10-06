@@ -1,43 +1,41 @@
 package com.xiaohan.xhsnotegen.ui.theme
 
-import android.app.Activity
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.*
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.SideEffect
-import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.platform.LocalView
-import androidx.core.view.WindowCompat
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.unit.dp
 
-private val DarkColorScheme = darkColorScheme(
-    primary = NeonRed,
-    onPrimary = TextPrimary,
-    primaryContainer = DarkCard,
-    secondary = NeonCyan,
-    tertiary = NeonPurple,
-    background = DarkBg,
-    surface = DarkSurface,
-    surfaceVariant = DarkCard,
-    onBackground = TextPrimary,
-    onSurface = TextPrimary,
-    onSurfaceVariant = TextSecondary,
-    outline = DarkBorder,
+val AppShapes = Shapes(
+    extraSmall = RoundedCornerShape(8.dp),
+    small = RoundedCornerShape(12.dp),
+    medium = RoundedCornerShape(16.dp),
+    large = RoundedCornerShape(24.dp),
+    extraLarge = RoundedCornerShape(32.dp),
 )
 
-@Composable
-fun XhsNoteGenTheme(content: @Composable () -> Unit) {
-    val colorScheme = DarkColorScheme
-    val view = LocalView.current
-    if (!view.isInEditMode) {
-        SideEffect {
-            val window = (view.context as Activity).window
-            window.statusBarColor = DarkBg.toArgb()
-            WindowCompat.getInsetsController(window, view).isAppearanceLightStatusBars = false
-        }
-    }
+/** The active theme and mode, for decorations that go beyond the color scheme. */
+val LocalAppTheme = staticCompositionLocalOf { AppTheme.TOMATO }
+val LocalDarkTheme = staticCompositionLocalOf { false }
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = AppTypography,
-        content = content,
-    )
+/**
+ * App theme: one of [AppTheme]'s palettes in light or dark. Dynamic
+ * (wallpaper) color is off on purpose — the palettes are the app's identity.
+ * System bar icons are set by MainActivity to match [darkTheme].
+ */
+@Composable
+fun XhsNoteGenTheme(
+    theme: AppTheme = AppTheme.TOMATO,
+    darkTheme: Boolean = false,
+    content: @Composable () -> Unit,
+) {
+    CompositionLocalProvider(LocalAppTheme provides theme, LocalDarkTheme provides darkTheme) {
+        MaterialTheme(
+            colorScheme = theme.scheme(darkTheme),
+            typography = AppTypography,
+            shapes = AppShapes,
+            content = content,
+        )
+    }
 }

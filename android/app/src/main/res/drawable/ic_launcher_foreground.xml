@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+  A glint — a four-point sparkle — over still water, with ripples spreading below it.
+  Drawn inside the 66dp adaptive-icon safe zone (a circle of radius 33 around 54,54).
+-->
+<vector xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:aapt="http://schemas.android.com/aapt"
+    android:width="108dp"
+    android:height="108dp"
+    android:viewportWidth="108"
+    android:viewportHeight="108">
+    <!-- ripples -->
+    <path
+        android:strokeColor="#A8E3E6"
+        android:strokeAlpha="0.35"
+        android:strokeWidth="1.6"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M32,70 A22,6 0 1,0 76,70 A22,6 0 1,0 32,70" />
+    <path
+        android:strokeColor="#A8E3E6"
+        android:strokeAlpha="0.6"
+        android:strokeWidth="1.8"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M39,70 A15,4.2 0 1,0 69,70 A15,4.2 0 1,0 39,70" />
+    <path
+        android:strokeColor="#D6F5F6"
+        android:strokeAlpha="0.9"
+        android:strokeWidth="2"
+        android:strokeLineCap="round"
+        android:fillColor="#00000000"
+        android:pathData="M48,70 A6,2 0 1,0 60,70 A6,2 0 1,0 48,70" />
+    <!-- glow behind the glint -->
+    <path android:pathData="M54,41 m-19,0 a19,19 0 1,0 38,0 a19,19 0 1,0 -38,0">
+        <aapt:attr name="android:fillColor">
+            <gradient
+                android:type="radial"
+                android:centerX="54"
+                android:centerY="41"
+                android:gradientRadius="19">
+                <item android:offset="0.0" android:color="#66FFD46B" />
+                <item android:offset="0.5" android:color="#28FFD46B" />
+                <item android:offset="1.0" android:color="#00FFD46B" />
+            </gradient>
+        </aapt:attr>
+    </path>
+    <!-- the glint -->
+    <path
+        android:fillColor="#FFD46B"
+        android:pathData="M54,23 Q57.2,37.8 71,41 Q57.2,44.2 54,59 Q50.8,44.2 37,41 Q50.8,37.8 54,23 Z" />
+    <!-- bright core -->
+    <path
+        android:fillColor="#FFF4C9"
+        android:pathData="M54,32 Q55.3,39.7 60,41 Q55.3,42.3 54,50 Q52.7,42.3 48,41 Q52.7,39.7 54,32 Z" />
+    <!-- small glints -->
+    <path
+        android:fillColor="#FFE9A8"
+        android:pathData="M74,27 Q75,30 78,31 Q75,32 74,35 Q73,32 70,31 Q73,30 74,27 Z" />
+    <path
+        android:fillColor="#FFE9A8"
+        android:fillAlpha="0.8"
+        android:pathData="M32,50 Q32.7,52.3 35,53 Q32.7,53.7 32,56 Q31.3,53.7 29,53 Q31.3,52.3 32,50 Z" />
+</vector>

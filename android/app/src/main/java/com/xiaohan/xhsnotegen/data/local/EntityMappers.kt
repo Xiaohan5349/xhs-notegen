@@ -1,45 +1,46 @@
 package com.xiaohan.xhsnotegen.data.local
 
-import com.google.gson.Gson
-import com.google.gson.reflect.TypeToken
+import com.xiaohan.xhsnotegen.data.json.JsonCodec
 import com.xiaohan.xhsnotegen.data.local.entity.*
 import com.xiaohan.xhsnotegen.domain.*
-
-private val gson = Gson()
 
 // ---- NoteDraft ----
 
 fun NoteDraftEntity.toDomain(foodInfo: FoodInfo? = null): NoteDraft = NoteDraft(
     id = id,
-    type = NoteType.fromKey(type),
+    type = type.ifBlank { BuiltInModes.FOOD },
     status = NoteStatus.fromKey(status),
-    photoUris = gson.fromJson(photoUris, StringListType) ?: emptyList(),
-    selectedPublishPhotoUris = gson.fromJson(selectedPublishPhotoUris, StringListType) ?: emptyList(),
+    photoUris = JsonCodec.parseStringList(photoUris),
+    selectedPublishPhotoUris = JsonCodec.parseStringList(selectedPublishPhotoUris),
     title = title ?: "",
     body = body ?: "",
-    hashtags = gson.fromJson(hashtags, StringListType) ?: emptyList(),
-    variants = variantsJson?.let { gson.fromJson(it, VariantListType) } ?: emptyList(),
+    hashtags = JsonCodec.parseStringList(hashtags),
+    variants = JsonCodec.parseVariants(variantsJson),
     selectedVariantIndex = selectedVariantIndex,
     styleLabel = styleLabel,
     createdAt = createdAt,
     updatedAt = updatedAt,
     foodInfo = foodInfo ?: FoodInfo(),
+    rating = rating,
+    language = PromptLanguage.fromKey(noteLanguage),
 )
 
 fun NoteDraft.toEntity(): NoteDraftEntity = NoteDraftEntity(
     id = id,
-    type = type.key,
+    type = type,
     status = status.key,
-    photoUris = gson.toJson(photoUris),
-    selectedPublishPhotoUris = gson.toJson(selectedPublishPhotoUris),
+    photoUris = JsonCodec.toJson(photoUris),
+    selectedPublishPhotoUris = JsonCodec.toJson(selectedPublishPhotoUris),
     title = title.ifBlank { null },
     body = body.ifBlank { null },
-    hashtags = gson.toJson(hashtags),
-    variantsJson = if (variants.isEmpty()) null else gson.toJson(variants),
+    hashtags = JsonCodec.toJson(hashtags),
+    variantsJson = if (variants.isEmpty()) null else JsonCodec.toJson(variants),
     selectedVariantIndex = selectedVariantIndex,
     styleLabel = styleLabel,
     createdAt = createdAt,
     updatedAt = updatedAt,
+    rating = rating.coerceIn(0, 5),
+    noteLanguage = language?.key,
 )
 
 // ---- FoodInfo ----
@@ -53,7 +54,16 @@ fun FoodInfoEntity.toDomain(): FoodInfo = FoodInfo(
     priceOrRating = priceOrRating ?: "",
     vibeNotes = vibeNotes ?: "",
     personalNotes = personalNotes ?: "",
-    sponsored = sponsored,
+    place = Place(
+        country = country.orEmpty(),
+        region = region.orEmpty(),
+        city = city.orEmpty(),
+        district = district.orEmpty(),
+        address = address.orEmpty(),
+        latitude = latitude,
+        longitude = longitude,
+        source = PlaceSource.fromKey(placeSource),
+    ),
 )
 
 fun FoodInfo.toEntity(draftId: Long): FoodInfoEntity = FoodInfoEntity(
@@ -66,15 +76,21 @@ fun FoodInfo.toEntity(draftId: Long): FoodInfoEntity = FoodInfoEntity(
     priceOrRating = priceOrRating.ifBlank { null },
     vibeNotes = vibeNotes.ifBlank { null },
     personalNotes = personalNotes.ifBlank { null },
-    sponsored = sponsored,
+    country = place.country.ifBlank { null },
+    region = place.region.ifBlank { null },
+    city = place.city.ifBlank { null },
+    latitude = place.latitude,
+    longitude = place.longitude,
+    placeSource = place.source?.key,
+    district = place.district.ifBlank { null },
+    address = place.address.ifBlank { null },
 )
+
+// ---- Tags ----
+
+fun TagEntity.toDomain(): NoteTag = NoteTag(id = id, name = name, parentId = parentId)
 
 // ---- StylePreference ----
 
 fun StylePreferenceEntity.toDomain(): NoteStyle =
     NoteStyle.fromKey(preferredStyle)
-
-// ---- Gson type tokens ----
-
-private val StringListType = object : TypeToken<List<String>>() {}.type
-private val VariantListType = object : TypeToken<List<NoteVariant>>() {}.type
