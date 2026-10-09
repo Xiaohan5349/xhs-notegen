@@ -15,6 +15,7 @@ import com.xiaohan.xhsnotegen.domain.NoteTag
 import com.xiaohan.xhsnotegen.domain.Place
 import com.xiaohan.xhsnotegen.domain.PlaceSource
 import com.xiaohan.xhsnotegen.domain.PlaceCatalog
+import com.xiaohan.xhsnotegen.domain.TagFilter
 import com.xiaohan.xhsnotegen.domain.TagTree
 import com.xiaohan.xhsnotegen.domain.WritingMode
 import com.xiaohan.xhsnotegen.i18n.LanguageStore
@@ -81,7 +82,10 @@ data class DraftListState(
     val counts: Map<DraftFilter, Int> = emptyMap(),
     val filter: DraftFilter = DraftFilter.ALL,
     val tags: List<NoteTag> = emptyList(),
-    val tagFilter: Long? = null,
+    /** Picked tags: same group OR, different groups AND (see [TagFilter]). */
+    val tagFilters: Set<Long> = emptySet(),
+    /** Notes per tag, counting tags below it, over all notes (not just the filtered ones). */
+    val tagCounts: Map<Long, Int> = emptyMap(),
     val groupBy: GroupBy = GroupBy.NONE,
     /** The order of the Group buttons (Settings → Home screen). */
     val groupOrder: List<GroupBy> = HomePrefs.DEFAULT_ORDER,
@@ -98,7 +102,7 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
     private val prefs = application.getSharedPreferences("home", 0)
 
     private val _filter = MutableStateFlow(DraftFilter.ALL)
-    private val _tagFilter = MutableStateFlow<Long?>(null)
+    private val _tagFilter = MutableStateFlow<Set<Long>>(emptySet())
     private val _groupBy = MutableStateFlow(
         GroupBy.entries.firstOrNull { it.name == prefs.getString("group_by", null) } ?: GroupBy.NONE
     )
@@ -111,18 +115,16 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
     val organizing: StateFlow<OrganizeProgress?> = _organizing.asStateFlow()
 
     private val options = combine(_filter, _tagFilter, _groupBy, _collapsed) { f, t, g, c -> Options(f, t, g, c) }
-    private data class Options(val filter: DraftFilter, val tag: Long?, val groupBy: GroupBy, val collapsed: Set<String>)
+    private data class Options(val filter: DraftFilter, val tags: Set<Long>, val groupBy: GroupBy, val collapsed: Set<String>)
 
     /** Things that change how the feed reads without the notes changing: button order, mode names, app language. */
     private val display = combine(HomePrefs.groupOrder, ModeStore.modes, snapshotFlow { LanguageStore.isZh }) { order, modes, zh -> Display(order, modes, zh) }
     private data class Display(val order: List<GroupBy>, val modes: List<WritingMode>, val zh: Boolean)
 
     val state: StateFlow<DraftListState> = combine(repo.getAllFlow(), repo.allTagsFlow(), options, display) { all, tags, o, d ->
-        // A tag filter pointing at a deleted tag simply stops filtering.
-        val tagFilter = o.tag?.takeIf { id -> tags.any { it.id == id } }
-        // Filtering by a tag includes everything below it.
-        val filterIds = tagFilter?.let { id -> setOf(id) + TagTree.descendants(id, tags) }
-        val visible = all.filter { o.filter.matches(it.status) && (filterIds == null || it.tags.any { t -> t.id in filterIds }) }
+        // Picked tags that were deleted simply stop filtering.
+        val tagFilters = o.tags.filterTo(HashSet()) { id -> tags.any { it.id == id } }
+        val visible = all.filter { o.filter.matches(it.status) && TagFilter.matches(it.tags, tagFilters, tags) }
         DraftListState(
             drafts = visible,
             feed = buildFeed(visible, o.groupBy, o.collapsed, tags, modeName = { key -> d.modes.firstOrNull { it.key == key }?.name ?: key },
@@ -130,7 +132,8 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
             counts = DraftFilter.entries.associateWith { f -> all.count { f.matches(it.status) } },
             filter = o.filter,
             tags = tags,
-            tagFilter = tagFilter,
+            tagFilters = tagFilters,
+            tagCounts = tags.associate { t -> t.id to all.count { TagFilter.matches(it.tags, setOf(t.id), tags) } },
             groupBy = o.groupBy,
             groupOrder = d.order,
             collapsed = o.collapsed,
@@ -146,7 +149,9 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun setFilter(filter: DraftFilter) { _filter.value = filter }
 
-    fun setTagFilter(tagId: Long?) { _tagFilter.value = if (_tagFilter.value == tagId) null else tagId }
+    fun toggleTagFilter(tagId: Long) { _tagFilter.value = TagFilter.toggle(_tagFilter.value, tagId, state.value.tags) }
+
+    fun clearTagFilters() { _tagFilter.value = emptySet() }
 
     /** Tapping the active grouping turns grouping off. */
     fun toggleGroupBy(groupBy: GroupBy) = setGroupBy(if (_groupBy.value == groupBy) GroupBy.NONE else groupBy)

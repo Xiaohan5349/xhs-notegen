@@ -19,12 +19,13 @@ import androidx.compose.ui.graphics.graphicsLayer
 import kotlin.random.Random
 
 /**
- * Decorative art for the anime-inspired themes, drawn behind the home header.
- * Everything is original and drawn in code — no third-party artwork — and
- * fades into the background at the bottom so content stays readable.
+ * Decorative art for the Glint and anime-inspired themes. Everything is
+ * original and drawn in code — no third-party artwork. It fades out toward
+ * the bottom; [inTile] (the home "all notes" tile) also fades it in from the
+ * left, so the big number on the left stays on a plain surface.
  */
 @Composable
-fun ThemeBackdrop(modifier: Modifier = Modifier) {
+fun ThemeBackdrop(modifier: Modifier = Modifier, inTile: Boolean = false) {
     val theme = LocalAppTheme.current
     if (theme.backdrop == Backdrop.NONE) return
     val dark = LocalDarkTheme.current
@@ -48,6 +49,12 @@ fun ThemeBackdrop(modifier: Modifier = Modifier) {
             Brush.verticalGradient(0f to Color.Black, 0.25f to Color.Black.copy(alpha = 0.8f), 0.6f to Color.Transparent)
         else Brush.verticalGradient(0f to Color.Black, 0.55f to Color.Black, 1f to Color.Transparent)
         drawRect(brush = fade, blendMode = BlendMode.DstIn)
+        if (inTile) {
+            drawRect(
+                brush = Brush.horizontalGradient(0f to Color.Transparent, 0.38f to Color.Transparent, 0.8f to Color.Black),
+                blendMode = BlendMode.DstIn,
+            )
+        }
     }
 }
 

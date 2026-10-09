@@ -1,5 +1,6 @@
 package com.xiaohan.xhsnotegen.ui.components
 
+import com.xiaohan.xhsnotegen.ui.theme.app
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -85,7 +86,7 @@ fun WheelPicker(
                 .fillMaxWidth()
                 .height(rowHeight)
                 .clip(MaterialTheme.shapes.medium)
-                .background(MaterialTheme.colorScheme.surfaceContainerHighest),
+                .background(MaterialTheme.app.inset),
         )
         LazyColumn(state = state, flingBehavior = fling, modifier = Modifier.fillMaxSize()) {
             items(pad) { Spacer(Modifier.height(rowHeight)) }
@@ -252,7 +253,7 @@ fun PlacePickerDialog(
     Dialog(onDismissRequest = onDismiss, properties = DialogProperties(usePlatformDefaultWidth = false)) {
         Surface(
             shape = MaterialTheme.shapes.extraLarge,
-            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            color = MaterialTheme.app.tile,
             modifier = Modifier.fillMaxWidth(0.94f).fillMaxHeight(0.86f),
         ) {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(10.dp)) {

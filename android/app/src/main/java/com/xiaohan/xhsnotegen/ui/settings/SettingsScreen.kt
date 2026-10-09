@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -33,7 +34,10 @@ import com.xiaohan.xhsnotegen.ai.AiSettings
 import com.xiaohan.xhsnotegen.i18n.AppLanguage
 import com.xiaohan.xhsnotegen.i18n.LanguageStore
 import com.xiaohan.xhsnotegen.i18n.tr
+import com.xiaohan.xhsnotegen.ui.components.InsetSegmented
 import com.xiaohan.xhsnotegen.ui.components.SectionCard
+import com.xiaohan.xhsnotegen.ui.theme.NumberStyle
+import com.xiaohan.xhsnotegen.ui.theme.app
 import com.xiaohan.xhsnotegen.ui.drafts.HomePrefs
 import com.xiaohan.xhsnotegen.ui.components.softFieldColors
 import com.xiaohan.xhsnotegen.ui.publish.XhsAuthStore
@@ -100,49 +104,37 @@ private fun AppearanceSection() {
         ThemeGroup.entries.forEach { group ->
             Text(group.label, style = MaterialTheme.typography.labelLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant)
-            FlowRow(
-                Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(4.dp),
-                verticalArrangement = Arrangement.spacedBy(4.dp),
-            ) {
-                AppTheme.entries.filter { it.group == group }.forEach { t ->
-                    ThemeSwatch(t, selected = t == theme) { AppearanceStore.setTheme(context, t) }
+            // Five to a row, each a little preview: the theme's container color with its accent.
+            AppTheme.entries.filter { it.group == group }.chunked(5).forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    row.forEach { t ->
+                        ThemeSwatch(t, selected = t == theme, modifier = Modifier.weight(1f)) { AppearanceStore.setTheme(context, t) }
+                    }
+                    repeat(5 - row.size) { Spacer(Modifier.weight(1f)) }
                 }
             }
         }
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            DarkMode.entries.forEachIndexed { i, m ->
-                SegmentedButton(
-                    selected = m == mode,
-                    onClick = { AppearanceStore.setDarkMode(context, m) },
-                    shape = SegmentedButtonDefaults.itemShape(i, DarkMode.entries.size),
-                    icon = {
-                        SegmentedButtonDefaults.Icon(active = m == mode) {
-                            Icon(
-                                when (m) {
-                                    DarkMode.SYSTEM -> Icons.Outlined.BrightnessAuto
-                                    DarkMode.LIGHT -> Icons.Outlined.LightMode
-                                    DarkMode.DARK -> Icons.Outlined.DarkMode
-                                },
-                                contentDescription = null,
-                                modifier = Modifier.size(SegmentedButtonDefaults.IconSize),
-                            )
-                        }
-                    },
-                ) { Text(m.label) }
-            }
-        }
+        InsetSegmented(
+            options = DarkMode.entries,
+            selected = mode,
+            label = { it.label },
+            onSelect = { AppearanceStore.setDarkMode(context, it) },
+            icon = { m ->
+                when (m) {
+                    DarkMode.SYSTEM -> Icons.Outlined.BrightnessAuto
+                    DarkMode.LIGHT -> Icons.Outlined.LightMode
+                    DarkMode.DARK -> Icons.Outlined.DarkMode
+                }
+            },
+        )
         Text(tr("Language", "语言"), style = MaterialTheme.typography.labelLarge,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
-        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-            AppLanguage.entries.forEachIndexed { i, l ->
-                SegmentedButton(
-                    selected = l == LanguageStore.choice,
-                    onClick = { LanguageStore.set(context, l) },
-                    shape = SegmentedButtonDefaults.itemShape(i, AppLanguage.entries.size),
-                ) { Text(l.label) }
-            }
-        }
+        InsetSegmented(
+            options = AppLanguage.entries,
+            selected = LanguageStore.choice,
+            label = { it.label },
+            onSelect = { LanguageStore.set(context, it) },
+        )
         Text(
             tr("App language. The language notes are written in is set per writing mode.",
                 "界面语言。笔记用什么语言写，在每个写作模式里单独设置。"),
@@ -166,13 +158,13 @@ private fun HomeSection() {
         title = tr("Home screen", "首页"),
         subtitle = tr("Order of the Group buttons above your notes", "笔记上方“分组”按钮的顺序"),
     ) {
-        Column(Modifier.clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainer)) {
+        Column(Modifier.clip(MaterialTheme.shapes.small).background(MaterialTheme.app.inset)) {
             order.forEachIndexed { i, g ->
                 Row(
                     Modifier.fillMaxWidth().padding(start = 16.dp, end = 4.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    Text("${i + 1}", style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    Text("${i + 1}", style = NumberStyle, color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.width(24.dp))
                     Text(g.label, style = MaterialTheme.typography.titleSmall, modifier = Modifier.weight(1f))
                     IconButton(onClick = { HomePrefs.move(context, g, -1) }, enabled = i > 0) {
@@ -188,41 +180,41 @@ private fun HomeSection() {
 }
 
 @Composable
-private fun ThemeSwatch(theme: AppTheme, selected: Boolean, onClick: () -> Unit) {
+private fun ThemeSwatch(theme: AppTheme, selected: Boolean, modifier: Modifier = Modifier, onClick: () -> Unit) {
     val (accent, container) = theme.swatch
     Column(
-        Modifier
+        modifier
             .clip(MaterialTheme.shapes.small)
             .selectable(selected = selected, onClick = onClick, role = Role.RadioButton)
-            .padding(4.dp),
+            .padding(vertical = 4.dp),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.spacedBy(6.dp),
     ) {
         Box(
             Modifier
-                .size(48.dp)
-                .border(
-                    width = if (selected) 2.5.dp else 1.dp,
-                    color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.outlineVariant,
-                    shape = CircleShape,
+                .fillMaxWidth()
+                .aspectRatio(1f)
+                .then(
+                    if (selected) Modifier.border(2.5.dp, MaterialTheme.colorScheme.onSurface, MaterialTheme.shapes.small).padding(4.dp)
+                    else Modifier.padding(4.dp)
                 )
-                .padding(4.dp)
-                .clip(CircleShape)
-                .background(swatchBrush(theme, container)),
+                .clip(RoundedCornerShape(9.dp))
+                .background(swatchBrush(theme, container))
+                .border(1.dp, MaterialTheme.app.line, RoundedCornerShape(9.dp)),
             contentAlignment = Alignment.Center,
         ) {
-            // Half-and-half dot: accent over its container.
-            Box(Modifier.size(22.dp).clip(CircleShape).background(accent), contentAlignment = Alignment.Center) {
+            // The accent as a dot on its own container color.
+            Box(Modifier.fillMaxSize(0.44f).clip(CircleShape).background(accent), contentAlignment = Alignment.Center) {
                 if (selected) Icon(Icons.Filled.Check, null, Modifier.size(14.dp),
                     tint = if (accent.luminance() > 0.5f) Color.Black else Color.White)
             }
         }
-        Text(theme.displayName, style = MaterialTheme.typography.labelSmall,
+        Text(theme.displayName, style = MaterialTheme.typography.labelSmall, maxLines = 1,
             color = if (selected) MaterialTheme.colorScheme.onSurface else MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
-/** Anime-inspired themes preview their backdrop colors; the rest their accent container. */
+/** Glint and anime-inspired themes preview their art colors; the rest their accent container. */
 private fun swatchBrush(theme: AppTheme, container: Color): Brush = when (theme.backdrop) {
     Backdrop.SKY -> Brush.verticalGradient(listOf(Color(0xFF5AA9F5), Color(0xFFDCEEFF)))
     Backdrop.SUNSET -> Brush.verticalGradient(listOf(Color(0xFFFFB199), Color(0xFFFF7EB3), Color(0xFFC77DFF)))
@@ -282,8 +274,8 @@ private fun SettingsRow(
     Row(
         Modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
-            .background(MaterialTheme.colorScheme.surfaceContainer)
+            .clip(MaterialTheme.shapes.small)
+            .background(MaterialTheme.app.inset)
             .clickable(onClick = onClick)
             .padding(horizontal = 16.dp, vertical = 14.dp),
         verticalAlignment = Alignment.CenterVertically,

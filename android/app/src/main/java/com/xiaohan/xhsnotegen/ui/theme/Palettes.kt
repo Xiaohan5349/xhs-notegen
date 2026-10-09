@@ -182,7 +182,8 @@ private val lightSchemes: Map<AppTheme, ColorScheme> = mapOf(
     AppTheme.SESAME to light(Accent(Ink, Paper, PaperHighest, Ink), HerbL, HoneyL, WarmLight),
     AppTheme.LATTE to light(Accent(Color(0xFF8B5E3C), Color.White, Color(0xFFEBD9C6), Color(0xFF2F1A0A)), HerbL, HoneyL, BeigeLight),
     AppTheme.SUMMER_SKY to light(
-        Accent(Color(0xFF1F7AE0), Color.White, Color(0xFFD3E6FC), Color(0xFF002B5C)), HerbL,
+        // #1D74D5 rather than #1F7AE0: white text on it clears 4.5:1.
+        Accent(Color(0xFF1D74D5), Color.White, Color(0xFFD3E6FC), Color(0xFF002B5C)), HerbL,
         Accent(Color(0xFFC98B00), Color.White, Color(0xFFFFE8A8), Color(0xFF3D2A00)), SkyLight,
     ),
     AppTheme.CITY_POP to light(

@@ -1,5 +1,6 @@
 package com.xiaohan.xhsnotegen.ui.generate
 
+import com.xiaohan.xhsnotegen.ui.theme.app
 import androidx.compose.animation.AnimatedContent
 import androidx.compose.animation.core.*
 import androidx.compose.animation.fadeIn
@@ -91,7 +92,7 @@ fun GeneratingScreen(
                                 modifier = Modifier
                                     .padding(horizontal = 24.dp)
                                     .fillMaxWidth()
-                                    .background(MaterialTheme.colorScheme.surfaceContainer, MaterialTheme.shapes.small)
+                                    .background(MaterialTheme.app.inset, MaterialTheme.shapes.small)
                                     .padding(10.dp),
                             )
                         }
@@ -196,7 +197,7 @@ private fun PhotoStack(photos: List<String>) {
                     }
                     .shadow(8.dp, MaterialTheme.shapes.small),
                 shape = MaterialTheme.shapes.small,
-                color = MaterialTheme.colorScheme.surfaceContainerLowest,
+                color = MaterialTheme.app.tile,
             ) {
                 AsyncImage(
                     model = uri,
@@ -205,7 +206,7 @@ private fun PhotoStack(photos: List<String>) {
                     modifier = Modifier
                         .padding(start = 8.dp, end = 8.dp, top = 8.dp, bottom = 24.dp)
                         .clip(MaterialTheme.shapes.extraSmall)
-                        .background(MaterialTheme.colorScheme.surfaceContainerHigh),
+                        .background(MaterialTheme.app.tile2),
                 )
             }
         }

@@ -1,5 +1,6 @@
 package com.xiaohan.xhsnotegen.ui.drafts
 
+import com.xiaohan.xhsnotegen.ui.components.AppFilterChip
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
@@ -94,11 +95,11 @@ fun TagsDialog(
                     val options = tree.map { it.first }
                     androidx.compose.foundation.lazy.LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
                         item {
-                            FilterChip(selected = newParent == null, onClick = { newParent = null }, label = { Text(tr("Top level", "顶层")) })
+                            AppFilterChip(selected = newParent == null, onClick = { newParent = null }, label = tr("Top level", "顶层"))
                         }
                         items(options, key = { it.id }) { r ->
-                            FilterChip(selected = newParent?.id == r.id, onClick = { newParent = r },
-                                label = { Text(TagTree.pathLabel(r, byId)) })
+                            AppFilterChip(selected = newParent?.id == r.id, onClick = { newParent = r },
+                                label = TagTree.pathLabel(r, byId))
                         }
                     }
                 }

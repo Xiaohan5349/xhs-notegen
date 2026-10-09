@@ -1,5 +1,7 @@
 package com.xiaohan.xhsnotegen.ui.settings
 
+import com.xiaohan.xhsnotegen.ui.components.AppFilterChip
+import com.xiaohan.xhsnotegen.ui.theme.app
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -159,12 +161,12 @@ fun AiSettingsScreen(onNavigateBack: () -> Unit) {
             ) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     AiProvider.entries.forEach { p ->
-                        FilterChip(selected = p == provider, onClick = { provider = p; result = null }, label = { Text(p.displayName) }, shape = CircleShape)
+                        AppFilterChip(selected = p == provider, onClick = { provider = p; result = null }, label = p.displayName)
                     }
                 }
 
                 if (provider.models.isNotEmpty()) {
-                    Column(Modifier.clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainer)) {
+                    Column(Modifier.clip(MaterialTheme.shapes.small).background(MaterialTheme.app.inset)) {
                         provider.models.forEach { m ->
                             val selected = m.id == draft.model
                             Row(
@@ -327,8 +329,8 @@ fun AiSettingsScreen(onNavigateBack: () -> Unit) {
                     Column(
                         Modifier
                             .fillMaxWidth()
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .clip(MaterialTheme.shapes.small)
+                            .background(MaterialTheme.app.inset)
                             .padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {

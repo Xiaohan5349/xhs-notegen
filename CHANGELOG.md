@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased
+
+### Added
+- **Filter by several tags at once** on the home screen. Tags under the same top-level tag combine as "or", different ones as "and": 京都 + 大阪 + 拉面 shows ramen in Kyoto or Osaka. Picking 京都 also picks 日本; un-picking it goes back to all of 日本
+- Tag counts on each tag, and an **All tags** sheet with search, multi-select and Clear
+
+### Changed
+- Refreshed look across the app: tiles with hairline edges and tighter corners, one style of filter chip, inset segmented choices, and a 4-column photo grid with "Show all N" on the create and review screens
+- Home screen opens with the note counts: a big "All notes" tile plus Ready / Drafts / Posted tiles that filter when tapped
+- "Posted" is gold in every theme; star colors follow the theme
+- Two accent colors are slightly darker so white text on them is easier to read
+
 ## v1.10.0 — 2026-09-30
 
 ### Renamed

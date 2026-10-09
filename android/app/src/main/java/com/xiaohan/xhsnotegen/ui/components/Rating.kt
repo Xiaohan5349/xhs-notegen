@@ -16,9 +16,8 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.unit.dp
 import com.xiaohan.xhsnotegen.i18n.tr
+import com.xiaohan.xhsnotegen.ui.theme.app
 
-/** Star gold that reads on both light and dark surfaces. */
-val StarColor = Color(0xFFF5B100)
 
 /**
  * Tappable 1–5 stars. Tapping the current rating again clears it (0 = not rated).
@@ -36,7 +35,7 @@ fun RatingBar(
                 Icon(
                     if (i <= rating) Icons.Filled.Star else Icons.Outlined.StarOutline,
                     contentDescription = starsLabel(i),
-                    tint = if (i <= rating) StarColor else MaterialTheme.colorScheme.outline,
+                    tint = if (i <= rating) MaterialTheme.app.star else MaterialTheme.colorScheme.outline,
                     modifier = Modifier.size(size),
                 )
             }
@@ -65,7 +64,7 @@ fun CardStars(rating: Int, onRate: ((Int) -> Unit)?, modifier: Modifier = Modifi
                 Icon(
                     if (filled) Icons.Filled.Star else Icons.Outlined.StarOutline,
                     contentDescription = if (onRate != null) starsLabel(i) else null,
-                    tint = if (filled) StarColor else MaterialTheme.colorScheme.outline,
+                    tint = if (filled) MaterialTheme.app.star else MaterialTheme.colorScheme.outline,
                     modifier = Modifier.size(18.dp),
                 )
             }
@@ -78,7 +77,7 @@ fun CardStars(rating: Int, onRate: ((Int) -> Unit)?, modifier: Modifier = Modifi
 fun RatingBadge(rating: Int, modifier: Modifier = Modifier, onDark: Boolean = false) {
     if (rating <= 0) return
     Row(modifier, verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-        Icon(Icons.Filled.Star, null, Modifier.size(14.dp), tint = StarColor)
+        Icon(Icons.Filled.Star, null, Modifier.size(14.dp), tint = MaterialTheme.app.star)
         Text("$rating", style = MaterialTheme.typography.labelMedium,
             color = if (onDark) Color.White else MaterialTheme.colorScheme.onSurface)
     }
@@ -90,7 +89,7 @@ fun RatingDialog(noteCount: Int, initial: Int, onSave: (Int) -> Unit, onDismiss:
     var value by remember { mutableIntStateOf(initial) }
     AlertDialog(
         onDismissRequest = onDismiss,
-        icon = { Icon(Icons.Filled.Star, null, tint = StarColor) },
+        icon = { Icon(Icons.Filled.Star, null, tint = MaterialTheme.app.star) },
         title = { Text(if (noteCount == 1) tr("Rate this note", "给这篇打分") else tr("Rate $noteCount notes", "给 $noteCount 篇打分")) },
         text = {
             Column(horizontalAlignment = Alignment.CenterHorizontally, modifier = Modifier.fillMaxWidth()) {
