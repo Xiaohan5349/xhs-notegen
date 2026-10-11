@@ -49,9 +49,10 @@ import com.xiaohan.xhsnotegen.domain.NoteStatus
 import com.xiaohan.xhsnotegen.domain.NoteStyle
 import com.xiaohan.xhsnotegen.domain.NoteVariant
 import com.xiaohan.xhsnotegen.i18n.tr
+import com.xiaohan.xhsnotegen.ui.components.AppFilterChip
+import com.xiaohan.xhsnotegen.ui.components.ArchShape
 import com.xiaohan.xhsnotegen.ui.components.CoverTag
 import com.xiaohan.xhsnotegen.ui.components.EmptyState
-import com.xiaohan.xhsnotegen.ui.components.InsetSegmented
 import com.xiaohan.xhsnotegen.ui.components.OrderBadge
 import com.xiaohan.xhsnotegen.ui.components.PhotoNumber
 import com.xiaohan.xhsnotegen.ui.components.PhotoSheet
@@ -187,8 +188,8 @@ fun ReviewScreen(
                 .consumeWindowInsets(padding)
                 .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(10.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             PhotoPicker(
                 d,
@@ -228,7 +229,6 @@ fun ReviewScreen(
                     OutlinedButton(
                         onClick = viewModel::rewriteCurrent,
                         enabled = aiTask == AiTask.NONE && !isPublishing,
-                        shape = MaterialTheme.shapes.small,
                     ) {
                         if (aiTask == AiTask.REWRITE_ONE) {
                             CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -378,13 +378,14 @@ private fun PhotoPicker(
             val order = selected.indexOf(uri) // -1 when left out
             val isIn = order >= 0
             var menu by remember { mutableStateOf(false) }
+            val shape = if (order == 0) ArchShape(10.dp) else RoundedCornerShape(10.dp)
             Box {
                 Box(
                     Modifier
                         .fillMaxWidth()
                         .aspectRatio(3f / 4f)
-                        .clip(RoundedCornerShape(4.dp))
-                        .then(if (isIn) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp)) else Modifier)
+                        .clip(shape)
+                        .then(if (isIn) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape) else Modifier)
                         .combinedClickable(onClick = { onToggle(uri) }, onLongClick = { menu = true }),
                 ) {
                     AsyncImage(
@@ -392,8 +393,10 @@ private fun PhotoPicker(
                         modifier = Modifier.fillMaxSize().background(MaterialTheme.app.tile2),
                     )
                     if (!isIn) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)))
-                    PhotoNumber(i + 1, Modifier.align(Alignment.TopStart).padding(3.dp))
-                    if (isIn) OrderBadge(order + 1, Modifier.align(Alignment.TopEnd).padding(3.dp))
+                    // The arched cover's top corners are cut away; keep its marks below the curve.
+                    val top = if (order == 0) 22.dp else 3.dp
+                    PhotoNumber(i + 1, Modifier.align(Alignment.TopStart).padding(start = 3.dp, top = top))
+                    if (isIn) OrderBadge(order + 1, Modifier.align(Alignment.TopEnd).padding(end = 3.dp, top = top))
                     if (order == 0) CoverTag(Modifier.align(Alignment.BottomStart).padding(3.dp))
                 }
                 DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
@@ -430,36 +433,42 @@ private fun PhotoPicker(
 @Composable
 private fun MealInfoRow(draft: NoteDraft, onRate: (Int) -> Unit, onEditPlace: () -> Unit) {
     val place = draft.foodInfo.place
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Tile(Modifier.weight(1f).fillMaxHeight(), contentPadding = PaddingValues(start = 8.dp, end = 8.dp, top = 10.dp, bottom = 8.dp)) {
-            Text(tr("Rating", "评分"), style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
-            RatingBar(draft.rating, onRate = onRate, size = 18.dp)
-            Text(ratingWords(draft.rating), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
-        }
-        Tile(Modifier.weight(1.25f).fillMaxHeight(), onClick = onEditPlace, contentPadding = PaddingValues(12.dp)) {
-            val source = when (place.source) {
-                PlaceSource.GPS -> tr("From photo location", "来自照片定位")
-                PlaceSource.TEXT -> tr("Found from the restaurant / area — tap to correct", "根据店名 / 区域查到 — 点按修改")
-                PlaceSource.MANUAL -> tr("Set by you", "手动设置")
-                null -> tr("Tap to set, or use Organize by place on the home screen", "点按设置，或在首页用“按地点整理”")
+    val c = MaterialTheme.colorScheme
+    val source = when (place.source) {
+        PlaceSource.GPS -> tr("From photo location", "来自照片定位")
+        PlaceSource.TEXT -> tr("Found from the restaurant / area — tap to correct", "根据店名 / 区域查到 — 点按修改")
+        PlaceSource.MANUAL -> tr("Set by you", "手动设置")
+        null -> tr("Tap to set, or use Organize by place on the home screen", "点按设置，或在首页用“按地点整理”")
+    }
+    Column {
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                RatingBar(draft.rating, onRate = onRate, size = 26.dp)
+                Text(ratingWords(draft.rating), style = MaterialTheme.typography.bodySmall,
+                    color = c.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Icon(Icons.Outlined.Place, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-                Spacer(Modifier.width(4.dp))
-                Text(tr("Place", "地点"), style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f))
-                Icon(Icons.Outlined.Edit, tr("Edit place", "编辑地点"), Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            Spacer(Modifier.height(4.dp))
-            Text(
-                place.fullAddressDisplay.ifBlank { draft.foodInfo.location.ifBlank { tr("Add a place", "添加地点") } },
-                style = MaterialTheme.typography.titleSmall,
-                maxLines = 2, overflow = TextOverflow.Ellipsis,
-            )
-            Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+        HorizontalDivider(color = MaterialTheme.app.line2)
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.small)
+                .clickable(onClick = onEditPlace)
+                .padding(vertical = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Icon(Icons.Outlined.Place, null, Modifier.size(18.dp), tint = MaterialTheme.app.accent2)
+            Spacer(Modifier.width(8.dp))
+            Column(Modifier.weight(1f)) {
+                Text(
+                    place.fullAddressDisplay.ifBlank { draft.foodInfo.location.ifBlank { tr("Add a place", "添加地点") } },
+                    style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis,
+                )
+                Text(source, style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant)
+            }
+            Icon(Icons.Outlined.Edit, tr("Edit place", "编辑地点"), Modifier.size(18.dp), tint = c.onSurfaceVariant)
+        }
+        HorizontalDivider(color = MaterialTheme.app.line2)
     }
 }
 
@@ -470,15 +479,16 @@ private fun MealInfoRow(draft: NoteDraft, onRate: (Int) -> Unit, onEditPlace: ()
 @Composable
 private fun StyleTabs(draft: NoteDraft, onSelect: (Int) -> Unit) {
     val preferred = draft.preferredStyle
-    InsetSegmented(
-        options = draft.variants.indices.toList(),
-        selected = draft.selectedVariantIndex,
-        label = { i ->
-            val style = NoteStyle.fromLabel(draft.variants[i].styleLabel)
-            (if (style == preferred) "★ " else "") + style.displayName
-        },
-        onSelect = onSelect,
-    )
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        itemsIndexed(draft.variants) { i, v ->
+            val style = NoteStyle.fromLabel(v.styleLabel)
+            AppFilterChip(
+                selected = i == draft.selectedVariantIndex,
+                onClick = { onSelect(i) },
+                label = style.displayName + if (style == preferred) " ★" else "",
+            )
+        }
+    }
 }
 
 @Composable
@@ -513,7 +523,7 @@ private fun NoteEditor(
     onRemoveTag: (String) -> Unit,
 ) {
     val c = MaterialTheme.colorScheme
-    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.app.tile, border = BorderStroke(1.dp, MaterialTheme.app.line)) {
+    Surface(shape = RoundedCornerShape(22.dp), color = MaterialTheme.app.tile) {
         Box {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 val over = variant.title.length > TITLE_LIMIT
@@ -555,17 +565,17 @@ private fun NoteEditor(
                         Row(
                             Modifier
                                 .clip(CircleShape)
-                                .background(c.primaryContainer)
+                                .background(MaterialTheme.app.tile2)
                                 .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("#$tag", style = MaterialTheme.typography.labelLarge, color = c.onPrimaryContainer)
+                            Text("#$tag", style = MaterialTheme.typography.labelLarge, color = c.onSurface)
                             Box(
                                 Modifier.padding(start = 2.dp).size(22.dp).clip(CircleShape).clickable { onRemoveTag(tag) },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(Icons.Filled.Close, contentDescription = tr("Remove #$tag", "删除 #$tag"),
-                                    Modifier.size(14.dp), tint = c.onPrimaryContainer)
+                                    Modifier.size(14.dp), tint = c.onSurfaceVariant)
                             }
                         }
                     }
@@ -574,7 +584,7 @@ private fun NoteEditor(
             }
             if (busy) {
                 Box(
-                    Modifier.matchParentSize().clip(MaterialTheme.shapes.medium).background(MaterialTheme.app.tile.copy(alpha = 0.75f)),
+                    Modifier.matchParentSize().clip(RoundedCornerShape(22.dp)).background(MaterialTheme.app.tile.copy(alpha = 0.75f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -638,9 +648,9 @@ private fun PublishBar(
     onPublish: () -> Unit,
 ) {
     val titleTooLong = (draft.selectedVariant?.title?.length ?: 0) > TITLE_LIMIT
-    Surface(color = MaterialTheme.colorScheme.background) {
+    val a = MaterialTheme.app
+    Surface(color = a.band) {
       Column {
-        HorizontalDivider(color = MaterialTheme.app.line)
         Column(
             Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
@@ -648,17 +658,19 @@ private fun PublishBar(
         ) {
             if (titleTooLong) {
                 Text(tr("Shorten the title to post", "标题太长，缩短后才能发布"), style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error)
+                    color = a.onBand)
             }
             Button(
                 onClick = onPublish,
                 enabled = enabled && !isPublishing && !titleTooLong,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = MaterialTheme.shapes.medium,
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = a.onBand, contentColor = a.band,
+                    disabledContainerColor = a.onBand.copy(alpha = 0.3f), disabledContentColor = a.onBand.copy(alpha = 0.75f),
+                ),
             ) {
                 if (isPublishing) {
-                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary)
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = a.onBand)
                     Spacer(Modifier.width(12.dp))
                     Text(tr("Posting…", "发布中…"), style = MaterialTheme.typography.titleMedium)
                 } else {

@@ -26,7 +26,7 @@ enum class DarkMode(val id: String) {
 object AppearanceStore {
     private const val PREFS = "appearance"
 
-    private val _theme = MutableStateFlow(AppTheme.TOMATO)
+    private val _theme = MutableStateFlow(AppTheme.DEFAULT)
     val theme: StateFlow<AppTheme> = _theme.asStateFlow()
 
     private val _darkMode = MutableStateFlow(DarkMode.SYSTEM)

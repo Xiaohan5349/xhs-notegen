@@ -49,6 +49,8 @@ import com.xiaohan.xhsnotegen.ui.components.CoverTag
 import com.xiaohan.xhsnotegen.ui.components.ModelChip
 import com.xiaohan.xhsnotegen.ui.components.PhotoNumber
 import com.xiaohan.xhsnotegen.ui.components.PhotoSheet
+import com.xiaohan.xhsnotegen.ui.components.ArchShape
+import com.xiaohan.xhsnotegen.ui.theme.CardTitleStyle
 import com.xiaohan.xhsnotegen.ui.theme.NumberStyle
 import com.xiaohan.xhsnotegen.ui.theme.app
 import com.xiaohan.xhsnotegen.ui.components.RatingBar
@@ -165,8 +167,7 @@ fun CreateFormScreen(
                             }
                         },
                         enabled = canGenerate,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = MaterialTheme.shapes.medium,
+                        modifier = Modifier.fillMaxWidth().height(54.dp),
                     ) {
                         if (isSaving) {
                             CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp,
@@ -189,7 +190,7 @@ fun CreateFormScreen(
                 .consumeWindowInsets(padding)
                 .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // ---- Kind of note ----
@@ -417,16 +418,15 @@ private fun BigAddPhotos(maxPhotos: Int, onClick: () -> Unit) {
         Modifier
             .fillMaxWidth()
             .height(160.dp)
-            .clip(MaterialTheme.shapes.small)
-            .background(MaterialTheme.app.inset)
-            .dashedBorder(MaterialTheme.colorScheme.primary, 12.dp)
+            .clip(MaterialTheme.shapes.medium)
+            .dashedBorder(MaterialTheme.app.line2, 18.dp)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(Icons.Outlined.AddPhotoAlternate, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary)
+        Icon(Icons.Outlined.AddPhotoAlternate, null, Modifier.size(36.dp), tint = MaterialTheme.app.head)
         Spacer(Modifier.height(8.dp))
-        Text(tr("Add photos", "添加照片"), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Text(tr("Add photos", "添加照片"), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.app.head)
         Text(tr("Up to $maxPhotos", "最多 $maxPhotos 张"), style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -455,8 +455,8 @@ private fun PhotoStrip(
                 Modifier
                     .fillMaxWidth()
                     .aspectRatio(3f / 4f)
-                    .clip(RoundedCornerShape(4.dp))
-                    .dashedBorder(MaterialTheme.app.line2, 4.dp)
+                    .clip(RoundedCornerShape(10.dp))
+                    .dashedBorder(MaterialTheme.app.line2, 10.dp)
                     .clickable(enabled = !importing, onClick = onAdd),
                 contentAlignment = Alignment.Center,
             ) {
@@ -472,24 +472,27 @@ private fun PhotoStrip(
         val uri = photos[index]
         var menu by remember { mutableStateOf(false) }
         val isSelected = uri in selected
+        val shape = if (index == 0) ArchShape(10.dp) else RoundedCornerShape(10.dp)
         Box {
             Box(
                 Modifier
                     .fillMaxWidth()
                     .aspectRatio(3f / 4f)
-                    .clip(RoundedCornerShape(4.dp))
-                    .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, RoundedCornerShape(4.dp)) else Modifier)
+                    .clip(shape)
+                    .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape) else Modifier)
                     .clickable { if (selecting) onToggleSelect(uri) else menu = true }
             ) {
                 AsyncImage(model = uri, contentDescription = null, contentScale = ContentScale.Crop,
                     modifier = Modifier.fillMaxSize().background(MaterialTheme.app.tile2))
-                PhotoNumber(index + 1, Modifier.align(Alignment.TopStart).padding(3.dp))
+                // The arched cover's top corners are cut away; keep its marks below the curve.
+                val top = if (index == 0) 22.dp else 3.dp
+                PhotoNumber(index + 1, Modifier.align(Alignment.TopStart).padding(start = 3.dp, top = top))
                 if (index == 0) CoverTag(Modifier.align(Alignment.BottomStart).padding(3.dp))
                 if (selecting) {
                     Box(
                         Modifier
                             .align(Alignment.TopEnd)
-                            .padding(3.dp)
+                            .padding(end = 3.dp, top = top)
                             .size(20.dp)
                             .clip(CircleShape)
                             .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.3f))
@@ -503,6 +506,7 @@ private fun PhotoStrip(
                     Box(
                         Modifier
                             .align(Alignment.TopEnd)
+                            .padding(top = top - 3.dp)
                             .size(28.dp)
                             .clickable { onRemove(uri) }
                             .padding(3.dp)
@@ -552,24 +556,20 @@ private fun StyleOption(
     Box(
         modifier
             .heightIn(min = 84.dp)
-            .clip(MaterialTheme.shapes.small)
-            .background(if (selected) c.primaryContainer else MaterialTheme.app.inset)
-            .border(
-                width = if (selected) 1.5.dp else 1.dp,
-                color = if (selected) c.primary else MaterialTheme.app.line,
-                shape = MaterialTheme.shapes.small,
-            )
+            .clip(MaterialTheme.shapes.medium)
+            .background(if (selected) c.primary else Color.Transparent)
+            .border(1.5.dp, if (selected) c.primary else MaterialTheme.app.line2, MaterialTheme.shapes.medium)
             .clickable(onClick = onClick)
             .padding(14.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(end = 18.dp)) {
-            Text(style.displayName, style = MaterialTheme.typography.titleSmall,
-                color = if (selected) c.onPrimaryContainer else c.onSurface)
+            Text(style.displayName, style = CardTitleStyle,
+                color = if (selected) c.onPrimary else MaterialTheme.app.head)
             Text(style.blurb, style = MaterialTheme.typography.bodySmall,
-                color = if (selected) c.onPrimaryContainer else c.onSurfaceVariant)
+                color = if (selected) c.onPrimary else c.onSurfaceVariant)
         }
         if (selected) {
-            Icon(Icons.Filled.CheckCircle, null, tint = c.primary,
+            Icon(Icons.Filled.CheckCircle, null, tint = c.onPrimary,
                 modifier = Modifier.align(Alignment.TopEnd).size(18.dp))
         }
     }
@@ -588,7 +588,7 @@ private fun ModePicker(modes: List<WritingMode>, selected: String, onSelect: (St
                 label = { Text(tr("Modes", "模式")) },
                 leadingIcon = { Icon(Icons.Outlined.Tune, null, Modifier.size(16.dp)) },
                 shape = CircleShape,
-                border = BorderStroke(1.dp, MaterialTheme.app.line2),
+                border = BorderStroke(1.5.dp, MaterialTheme.app.line2),
             )
         }
     }

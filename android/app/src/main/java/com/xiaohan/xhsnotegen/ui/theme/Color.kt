@@ -58,4 +58,16 @@ val GoldMark = Color(0xFFA87700)      // bars, dots and stars on light surfaces 
 val GoldNightContainer = Color(0xFF4A3708)
 val OnGoldNightContainer = Color(0xFFF6DFA5)
 val GoldNightMark = Color(0xFFF2C96B)
+
+// ---- Field (田野): cream paper, forest green, terracotta — the Organic Earth palette ----
+val FieldCream = Color(0xFFF1EADC)
+val FieldForest = Color(0xFF1F3A2B)
+val FieldInk = Color(0xFF24291F)
+val FieldOnForest = Color(0xFFEFE8D8)
+val FieldTerracotta = Color(0xFF9A4424)      // small text and marks on cream (≥ 4.5:1)
+val FieldTerracottaLight = Color(0xFFD97A52) // on the forest night
+val FieldTerracottaInk = Color(0xFF1C1410)   // text on the light terracotta
+val FieldNight = Color(0xFF1A2E22)
+/** The home band at night: one step deeper than the page. */
+val FieldNightBand = Color(0xFF122219)
 val StarNight = Color(0xFFF5B100)

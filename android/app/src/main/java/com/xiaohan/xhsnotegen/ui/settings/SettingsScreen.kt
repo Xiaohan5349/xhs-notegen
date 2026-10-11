@@ -214,11 +214,9 @@ private fun ThemeSwatch(theme: AppTheme, selected: Boolean, modifier: Modifier =
     }
 }
 
-/** Glint and anime-inspired themes preview their art colors; the rest their accent container. */
+/** Themes with art preview its colors; the rest their accent container. */
 private fun swatchBrush(theme: AppTheme, container: Color): Brush = when (theme.backdrop) {
     Backdrop.SKY -> Brush.verticalGradient(listOf(Color(0xFF5AA9F5), Color(0xFFDCEEFF)))
-    Backdrop.SUNSET -> Brush.verticalGradient(listOf(Color(0xFFFFB199), Color(0xFFFF7EB3), Color(0xFFC77DFF)))
-    Backdrop.SEIGAIHA -> Brush.verticalGradient(listOf(Color(0xFFFFDAD3), Color(0xFFDBE1FA)))
     Backdrop.RIPPLE -> Brush.verticalGradient(listOf(Color(0xFF1E6470), Color(0xFFBFE3E5)))
     Backdrop.NONE -> SolidColor(container)
 }

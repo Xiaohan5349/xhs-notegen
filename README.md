@@ -12,7 +12,8 @@ Standalone Android app that generates Xiaohongshu diary-style notes (food, trave
 - **Publishing** straight to Xiaohongshu via the Creator API, or a guided manual handoff (text copied, photos saved in order, XHS opened)
 - **Life diary** — photo-feed home with filters (Drafts / Ready / Posted), your own tags, multi-select actions, and grouping by place, tag, rating or writing mode (order set in Settings); import/export JSON backups
 - **Organize by place** — each note gets a place from its photo's GPS (with your permission; the Android photo picker otherwise strips it) or from its area / restaurant name
-- **Themes** — six classic palettes (Tomato, Matcha, Blueberry, Sakura, Sesame, Latte) the signature Glint theme (water ripples and drifting glints), and three anime-inspired ones with drawn backdrops (Summer Sky, City Pop, Matsuri), each with System / Light / Dark mode
+- **Look** — a seasonal-journal style: serif titles, photo covers in arched frames, a round seal for each note's status, and a home band whose ring shows how many notes are posted and ready
+- **Themes** — two signature themes, Field (cream, forest green and terracotta; the default for new installs) and Glint (water ripples and drifting glints), plus seven classic palettes (Tomato, Matcha, Blueberry, Sakura, Sesame, Latte, Summer Sky), each with System / Light / Dark mode
 
 ## Setup
 

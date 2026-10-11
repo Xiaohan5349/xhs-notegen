@@ -5,11 +5,13 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
@@ -29,13 +31,22 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.layout.layout
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.xiaohan.xhsnotegen.domain.NoteDraft
@@ -46,15 +57,18 @@ import com.xiaohan.xhsnotegen.domain.TagTree
 import com.xiaohan.xhsnotegen.i18n.LanguageStore
 import com.xiaohan.xhsnotegen.i18n.tr
 import com.xiaohan.xhsnotegen.ui.components.AppFilterChip
+import com.xiaohan.xhsnotegen.ui.components.ArchShape
 import com.xiaohan.xhsnotegen.ui.components.CardStars
 import com.xiaohan.xhsnotegen.ui.components.EmptyState
 import com.xiaohan.xhsnotegen.ui.components.RatingDialog
 import com.xiaohan.xhsnotegen.ui.components.RatingMeter
-import com.xiaohan.xhsnotegen.ui.components.StatusPill
-import com.xiaohan.xhsnotegen.ui.components.Tile
+import com.xiaohan.xhsnotegen.ui.components.StatusSeal
+import com.xiaohan.xhsnotegen.ui.components.dashedBorder
 import com.xiaohan.xhsnotegen.ui.components.softFieldColors
 import com.xiaohan.xhsnotegen.ui.publish.XhsAuthStore
-import com.xiaohan.xhsnotegen.ui.theme.BigNumberStyle
+import com.xiaohan.xhsnotegen.ui.theme.BandNumberStyle
+import com.xiaohan.xhsnotegen.ui.theme.CardTitleStyle
+import com.xiaohan.xhsnotegen.ui.theme.HeroTitleStyle
 import com.xiaohan.xhsnotegen.ui.theme.NumberStyle
 import com.xiaohan.xhsnotegen.ui.theme.ThemeBackdrop
 import com.xiaohan.xhsnotegen.ui.theme.app
@@ -101,6 +115,7 @@ fun DraftListScreen(
     BackHandler(enabled = selecting) { viewModel.clearSelection() }
 
     val total = state.counts[DraftFilter.ALL] ?: 0
+    val heroGone by remember { derivedStateOf { gridState.firstVisibleItemIndex > 0 } }
     // The first note of each group (or of the whole feed) gets a full-width tile.
     val featured = remember(state.feed) {
         buildSet {
@@ -130,7 +145,8 @@ fun DraftListScreen(
                 )
             } else {
                 TopAppBar(
-                    title = { Text(tr("Glint", "浮生拾遗"), style = MaterialTheme.typography.headlineSmall, maxLines = 1) },
+                    // The big title in the list says it already; this one shows once that scrolls away.
+                    title = { if (heroGone || total == 0) Text(tr("Glint", "浮生拾遗"), style = MaterialTheme.typography.headlineSmall, maxLines = 1) },
                     actions = {
                         IconButton(onClick = onOpenSettings) {
                             BadgedBox(badge = {
@@ -187,6 +203,7 @@ fun DraftListScreen(
                 text = { Text(tr("New note", "写笔记")) },
                 containerColor = MaterialTheme.colorScheme.primary,
                 contentColor = MaterialTheme.colorScheme.onPrimary,
+                shape = CircleShape,
             )
         },
         snackbarHost = { SnackbarHost(snackbarHostState) },
@@ -196,13 +213,16 @@ fun DraftListScreen(
             columns = StaggeredGridCells.Fixed(2),
             state = gridState,
             modifier = Modifier.fillMaxSize().padding(padding),
-            contentPadding = PaddingValues(start = 14.dp, end = 14.dp, top = 4.dp, bottom = 96.dp),
-            verticalItemSpacing = 10.dp,
-            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            contentPadding = PaddingValues(start = PagePadding, end = PagePadding, top = 0.dp, bottom = 96.dp),
+            verticalItemSpacing = 16.dp,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
         ) {
             if (total > 0) {
+                item(span = StaggeredGridItemSpan.FullLine, key = "hero") {
+                    HomeHero(total, state.counts[DraftFilter.READY] ?: 0)
+                }
                 item(span = StaggeredGridItemSpan.FullLine, key = "stats") {
-                    StatsTiles(state.counts, state.filter, viewModel::setFilter)
+                    ProgressBand(state.counts, state.filter, viewModel::setFilter, Modifier.bleed(PagePadding))
                 }
                 item(span = StaggeredGridItemSpan.FullLine, key = "controls") {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
@@ -227,7 +247,7 @@ fun DraftListScreen(
                             title = tr("Your diary is empty", "还没有笔记"),
                             body = tr("Snap a photo, jot down a few words, and get a note that sounds like you.", "拍张照，随手写几句，就能得到一篇像你自己写的笔记。"),
                             action = {
-                                Button(onClick = onCreateClick, shape = MaterialTheme.shapes.medium) {
+                                Button(onClick = onCreateClick) {
                                     Icon(Icons.Filled.Add, null, Modifier.size(18.dp))
                                     Spacer(Modifier.width(8.dp))
                                     Text(tr("Write your first note", "写第一篇笔记"))
@@ -401,73 +421,121 @@ private fun StatusMenuItems(onPick: (NoteStatus) -> Unit) {
 }
 
 // ---------------------------------------------------------------------------
-// Status tiles: the counts are the filter
+// Hero and band: the counts are the filter
 // ---------------------------------------------------------------------------
 
+private val PagePadding = 20.dp
+
+/** Lets a full-line item reach the screen edges past the grid's side padding. */
+private fun Modifier.bleed(padding: Dp) = layout { measurable, constraints ->
+    val extra = padding.roundToPx() * 2
+    val placeable = measurable.measure(constraints.copy(minWidth = constraints.maxWidth + extra, maxWidth = constraints.maxWidth + extra))
+    layout(constraints.maxWidth, placeable.height) { placeable.place(-extra / 2, 0) }
+}
+
 @Composable
-private fun StatsTiles(counts: Map<DraftFilter, Int>, selected: DraftFilter, onSelect: (DraftFilter) -> Unit) {
+private fun HomeHero(total: Int, ready: Int) {
+    val c = MaterialTheme.colorScheme
+    val accent = MaterialTheme.app.accent2
+    Column(Modifier.fillMaxWidth().padding(top = 2.dp, bottom = 2.dp)) {
+        Text(
+            buildAnnotatedString {
+                if (LanguageStore.isZh) {
+                    append("浮生")
+                    withStyle(SpanStyle(color = accent)) { append("拾遗") }
+                } else append("Glint")
+            },
+            style = HeroTitleStyle, color = c.primary,
+        )
+        Text(tr("$total notes · $ready ready to post", "$total 篇 · $ready 篇待发布"),
+            style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant)
+    }
+}
+
+/**
+ * The deep band under the title: a ring for all notes (gold arc = posted, light arc =
+ * ready, bare track = drafts) and a list of the three statuses. Tapping any of them filters.
+ */
+@Composable
+private fun ProgressBand(counts: Map<DraftFilter, Int>, selected: DraftFilter, onSelect: (DraftFilter) -> Unit, modifier: Modifier = Modifier) {
     val total = counts[DraftFilter.ALL] ?: 0
     val posted = counts[DraftFilter.SHARED] ?: 0
     val ready = counts[DraftFilter.READY] ?: 0
     val drafts = counts[DraftFilter.DRAFTS] ?: 0
     val a = MaterialTheme.app
-    Row(Modifier.fillMaxWidth().height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        Tile(
-            modifier = Modifier.weight(1.55f).fillMaxHeight(),
-            selected = selected == DraftFilter.ALL,
-            onClick = { onSelect(DraftFilter.ALL) },
-            contentPadding = PaddingValues(0.dp),
+    val readyInk = a.onBand.copy(alpha = 0.7f)
+    Box(modifier.fillMaxWidth().background(a.band)) {
+        // The theme's art (Glint ripples, summer sky) sits around the ring, never under the list.
+        ThemeBackdrop(Modifier.matchParentSize(), inBand = true)
+        Row(
+            Modifier.padding(horizontal = PagePadding, vertical = 16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(18.dp),
         ) {
-            Box(Modifier.fillMaxSize()) {
-                // The theme's art (Glint ripples, summer sky, …) lives here now.
-                ThemeBackdrop(Modifier.matchParentSize(), inTile = true)
-                Column(Modifier.padding(14.dp)) {
-                    Text(tr("All notes", "全部笔记"), style = MaterialTheme.typography.labelMedium, color = LocalContentColor.current)
-                    Row(verticalAlignment = Alignment.Bottom) {
-                        Text("$total", style = BigNumberStyle)
-                        Spacer(Modifier.width(4.dp))
-                        Text(tr("notes", "篇"), style = MaterialTheme.typography.labelMedium, modifier = Modifier.padding(bottom = 10.dp))
-                    }
-                    Spacer(Modifier.height(8.dp))
-                    Row(Modifier.fillMaxWidth().height(8.dp).clip(RoundedCornerShape(4.dp)), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
-                        if (posted > 0) Box(Modifier.weight(posted.toFloat()).fillMaxHeight().background(a.goldMark))
-                        if (ready > 0) Box(Modifier.weight(ready.toFloat()).fillMaxHeight().background(MaterialTheme.colorScheme.primary))
-                        if (drafts > 0) Box(Modifier.weight(drafts.toFloat()).fillMaxHeight().background(a.line2))
-                    }
-                    Spacer(Modifier.height(6.dp))
-                    Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                        Legend(a.goldMark, tr("Posted", "已发布"), posted)
-                        Legend(MaterialTheme.colorScheme.primary, tr("Ready", "待发"), ready)
-                        Legend(a.line2, tr("Drafts", "草稿"), drafts)
-                    }
-                }
+            ProgressRing(total, posted, ready, selected == DraftFilter.ALL) { onSelect(DraftFilter.ALL) }
+            Column(Modifier.weight(1f)) {
+                BandRow(tr("Ready", "待发布"), ready, readyInk, selected == DraftFilter.READY, first = true) { onSelect(DraftFilter.READY) }
+                BandRow(tr("Drafts", "草稿"), drafts, a.onBand.copy(alpha = 0.3f), selected == DraftFilter.DRAFTS) { onSelect(DraftFilter.DRAFTS) }
+                BandRow(tr("Posted", "已发布"), posted, a.bandGold, selected == DraftFilter.SHARED) { onSelect(DraftFilter.SHARED) }
             }
         }
-        Column(Modifier.weight(1f), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            CountTile(tr("Ready", "待发布"), ready, MaterialTheme.colorScheme.primary, selected == DraftFilter.READY) { onSelect(DraftFilter.READY) }
-            CountTile(tr("Drafts", "草稿"), drafts, a.line2, selected == DraftFilter.DRAFTS) { onSelect(DraftFilter.DRAFTS) }
-            CountTile(tr("Posted", "已发布"), posted, a.goldMark, selected == DraftFilter.SHARED) { onSelect(DraftFilter.SHARED) }
+    }
+}
+
+@Composable
+private fun ProgressRing(total: Int, posted: Int, ready: Int, selected: Boolean, onClick: () -> Unit) {
+    val a = MaterialTheme.app
+    Box(
+        Modifier
+            .size(108.dp)
+            .clip(CircleShape)
+            .selectable(selected = selected, role = Role.Tab, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Canvas(Modifier.matchParentSize()) {
+            val stroke = 7.dp.toPx()
+            val inset = 4.dp.toPx() + stroke / 2   // room for the "selected" outline
+            val arcSize = androidx.compose.ui.geometry.Size(size.width - inset * 2, size.height - inset * 2)
+            val topLeft = androidx.compose.ui.geometry.Offset(inset, inset)
+            // A solid disc so the theme art never shows behind the count.
+            drawCircle(a.band, radius = arcSize.width / 2 + stroke / 2)
+            drawArc(a.onBand.copy(alpha = 0.18f), 0f, 360f, false, topLeft, arcSize, style = Stroke(stroke))
+            if (total > 0) {
+                val gap = if (posted > 0 && ready > 0) 3f else 0f
+                val postedSweep = 360f * posted / total
+                val readySweep = 360f * ready / total
+                if (posted > 0) drawArc(a.bandGold, -90f, postedSweep - gap, false, topLeft, arcSize, style = Stroke(stroke))
+                if (ready > 0) drawArc(a.onBand.copy(alpha = 0.7f), -90f + postedSweep + gap / 2, readySweep - gap, false, topLeft, arcSize, style = Stroke(stroke))
+            }
+            if (selected) drawCircle(a.onBand, radius = size.width / 2 - 0.75.dp.toPx(), style = Stroke(1.5.dp.toPx()))
+        }
+        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+            Text("$total", style = BandNumberStyle.copy(fontSize = 30.sp, lineHeight = 32.sp), color = a.onBand)
+            Text(tr("All notes", "全部笔记"), style = MaterialTheme.typography.labelSmall, color = a.onBand)
         }
     }
 }
 
 @Composable
-private fun Legend(color: Color, label: String, n: Int) {
-    Row(verticalAlignment = Alignment.CenterVertically) {
-        Box(Modifier.size(7.dp).clip(CircleShape).background(color))
-        Spacer(Modifier.width(4.dp))
-        Text("$label $n", style = NumberStyle, color = LocalContentColor.current, maxLines = 1)
-    }
-}
-
-@Composable
-private fun CountTile(label: String, n: Int, dot: Color, selected: Boolean, onClick: () -> Unit) {
-    Tile(Modifier.fillMaxWidth(), selected = selected, onClick = onClick, contentPadding = PaddingValues(horizontal = 12.dp, vertical = 10.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(Modifier.size(7.dp).clip(CircleShape).background(dot))
-            Spacer(Modifier.width(6.dp))
-            Text(label, style = MaterialTheme.typography.labelMedium, modifier = Modifier.weight(1f), maxLines = 1)
-            Text("$n", style = MaterialTheme.typography.titleLarge)
+private fun BandRow(label: String, n: Int, dot: Color, selected: Boolean, first: Boolean = false, onClick: () -> Unit) {
+    val a = MaterialTheme.app
+    Column {
+        if (!first) HorizontalDivider(color = a.onBand.copy(alpha = 0.25f))
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .heightIn(min = 40.dp)
+                .selectable(selected = selected, role = Role.Tab, onClick = onClick)
+                .then(if (selected) Modifier.background(a.onBand.copy(alpha = 0.10f)) else Modifier)
+                .padding(start = if (selected) 10.dp else 2.dp, end = 2.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(Modifier.size(8.dp).clip(CircleShape).background(dot))
+            Spacer(Modifier.width(8.dp))
+            Text(label, style = MaterialTheme.typography.labelLarge,
+                fontWeight = if (selected) FontWeight.SemiBold else FontWeight.Normal,
+                color = a.onBand, modifier = Modifier.weight(1f), maxLines = 1)
+            Text("$n", style = BandNumberStyle, color = a.onBand)
         }
     }
 }
@@ -535,15 +603,15 @@ private fun TagFilterBox(
             Modifier
                 .fillMaxWidth()
                 .padding(top = 6.dp)
-                .clip(MaterialTheme.shapes.small)
-                .background(MaterialTheme.colorScheme.primaryContainer)
+                .clip(MaterialTheme.shapes.medium)
+                .background(MaterialTheme.app.tile2)
                 .padding(start = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             LazyRow(Modifier.weight(1f), horizontalArrangement = Arrangement.spacedBy(6.dp), verticalAlignment = Alignment.CenterVertically) {
                 items(path, key = { "p${it.id}" }) { p ->
-                    Text("${p.name} ›", style = MaterialTheme.typography.labelLarge, fontWeight = FontWeight.SemiBold,
-                        color = MaterialTheme.colorScheme.onPrimaryContainer,
+                    Text("${p.name} ›", style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.clip(RoundedCornerShape(6.dp)).clickable { focusId = p.id }.padding(4.dp))
                 }
                 item(key = "all") {
@@ -558,7 +626,7 @@ private fun TagFilterBox(
                 }
             }
             IconButton(onClick = { focusId = null }) {
-                Icon(Icons.Filled.Close, tr("Close", "收起"), tint = MaterialTheme.colorScheme.onPrimaryContainer)
+                Icon(Icons.Filled.Close, tr("Close", "收起"), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
     }
@@ -571,13 +639,13 @@ private fun AllTagsChip(count: Int, onClick: () -> Unit) {
             .padding(vertical = 8.dp)
             .heightIn(min = 32.dp)
             .clip(CircleShape)
-            .border(1.dp, MaterialTheme.colorScheme.primary, CircleShape)
+            .dashedBorder(MaterialTheme.app.line2, 16.dp)
             .clickable(onClick = onClick)
             .padding(horizontal = 12.dp),
         contentAlignment = Alignment.Center,
     ) {
         Text(tr("All $count ›", "全部 $count 个 ›"), style = MaterialTheme.typography.labelLarge,
-            color = MaterialTheme.colorScheme.onPrimaryContainer, fontWeight = FontWeight.SemiBold)
+            color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 
@@ -648,7 +716,7 @@ private fun AllTagsSheet(
                     }
                 }
             }
-            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(48.dp), shape = MaterialTheme.shapes.small) {
+            Button(onClick = onDismiss, modifier = Modifier.fillMaxWidth().height(48.dp)) {
                 Text(tr("Done", "完成"))
             }
         }
@@ -668,12 +736,10 @@ private fun GroupRow(
     onOrganize: () -> Unit,
 ) {
     Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(4.dp)) {
             Text(tr("Group", "分组"), style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                modifier = Modifier.align(Alignment.CenterVertically).padding(end = 2.dp))
-            state.groupOrder.forEach { g ->
-                AppFilterChip(selected = g == state.groupBy, onClick = { onGroupBy(g) }, label = g.label)
-            }
+                modifier = Modifier.align(Alignment.CenterVertically).padding(end = 6.dp))
+            state.groupOrder.forEach { g -> GroupTab(g.label, g == state.groupBy) { onGroupBy(g) } }
         }
         // On its own line: with the Group buttons in English there is no room for it beside them.
         if (state.groupBy == GroupBy.PLACE && state.unplacedCount > 0 && organizing == null) {
@@ -696,52 +762,76 @@ private fun GroupRow(
     }
 }
 
+/** A word you tap; the chosen one turns serif with an accent rule underneath. */
+@Composable
+private fun GroupTab(label: String, selected: Boolean, onClick: () -> Unit) {
+    val accent = MaterialTheme.app.accent2
+    Box(
+        Modifier
+            .heightIn(min = 40.dp)
+            .clip(RoundedCornerShape(8.dp))
+            .selectable(selected = selected, role = Role.Tab, onClick = onClick)
+            .padding(horizontal = 6.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(
+            label,
+            style = if (selected) MaterialTheme.typography.titleMedium.copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontWeight = FontWeight.Normal)
+            else MaterialTheme.typography.labelLarge.copy(fontWeight = FontWeight.Normal),
+            color = if (selected) MaterialTheme.app.head else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = if (selected) Modifier.drawUnderline(accent) else Modifier,
+        )
+    }
+}
+
+private fun Modifier.drawUnderline(color: Color) = this.then(
+    Modifier.drawBehind { drawLine(color, androidx.compose.ui.geometry.Offset(0f, size.height), androidx.compose.ui.geometry.Offset(size.width, size.height), strokeWidth = 1.5.dp.toPx()) }
+)
+
 @Composable
 private fun GroupHeaderRow(header: GroupHeader, collapsed: Boolean, onToggle: () -> Unit) {
     val arrow by animateFloatAsState(if (collapsed) -90f else 0f, label = "arrow")
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clip(MaterialTheme.shapes.small)
-            .clickable(onClick = onToggle)
-            .padding(
-                // Deeper levels step in, up to a point, so long branches still fit.
-                start = if (header.level == 0) 2.dp else (2 + 12 * header.level.coerceAtMost(4)).dp,
-                top = if (header.level == 0) 10.dp else 2.dp,
-                bottom = 2.dp,
-            ),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Icon(Icons.Outlined.ExpandMore, contentDescription = if (collapsed) tr("Expand", "展开") else tr("Collapse", "收起"),
-            modifier = Modifier.size(20.dp).rotate(arrow), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-        Spacer(Modifier.width(6.dp))
-        if (header.rating != null) {
-            // Rating groups: a level meter in the theme color, not stars (stars belong to the cards).
-            if (header.rating > 0) {
-                RatingMeter(header.rating)
-                Spacer(Modifier.width(10.dp))
+    val c = MaterialTheme.colorScheme
+    val top = header.level == 0
+    Column(Modifier.fillMaxWidth().padding(top = if (top) 12.dp else 0.dp)) {
+        Row(
+            Modifier
+                .fillMaxWidth()
+                .clip(MaterialTheme.shapes.small)
+                .clickable(onClick = onToggle)
+                .padding(
+                    // Deeper levels step in, up to a point, so long branches still fit.
+                    start = if (top) 0.dp else (12 * header.level.coerceAtMost(4)).dp,
+                    top = 4.dp, bottom = 6.dp,
+                ),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            if (header.rating != null) {
+                // Rating groups: a level meter in the theme color, not stars (stars belong to the cards).
+                if (header.rating > 0) {
+                    RatingMeter(header.rating)
+                    Spacer(Modifier.width(10.dp))
+                }
+                Text(header.title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f, fill = false),
+                    color = if (header.rating > 0) MaterialTheme.app.head else c.onSurfaceVariant)
+            } else if (top) {
+                Text(header.title, style = MaterialTheme.typography.headlineSmall.copy(fontSize = 24.sp, lineHeight = 30.sp),
+                    color = MaterialTheme.app.head, modifier = Modifier.weight(1f, fill = false))
+            } else {
+                Icon(if (header.key.startsWith("tag:")) Icons.Outlined.Label else Icons.Outlined.Place, null,
+                    Modifier.size(16.dp), tint = MaterialTheme.app.accent2)
+                Spacer(Modifier.width(4.dp))
+                Text(header.title, style = (if (header.level == 1) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall)
+                    .copy(fontFamily = androidx.compose.ui.text.font.FontFamily.Serif, fontWeight = FontWeight.Normal),
+                    color = MaterialTheme.app.head, modifier = Modifier.weight(1f, fill = false))
             }
-            Text(header.title, style = MaterialTheme.typography.titleLarge, modifier = Modifier.weight(1f, fill = false),
-                color = if (header.rating > 0) MaterialTheme.colorScheme.onBackground else MaterialTheme.colorScheme.onSurfaceVariant)
-        } else if (header.level == 0) {
-            Text(header.title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f, fill = false))
-        } else {
-            Icon(if (header.key.startsWith("tag:")) Icons.Outlined.Label else Icons.Outlined.Place, null,
-                Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
-            Spacer(Modifier.width(4.dp))
-            Text(header.title, style = if (header.level == 1) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
-                modifier = Modifier.weight(1f, fill = false))
+            Spacer(Modifier.width(10.dp))
+            Text(tr("${header.count}", "${header.count} 篇"), style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant)
+            Spacer(Modifier.weight(1f))
+            Icon(Icons.Outlined.ExpandMore, contentDescription = if (collapsed) tr("Expand", "展开") else tr("Collapse", "收起"),
+                modifier = Modifier.size(22.dp).rotate(arrow), tint = c.onSurfaceVariant)
         }
-        Spacer(Modifier.width(8.dp))
-        Text(
-            "${header.count}",
-            style = NumberStyle,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-            modifier = Modifier
-                .clip(CircleShape)
-                .background(MaterialTheme.app.inset)
-                .padding(horizontal = 8.dp, vertical = 2.dp),
-        )
+        if (top) HorizontalDivider(color = MaterialTheme.app.line2)
     }
 }
 
@@ -773,34 +863,32 @@ private fun NoteCard(
     val cover = draft.publishPhotoUris.firstOrNull()
     val place = draft.foodInfo.place
 
-    Surface(
-        shape = MaterialTheme.shapes.medium,
-        color = MaterialTheme.app.tile,
-        border = if (selected) BorderStroke(2.5.dp, MaterialTheme.colorScheme.primary) else BorderStroke(1.dp, MaterialTheme.app.line),
-        modifier = Modifier
+    val arch = remember { ArchShape() }
+    val page = MaterialTheme.colorScheme.background
+    // Not clipped: the seal hangs off the cover's corner.
+    Column(
+        Modifier
             .fillMaxWidth()
-            .clip(MaterialTheme.shapes.medium)
             .combinedClickable(onClick = onClick, onLongClick = onLongClick),
     ) {
-        Column {
-            Box(Modifier.fillMaxWidth().aspectRatio(if (featured) 4f / 3f else 3f / 4f)) {
+        Box(Modifier.fillMaxWidth().padding(bottom = 6.dp)) {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(if (featured) 16f / 10f else 3f / 4f)
+                    .clip(arch)
+                    .then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, arch) else Modifier),
+            ) {
                 CoverPlaceholder(draft.foodInfo.restaurantName)
                 if (cover != null) {
                     AsyncImage(model = cover, contentDescription = null, contentScale = ContentScale.Crop,
                         modifier = Modifier.fillMaxSize())
                 }
-                // Legibility scrim for the overlaid chips.
-                Box(
-                    Modifier.fillMaxWidth().height(56.dp).background(
-                        Brush.verticalGradient(listOf(Color.Black.copy(alpha = 0.28f), Color.Transparent))
-                    )
-                )
-                StatusPill(draft.status, Modifier.align(Alignment.TopStart).padding(8.dp))
                 if (selecting) {
                     Box(
                         Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp)
+                            .align(Alignment.BottomStart)
+                            .padding(10.dp)
                             .size(26.dp)
                             .clip(CircleShape)
                             .background(if (selected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.3f))
@@ -810,21 +898,27 @@ private fun NoteCard(
                         if (selected) Icon(Icons.Filled.Check, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimary)
                     }
                 } else if (draft.photoUris.size > 1) {
-                    Text(
-                        "×${draft.photoUris.size}",
-                        style = NumberStyle, color = Color.White,
-                        modifier = Modifier
-                            .align(Alignment.TopEnd)
-                            .padding(8.dp)
-                            .clip(RoundedCornerShape(6.dp))
-                            .background(Color.Black.copy(alpha = 0.55f))
-                            .padding(horizontal = 6.dp, vertical = 1.dp),
-                    )
+                    Row(
+                        Modifier
+                            .align(Alignment.BottomStart)
+                            .padding(10.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.48f))
+                            .padding(horizontal = 7.dp, vertical = 2.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(Icons.Outlined.PhotoLibrary, null, Modifier.size(13.dp), tint = Color.White)
+                        Spacer(Modifier.width(3.dp))
+                        Text("${draft.photoUris.size}", style = MaterialTheme.typography.labelSmall, color = Color.White)
+                    }
                 }
             }
+            StatusSeal(draft.status, ringColor = page, modifier = Modifier.align(Alignment.BottomEnd).offset(x = 6.dp, y = 6.dp))
+        }
 
-            Column(Modifier.padding(start = 12.dp, end = 4.dp, top = 10.dp, bottom = 4.dp)) {
-                Text(title, style = if (featured) MaterialTheme.typography.titleMedium else MaterialTheme.typography.titleSmall,
+        Column {
+            Column(Modifier.padding(start = 2.dp, top = 6.dp)) {
+                Text(title, style = if (featured) CardTitleStyle.copy(fontSize = 19.sp, lineHeight = 26.sp) else CardTitleStyle,
                     maxLines = 2, overflow = TextOverflow.Ellipsis, modifier = Modifier.padding(end = 8.dp))
                 // Always visible; tap a star to rate without opening the note.
                 CardStars(
@@ -836,7 +930,7 @@ private fun NoteCard(
                     Text(
                         draft.tags.joinToString(" · ") { it.name },
                         style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.primary,
+                        color = MaterialTheme.app.head,
                         maxLines = 1,
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.padding(top = 2.dp, end = 8.dp),

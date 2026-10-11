@@ -5,12 +5,19 @@
 ### Added
 - **Filter by several tags at once** on the home screen. Tags under the same top-level tag combine as "or", different ones as "and": 京都 + 大阪 + 拉面 shows ramen in Kyoto or Osaka. Picking 京都 also picks 日本; un-picking it goes back to all of 日本
 - Tag counts on each tag, and an **All tags** sheet with search, multi-select and Clear
+- New **Field · 田野** theme (Signature): cream paper, forest green and a little terracotta, with a forest night in dark mode. New installs start with it; if you already picked a theme, it stays
 
 ### Changed
-- Refreshed look across the app: tiles with hairline edges and tighter corners, one style of filter chip, inset segmented choices, and a 4-column photo grid with "Show all N" on the create and review screens
-- Home screen opens with the note counts: a big "All notes" tile plus Ready / Drafts / Posted tiles that filter when tapped
+- New look across the app, like a seasonal journal: serif titles and numbers, photo covers in arched frames, a round seal for each note's status (gold when posted), pill buttons and chips, and fields written on the page with a rule underneath
+- Home screen opens with the app name and a deep band: a ring shows how many notes are posted (gold) and ready (light), and Ready / Drafts / Posted sit beside it — tap the ring or a row to filter. The theme's art (Glint ripples, summer sky) is drawn around the ring
+- Grouping is a row of words; the chosen one is underlined. Group headers are serif with a rule underneath
+- Review: rating and place are two ruled rows, styles are pills, and the Post button sits on the deep band
+- 4-column photo grid with "Show all N" on the create and review screens; the cover photo has an arched top
 - "Posted" is gold in every theme; star colors follow the theme
 - Two accent colors are slightly darker so white text on them is easier to read
+
+### Removed
+- The **Matsuri · 祭典** and **City Pop · 城市流行** themes: they shared their main color with Tomato and Sakura. If you used one, the app switches to Tomato or Sakura. The "Anime-inspired" group is gone; Summer Sky is now under Classic
 
 ## v1.10.0 — 2026-09-30
 
