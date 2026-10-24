@@ -62,9 +62,9 @@ Room schemas are exported to `android/app/schemas/` — commit them, and add a `
 
 ## How It Works
 
-1. Pick 1-20 food photos → EXIF fills the date/time; allow photo access to also fill the place from GPS
-2. Fill in dish names, restaurant, and — ideally — a few words of your own
-3. Gemini writes 4 diary-style variants in one request (photos are sent once)
+1. Pick a writing mode and its photos (up to the mode's limit) → EXIF fills the date/time; allow photo access to also fill the place from GPS
+2. Fill in the mode's form (for food: dishes and restaurant) and — ideally — a few words of your own
+3. Your chosen AI model writes 4 diary-style variants in one request (photos are sent once)
 4. Review, edit, and choose which photos to post and in what order
 5. One-tap publish to your XHS account via the Creator API; if that fails, a guided manual handoff
 
@@ -76,7 +76,7 @@ The prompts live in `ui/generate/FoodPrompts.kt` and are written in Chinese. The
 
 - Kotlin + Jetpack Compose
 - Room database
-- OkHttp (Gemini API + XHS Creator API)
+- OkHttp (AI provider APIs + XHS Creator API)
 - Pure Kotlin x-s signing (ported from [ReaJason/xhs](https://github.com/ReaJason/xhs))
 
 ## Limitations

@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Docs
+- README "How It Works" now describes writing modes and any AI provider instead of food photos and Gemini only.
+
 ## v1.11.0 — 2026-10-24
 
 ### Added
