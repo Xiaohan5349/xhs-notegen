@@ -2,9 +2,6 @@
 
 ## Unreleased
 
-### Docs
-- The project is now under the **MIT License** (`LICENSE`). The x-s signing ported from ReaJason/xhs keeps its MIT notice in `THIRD_PARTY_NOTICES.md`
-
 ## v1.11.0 — 2026-10-24
 
 ### Added
@@ -33,6 +30,10 @@
 ### Removed
 - **Group by Tag** on the home screen: search and the tag row filter by tags. If tag grouping was on, the home screen opens ungrouped
 - The **Matsuri · 祭典** and **City Pop · 城市流行** themes: they shared their main color with Tomato and Sakura. If you used one, the app switches to Tomato or Sakura. The "Anime-inspired" group is gone; Summer Sky is now under Classic
+
+### Docs
+- The project is now under the **MIT License** (`LICENSE`). The x-s signing ported from ReaJason/xhs keeps its MIT notice in `THIRD_PARTY_NOTICES.md`
+- README limitations are up to date: photo notes only, one XHS account, keys and cookies not encrypted (the old "food notes only" line is gone — there are 8 writing modes plus your own)
 
 ## v1.10.0 — 2026-09-30
 

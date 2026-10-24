@@ -81,7 +81,9 @@ The prompts live in `ui/generate/FoodPrompts.kt` and are written in Chinese. The
 
 ## Limitations
 
-- Food notes only (museum/travel/concert not yet built)
+- Photo notes only — no video notes yet
+- One Xiaohongshu account at a time
+- API keys and the XHS login cookies are stored in plain app storage (private to the app, but not encrypted)
 - XHS login expires after several weeks — the app detects this and asks you to log in again
 - The Creator API and its x-s signing are unofficial and can change without notice (signing is covered by golden tests against the upstream Python implementation)
 - Backups contain note text only, not photos
