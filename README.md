@@ -85,3 +85,7 @@ The prompts live in `ui/generate/FoodPrompts.kt` and are written in Chinese. The
 - XHS login expires after several weeks — the app detects this and asks you to log in again
 - The Creator API and its x-s signing are unofficial and can change without notice (signing is covered by golden tests against the upstream Python implementation)
 - Backups contain note text only, not photos
+
+## License
+
+MIT — see [LICENSE](LICENSE). The x-s signing is ported from [ReaJason/xhs](https://github.com/ReaJason/xhs) (MIT); its notice is in [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

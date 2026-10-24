@@ -2,6 +2,9 @@
 
 ## Unreleased
 
+### Docs
+- The project is now under the **MIT License** (`LICENSE`). The x-s signing ported from ReaJason/xhs keeps its MIT notice in `THIRD_PARTY_NOTICES.md`
+
 ## v1.11.0 — 2026-10-24
 
 ### Added
