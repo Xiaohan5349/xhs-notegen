@@ -107,11 +107,12 @@ fun RatingDialog(noteCount: Int, initial: Int, onSave: (Int) -> Unit, onDismiss:
 }
 
 fun ratingWords(rating: Int): String = when (rating) {
-    1 -> tr("Wouldn't go back", "不会再去")
-    2 -> tr("Meh", "一般")
-    3 -> tr("Fine", "还行")
-    4 -> tr("Good — would go again", "不错，还会再去")
-    5 -> tr("Loved it", "超喜欢")
+    // The "从夯到拉" tier list; English uses the matching letter tiers.
+    1 -> tr("D tier", "拉完了")
+    2 -> tr("C tier", "NPC")
+    3 -> tr("B tier", "人上人")
+    4 -> tr("A tier", "顶级")
+    5 -> tr("S tier", "夯")
     else -> tr("Not rated", "未评分")
 }
 

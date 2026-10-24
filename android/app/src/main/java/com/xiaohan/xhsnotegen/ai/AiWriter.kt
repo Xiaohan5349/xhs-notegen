@@ -416,7 +416,7 @@ object AiWriter {
             .build()
     )
 
-    private fun get(url: String, headers: Map<String, String>): RawResult = timed(
+    internal fun get(url: String, headers: Map<String, String>): RawResult = timed(
         Request.Builder().url(url).apply { headers.forEach { (k, v) -> addHeader(k, v) } }.get().build()
     )
 

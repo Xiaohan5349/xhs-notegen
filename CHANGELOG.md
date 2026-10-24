@@ -2,12 +2,23 @@
 
 ## Unreleased
 
+## v1.11.0 — 2026-10-24
+
 ### Added
 - **Filter by several tags at once** on the home screen. Tags under the same top-level tag combine as "or", different ones as "and": 京都 + 大阪 + 拉面 shows ramen in Kyoto or Osaka. Picking 京都 also picks 日本; un-picking it goes back to all of 日本
 - Tag counts on each tag, and an **All tags** sheet with search, multi-select and Clear
 - New **Field · 田野** theme (Signature): cream paper, forest green and a little terracotta, with a forest night in dark mode. New installs start with it; if you already picked a theme, it stays
+- **Three home layouts**, from the button at the top of the home screen: Grid (as before), List (thumbnail rows) and Gallery (covers only, three across). The app remembers your choice
+- **Topics → tags** on the review screen: tap a #topic to also give the note a tag of the same name (tap again to take it off), or **Tag all**. Topics that are tags are marked
+- **Search** on the home screen: type a place, tag, mode, rating ("4", "4星") or any words, and pick what you meant. Each pick becomes a chip; picks of the same kind are "or", different kinds are "and" (京都 + 大阪 + Food + 4★+), and every word you add must appear. Places match the country, province or city of the note's place, not tags. The most-used tags still sit under the box for one tap
+- **Hold to copy** the place and date on the new-note screen and the address on the review screen
+- **Read the model list** for every provider, not only Custom. The list is kept, so next time it opens without a request; the refresh button reads it again
+- **Check balance** in AI settings for DeepSeek and for OpenRouter (Custom address openrouter.ai). OpenRouter shows what the key has left, or what it has used if it has no limit. OpenAI, Claude and Gemini don't offer a balance to API keys
 
 ### Changed
+- Debug builds carry their build time, e.g. `浮生拾遗-1.11.0-debug-1023-2348.apk`, and the same in the app's version name
+- Adding a #topic on the review screen: a ✓ appears while you type — tap it to add. Tapping elsewhere also adds what you typed instead of dropping it, and typing "#" starts the next topic
+- Rating words follow the "从夯到拉" tiers: 拉完了 · NPC · 人上人 · 顶级 · 夯 (English: D–S tier)
 - New look across the app, like a seasonal journal: serif titles and numbers, photo covers in arched frames, a round seal for each note's status (gold when posted), pill buttons and chips, and fields written on the page with a rule underneath
 - Home screen opens with the app name and a deep band: a ring shows how many notes are posted (gold) and ready (light), and Ready / Drafts / Posted sit beside it — tap the ring or a row to filter. The theme's art (Glint ripples, summer sky) is drawn around the ring
 - Grouping is a row of words; the chosen one is underlined. Group headers are serif with a rule underneath
@@ -17,6 +28,7 @@
 - Two accent colors are slightly darker so white text on them is easier to read
 
 ### Removed
+- **Group by Tag** on the home screen: search and the tag row filter by tags. If tag grouping was on, the home screen opens ungrouped
 - The **Matsuri · 祭典** and **City Pop · 城市流行** themes: they shared their main color with Tomato and Sakura. If you used one, the app switches to Tomato or Sakura. The "Anime-inspired" group is gone; Summer Sky is now under Classic
 
 ## v1.10.0 — 2026-09-30

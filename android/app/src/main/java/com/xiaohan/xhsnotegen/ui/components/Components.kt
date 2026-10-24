@@ -1,6 +1,14 @@
 package com.xiaohan.xhsnotegen.ui.components
 
+import android.content.ClipData
+import android.content.ClipboardManager
+import android.content.Context
+import android.os.Build
+import android.widget.Toast
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.ExperimentalFoundationApi
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -538,6 +546,7 @@ fun NoteLanguageRow(
 }
 
 /** Looks like a text field but opens a picker when tapped — for values chosen from a list, not typed. */
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun PickerField(
     value: String,
@@ -548,11 +557,14 @@ fun PickerField(
     modifier: Modifier = Modifier,
     supporting: String? = null,
 ) {
+    val context = LocalContext.current
     Column(modifier, verticalArrangement = Arrangement.spacedBy(6.dp)) {
         Text(label, style = MaterialTheme.typography.labelLarge, color = MaterialTheme.colorScheme.onSurfaceVariant)
         val rule = MaterialTheme.app.line2
-        Surface(onClick = onClick, shape = RoundedCornerShape(0.dp), color = Color.Transparent,
-            modifier = Modifier.drawBehind { drawLine(rule, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), strokeWidth = 1.dp.toPx()) }) {
+        // Tap opens the picker; hold copies what it shows.
+        Box(Modifier
+            .drawBehind { drawLine(rule, Offset(0f, size.height - 0.5f), Offset(size.width, size.height - 0.5f), strokeWidth = 1.dp.toPx()) }
+            .combinedClickable(onClick = onClick, onLongClick = if (value.isBlank()) null else ({ copyToClipboard(context, value) }))) {
             Row(
                 Modifier.fillMaxWidth().heightIn(min = 56.dp).padding(horizontal = 4.dp, vertical = 8.dp),
                 verticalAlignment = Alignment.CenterVertically,
@@ -572,6 +584,15 @@ fun PickerField(
         if (supporting != null) {
             Text(supporting, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
+    }
+}
+
+/** Copies [text]; Android 13+ shows its own "Copied" notice, older versions get a toast. */
+fun copyToClipboard(context: Context, text: String) {
+    val clipboard = context.getSystemService(Context.CLIPBOARD_SERVICE) as ClipboardManager
+    clipboard.setPrimaryClip(ClipData.newPlainText("text", text))
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+        Toast.makeText(context, tr("Copied", "已复制"), Toast.LENGTH_SHORT).show()
     }
 }
 

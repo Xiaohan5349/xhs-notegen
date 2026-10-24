@@ -74,6 +74,18 @@ object AiSettings {
     fun customVision(c: Context): Boolean = prefs(c).getBoolean(KEY_CUSTOM_VISION, true)
     fun setCustomVision(c: Context, vision: Boolean) = prefs(c).edit { putBoolean(KEY_CUSTOM_VISION, vision) }
 
+    /** The model list last read from [baseUrl], or null if never read (or read from another address). */
+    fun cachedModels(c: Context, p: AiProvider, baseUrl: String): List<String>? {
+        val prefs = prefs(c)
+        if (prefs.getString("models_url_${p.id}", null) != baseUrl) return null
+        return prefs.getString("models_${p.id}", null)?.split('\n')?.filter { it.isNotBlank() }
+    }
+
+    fun setCachedModels(c: Context, p: AiProvider, baseUrl: String, models: List<String>) = prefs(c).edit {
+        putString("models_url_${p.id}", baseUrl)
+        putString("models_${p.id}", models.joinToString("\n"))
+    }
+
     fun current(c: Context): AiConfig {
         val p = provider(c)
         val model = model(c, p)

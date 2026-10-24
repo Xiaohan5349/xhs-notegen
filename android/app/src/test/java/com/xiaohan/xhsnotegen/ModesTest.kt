@@ -50,28 +50,6 @@ class ModesTest {
     }
 
     @Test
-    fun `tags group root then sub-tags, with General for root-only notes`() {
-        val travel = NoteTag(1, "旅行")
-        val kyoto = NoteTag(2, "京都", parentId = 1)
-        val beach = NoteTag(3, "海边", parentId = 1)
-        val coffee = NoteTag(4, "咖啡")
-        val notes = listOf(
-            NoteDraft(id = 10, tags = listOf(travel, kyoto)),
-            NoteDraft(id = 11, tags = listOf(travel, beach)),
-            NoteDraft(id = 12, tags = listOf(travel)),
-            NoteDraft(id = 13, tags = listOf(coffee)),
-            NoteDraft(id = 14),
-        )
-        val feed = buildFeed(notes, GroupBy.TAG, emptySet(), listOf(travel, kyoto, beach, coffee), zh = true).map {
-            when (it) { is FeedItem.Header -> "${"  ".repeat(it.header.level)}[${it.header.title} ${it.header.count}]"; is FeedItem.Note -> "${it.draft.id}" }
-        }
-        assertEquals(
-            listOf("[旅行 3]", "  [京都 1]", "10", "  [海边 1]", "11", "  [General 1]", "12", "[咖啡 1]", "13", "[No tag 1]", "14"),
-            feed,
-        )
-    }
-
-    @Test
     fun `old exports with FOOD type import as the food mode`() {
         val d = JsonCodec.parseImport("""{"drafts":[{"type":"FOOD"}],"tagParents":{"京都":"旅行"}}""")
         assertEquals(BuiltInModes.FOOD, d.drafts!!.single()!!.toDomain().type)

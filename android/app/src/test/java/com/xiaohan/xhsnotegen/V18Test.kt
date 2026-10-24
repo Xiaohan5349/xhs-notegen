@@ -22,36 +22,6 @@ class V18Test {
     }
 
     @Test
-    fun `tags group at any depth, like country and city`() {
-        val travel = NoteTag(1, "旅行")
-        val japan = NoteTag(2, "日本", parentId = 1)
-        val kyoto = NoteTag(3, "京都", parentId = 2)
-        val tokyo = NoteTag(4, "东京", parentId = 2)
-        val all = listOf(travel, japan, kyoto, tokyo)
-        val notes = listOf(
-            NoteDraft(id = 10, tags = listOf(travel, kyoto)),
-            NoteDraft(id = 11, tags = listOf(kyoto)),          // only the deepest tag: still under 旅行 › 日本
-            NoteDraft(id = 12, tags = listOf(travel, tokyo)),
-            NoteDraft(id = 13, tags = listOf(travel, japan)),  // 日本 but no city
-            NoteDraft(id = 14, tags = listOf(travel)),
-        )
-        assertEquals(
-            listOf(
-                "[旅行 5]",
-                "  [日本 4]",
-                "    [京都 2]", "10", "11",
-                "    [东京 1]", "12",
-                "    [General 1]", "13",
-                "  [General 1]", "14",
-            ),
-            titles(buildFeed(notes, GroupBy.TAG, emptySet(), all, zh = true)),
-        )
-        // Collapsing 日本 hides everything below it.
-        val collapsed = titles(buildFeed(notes, GroupBy.TAG, setOf("tag:1/2"), all, zh = true))
-        assertEquals(listOf("[旅行 5]", "  [日本 4]", "  [General 1]", "14"), collapsed)
-    }
-
-    @Test
     fun `tag tree helpers survive loops`() {
         val a = NoteTag(1, "a", parentId = 2)
         val b = NoteTag(2, "b", parentId = 1)

@@ -21,6 +21,11 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Label
+import androidx.compose.material.icons.automirrored.outlined.ViewList
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
@@ -36,7 +41,9 @@ import androidx.compose.ui.draw.rotate
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.layout
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.buildAnnotatedString
@@ -51,7 +58,11 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import coil.compose.AsyncImage
 import com.xiaohan.xhsnotegen.domain.NoteDraft
 import com.xiaohan.xhsnotegen.domain.NoteStatus
+import com.xiaohan.xhsnotegen.domain.NoteSearch
 import com.xiaohan.xhsnotegen.domain.NoteTag
+import com.xiaohan.xhsnotegen.domain.SearchSuggestion
+import com.xiaohan.xhsnotegen.domain.SearchTerm
+import com.xiaohan.xhsnotegen.domain.TagFilter
 import com.xiaohan.xhsnotegen.domain.Place
 import com.xiaohan.xhsnotegen.domain.TagTree
 import com.xiaohan.xhsnotegen.i18n.LanguageStore
@@ -62,6 +73,7 @@ import com.xiaohan.xhsnotegen.ui.components.CardStars
 import com.xiaohan.xhsnotegen.ui.components.EmptyState
 import com.xiaohan.xhsnotegen.ui.components.RatingDialog
 import com.xiaohan.xhsnotegen.ui.components.RatingMeter
+import com.xiaohan.xhsnotegen.ui.components.StatusPill
 import com.xiaohan.xhsnotegen.ui.components.StatusSeal
 import com.xiaohan.xhsnotegen.ui.components.dashedBorder
 import com.xiaohan.xhsnotegen.ui.components.softFieldColors
@@ -72,6 +84,20 @@ import com.xiaohan.xhsnotegen.ui.theme.HeroTitleStyle
 import com.xiaohan.xhsnotegen.ui.theme.NumberStyle
 import com.xiaohan.xhsnotegen.ui.theme.ThemeBackdrop
 import com.xiaohan.xhsnotegen.ui.theme.app
+
+private val HomeLayout.label: String
+    get() = when (this) {
+        HomeLayout.GRID -> tr("Grid", "双列")
+        HomeLayout.LIST -> tr("List", "列表")
+        HomeLayout.GALLERY -> tr("Gallery", "相册")
+    }
+
+private val HomeLayout.icon: ImageVector
+    get() = when (this) {
+        HomeLayout.GRID -> Icons.Outlined.GridView
+        HomeLayout.LIST -> Icons.AutoMirrored.Outlined.ViewList
+        HomeLayout.GALLERY -> Icons.Outlined.ViewModule
+    }
 
 /** Which dialog is open, and for which notes. */
 private sealed interface HomeDialog {
@@ -95,9 +121,12 @@ fun DraftListScreen(
     val selection by viewModel.selection.collectAsState()
     val organizing by viewModel.organizing.collectAsState()
     val loggedIn by XhsAuthStore.loggedIn.collectAsState()
+    val layout by HomePrefs.layout.collectAsState()
+    val context = LocalContext.current
     val snackbarHostState = remember { SnackbarHostState() }
     val gridState = rememberLazyStaggeredGridState()
     var showMenu by remember { mutableStateOf(false) }
+    var showLayoutMenu by remember { mutableStateOf(false) }
     var dialog by remember { mutableStateOf<HomeDialog?>(null) }
     val selecting = selection.isNotEmpty()
 
@@ -116,8 +145,9 @@ fun DraftListScreen(
 
     val total = state.counts[DraftFilter.ALL] ?: 0
     val heroGone by remember { derivedStateOf { gridState.firstVisibleItemIndex > 0 } }
-    // The first note of each group (or of the whole feed) gets a full-width tile.
-    val featured = remember(state.feed) {
+    // In the grid, the first note of each group (or of the whole feed) gets a full-width tile.
+    val featured = remember(state.feed, layout) {
+        if (layout != HomeLayout.GRID) return@remember emptySet()
         buildSet {
             var afterHeader = true
             state.feed.forEach { item ->
@@ -148,6 +178,21 @@ fun DraftListScreen(
                     // The big title in the list says it already; this one shows once that scrolls away.
                     title = { if (heroGone || total == 0) Text(tr("Glint", "浮生拾遗"), style = MaterialTheme.typography.headlineSmall, maxLines = 1) },
                     actions = {
+                        Box {
+                            IconButton(onClick = { showLayoutMenu = true }) {
+                                Icon(layout.icon, contentDescription = tr("Layout", "展示方式"))
+                            }
+                            DropdownMenu(expanded = showLayoutMenu, onDismissRequest = { showLayoutMenu = false }) {
+                                HomeLayout.entries.forEach { l ->
+                                    DropdownMenuItem(
+                                        text = { Text(l.label) },
+                                        leadingIcon = { Icon(l.icon, null) },
+                                        trailingIcon = { if (l == layout) Icon(Icons.Filled.Check, null) },
+                                        onClick = { showLayoutMenu = false; HomePrefs.setLayout(context, l) },
+                                    )
+                                }
+                            }
+                        }
                         IconButton(onClick = onOpenSettings) {
                             BadgedBox(badge = {
                                 if (loggedIn) Badge(containerColor = MaterialTheme.app.goldMark)
@@ -210,12 +255,16 @@ fun DraftListScreen(
         containerColor = MaterialTheme.colorScheme.background,
     ) { padding ->
         LazyVerticalStaggeredGrid(
-            columns = StaggeredGridCells.Fixed(2),
+            columns = StaggeredGridCells.Fixed(layout.columns),
             state = gridState,
             modifier = Modifier.fillMaxSize().padding(padding),
             contentPadding = PaddingValues(start = PagePadding, end = PagePadding, top = 0.dp, bottom = 96.dp),
-            verticalItemSpacing = 16.dp,
-            horizontalArrangement = Arrangement.spacedBy(14.dp),
+            verticalItemSpacing = when (layout) {
+                HomeLayout.LIST -> 2.dp
+                HomeLayout.GALLERY -> 8.dp
+                else -> 16.dp
+            },
+            horizontalArrangement = Arrangement.spacedBy(if (layout == HomeLayout.GALLERY) 8.dp else 14.dp),
         ) {
             if (total > 0) {
                 item(span = StaggeredGridItemSpan.FullLine, key = "hero") {
@@ -226,13 +275,22 @@ fun DraftListScreen(
                 }
                 item(span = StaggeredGridItemSpan.FullLine, key = "controls") {
                     Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        if (state.tags.isNotEmpty()) {
-                            TagFilterBox(
-                                state = state,
-                                onToggle = viewModel::toggleTagFilter,
-                                onClear = viewModel::clearTagFilters,
-                                onOpenAll = { dialog = HomeDialog.AllTags },
-                            )
+                        SearchBox(
+                            state = state,
+                            onAdd = viewModel::addSearchTerm,
+                            onPickTag = viewModel::toggleTagFilter,
+                            onRemove = viewModel::removeSearchTerm,
+                            onClearAll = viewModel::clearSearch,
+                        ) {
+                            // Not typing: the most-used tags, one tap each.
+                            if (state.tags.isNotEmpty()) {
+                                TagFilterBox(
+                                    state = state,
+                                    onToggle = viewModel::toggleTagFilter,
+                                    onClear = viewModel::clearTagFilters,
+                                    onOpenAll = { dialog = HomeDialog.AllTags },
+                                )
+                            }
                         }
                         GroupRow(state, organizing, onGroupBy = viewModel::toggleGroupBy, onOrganize = { viewModel.organize() })
                     }
@@ -289,20 +347,45 @@ fun DraftListScreen(
                     )
                     is FeedItem.Note -> {
                         val draft = item.draft
-                        NoteCard(
-                            draft = draft,
-                            featured = "${item.groupKey}:${draft.id}" in featured,
-                            selecting = selecting,
-                            selected = draft.id in selection,
-                            onClick = { if (selecting) viewModel.toggleSelected(draft.id) else onDraftClick(draft.id) },
-                            onLongClick = { viewModel.toggleSelected(draft.id) },
-                            onTags = { dialog = HomeDialog.Tags(setOf(draft.id)) },
-                            onPlace = { dialog = HomeDialog.SetPlace(setOf(draft.id)) },
-                            onRate = { dialog = HomeDialog.Rate(setOf(draft.id)) },
-                            onQuickRate = { viewModel.setRating(setOf(draft.id), it) },
-                            onStatus = { viewModel.setStatus(setOf(draft.id), it) },
-                            onDelete = { dialog = HomeDialog.Delete(setOf(draft.id)) },
-                        )
+                        val ids = setOf(draft.id)
+                        val onClick = { if (selecting) viewModel.toggleSelected(draft.id) else onDraftClick(draft.id) }
+                        val onLongClick = { viewModel.toggleSelected(draft.id) }
+                        when (layout) {
+                            HomeLayout.GRID -> NoteCard(
+                                draft = draft,
+                                featured = "${item.groupKey}:${draft.id}" in featured,
+                                selecting = selecting,
+                                selected = draft.id in selection,
+                                onClick = onClick,
+                                onLongClick = onLongClick,
+                                onTags = { dialog = HomeDialog.Tags(ids) },
+                                onPlace = { dialog = HomeDialog.SetPlace(ids) },
+                                onRate = { dialog = HomeDialog.Rate(ids) },
+                                onQuickRate = { viewModel.setRating(ids, it) },
+                                onStatus = { viewModel.setStatus(ids, it) },
+                                onDelete = { dialog = HomeDialog.Delete(ids) },
+                            )
+                            HomeLayout.LIST -> NoteRow(
+                                draft = draft,
+                                selecting = selecting,
+                                selected = draft.id in selection,
+                                onClick = onClick,
+                                onLongClick = onLongClick,
+                                onTags = { dialog = HomeDialog.Tags(ids) },
+                                onPlace = { dialog = HomeDialog.SetPlace(ids) },
+                                onRate = { dialog = HomeDialog.Rate(ids) },
+                                onQuickRate = { viewModel.setRating(ids, it) },
+                                onStatus = { viewModel.setStatus(ids, it) },
+                                onDelete = { dialog = HomeDialog.Delete(ids) },
+                            )
+                            HomeLayout.GALLERY -> NoteTile(
+                                draft = draft,
+                                selecting = selecting,
+                                selected = draft.id in selection,
+                                onClick = onClick,
+                                onLongClick = onLongClick,
+                            )
+                        }
                     }
                 }
             }
@@ -538,6 +621,131 @@ private fun BandRow(label: String, n: Int, dot: Color, selected: Boolean, first:
             Text("$n", style = BandNumberStyle, color = a.onBand)
         }
     }
+}
+
+// ---------------------------------------------------------------------------
+// Search: one box for places, tags, modes, ratings and words; picks stack up
+// ---------------------------------------------------------------------------
+
+private val SearchSuggestion.Kind.icon: ImageVector
+    get() = when (this) {
+        SearchSuggestion.Kind.PLACE -> Icons.Outlined.Place
+        SearchSuggestion.Kind.TAG -> Icons.AutoMirrored.Outlined.Label
+        SearchSuggestion.Kind.MODE -> Icons.Outlined.Category
+        SearchSuggestion.Kind.RATING -> Icons.Outlined.StarOutline
+        SearchSuggestion.Kind.KEYWORD -> Icons.Outlined.TextFields
+    }
+
+private val SearchSuggestion.Kind.label: String
+    get() = when (this) {
+        SearchSuggestion.Kind.PLACE -> tr("Place", "地点")
+        SearchSuggestion.Kind.TAG -> tr("Tag", "标签")
+        SearchSuggestion.Kind.MODE -> tr("Mode", "模式")
+        SearchSuggestion.Kind.RATING -> tr("Rating", "评分")
+        SearchSuggestion.Kind.KEYWORD -> tr("Text", "文字")
+    }
+
+/**
+ * Type to get suggestions by kind; picking one adds it as a chip. Same kind = or,
+ * different kinds = and (see [NoteSearch]). While not typing, [idle] shows (the tag row).
+ */
+@OptIn(ExperimentalLayoutApi::class)
+@Composable
+private fun SearchBox(
+    state: DraftListState,
+    onAdd: (SearchTerm) -> Unit,
+    onPickTag: (Long) -> Unit,
+    onRemove: (SearchTerm) -> Unit,
+    onClearAll: () -> Unit,
+    idle: @Composable () -> Unit,
+) {
+    var query by rememberSaveable { mutableStateOf("") }
+    val zh = LanguageStore.isZh
+    val suggestions = remember(query, state.all, state.tags, state.tagCounts, state.modeNames, zh) {
+        NoteSearch.suggest(query, state.all, state.tags, state.tagCounts,
+            modeName = { state.modeNames[it] ?: it }, localize = { it.localized(zh) })
+    }
+    fun pick(s: SearchSuggestion) {
+        s.term?.let(onAdd)
+        s.tagId?.let { id -> if (id !in state.tagFilters) onPickTag(id) }
+        query = ""
+    }
+
+    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+        TextField(
+            value = query,
+            onValueChange = { query = it },
+            modifier = Modifier.fillMaxWidth(),
+            placeholder = { Text(tr("Search places, tags, modes, 4★ or words", "搜索地点、标签、模式、4星或文字"), maxLines = 1, overflow = TextOverflow.Ellipsis) },
+            leadingIcon = { Icon(Icons.Outlined.Search, null) },
+            trailingIcon = {
+                if (query.isNotEmpty()) IconButton(onClick = { query = "" }) { Icon(Icons.Filled.Close, tr("Clear", "清除")) }
+            },
+            singleLine = true,
+            keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search),
+            // Enter searches the words as typed.
+            keyboardActions = KeyboardActions(onSearch = { suggestions.lastOrNull()?.let(::pick) }),
+            colors = softFieldColors(),
+        )
+
+        if (query.isNotBlank()) {
+            Column {
+                suggestions.forEach { s ->
+                    Row(
+                        Modifier
+                            .fillMaxWidth()
+                            .clip(MaterialTheme.shapes.small)
+                            .clickable { pick(s) }
+                            .padding(horizontal = 4.dp, vertical = 10.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Icon(s.kind.icon, null, Modifier.size(18.dp), tint = MaterialTheme.app.accent2)
+                        Spacer(Modifier.width(8.dp))
+                        Text(s.kind.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.width(40.dp))
+                        Text(
+                            if (s.kind == SearchSuggestion.Kind.KEYWORD) tr("“${s.label}” in the text", "正文里有「${s.label}」") else s.label,
+                            style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis,
+                            modifier = Modifier.weight(1f),
+                        )
+                        Text("${s.count}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            }
+        }
+
+        // What is filtering right now: search conditions and picked tags, each removable.
+        val pickedTags = TagFilter.active(state.tagFilters, state.tags).mapNotNull { id -> state.tags.firstOrNull { it.id == id } }
+        if (state.search.isNotEmpty() || pickedTags.isNotEmpty()) {
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                state.search.forEach { t ->
+                    val (icon, label) = when (t) {
+                        is SearchTerm.InPlace -> Icons.Outlined.Place to t.label
+                        is SearchTerm.Mode -> Icons.Outlined.Category to (state.modeNames[t.key] ?: t.key)
+                        is SearchTerm.MinRating -> Icons.Outlined.StarOutline to "★".repeat(t.stars) + if (t.stars < 5) "+" else ""
+                        is SearchTerm.Keyword -> Icons.Outlined.TextFields to "“${t.text}”"
+                    }
+                    ConditionChip(icon, label) { onRemove(t) }
+                }
+                pickedTags.forEach { t -> ConditionChip(Icons.AutoMirrored.Outlined.Label, t.name) { onPickTag(t.id) } }
+                TextButton(onClick = onClearAll) { Text(tr("Clear all", "全部清除")) }
+            }
+        }
+
+        if (query.isBlank()) idle()
+    }
+}
+
+@Composable
+private fun ConditionChip(icon: ImageVector, label: String, onRemove: () -> Unit) {
+    InputChip(
+        selected = true,
+        onClick = onRemove,
+        label = { Text(label, maxLines = 1) },
+        leadingIcon = { Icon(icon, null, Modifier.size(16.dp)) },
+        trailingIcon = { Icon(Icons.Filled.Close, tr("Remove", "移除"), Modifier.size(16.dp)) },
+        shape = CircleShape,
+    )
 }
 
 // ---------------------------------------------------------------------------
@@ -855,8 +1063,6 @@ private fun NoteCard(
     onStatus: (NoteStatus) -> Unit,
     onDelete: () -> Unit,
 ) {
-    var showMenu by remember { mutableStateOf(false) }
-
     val variant = draft.selectedVariant
     val title = variant?.title?.takeIf { it.isNotBlank() }
         ?: draft.foodInfo.dishNames.ifBlank { tr("Untitled", "无标题") }
@@ -885,18 +1091,7 @@ private fun NoteCard(
                         modifier = Modifier.fillMaxSize())
                 }
                 if (selecting) {
-                    Box(
-                        Modifier
-                            .align(Alignment.BottomStart)
-                            .padding(10.dp)
-                            .size(26.dp)
-                            .clip(CircleShape)
-                            .background(if (selected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.3f))
-                            .border(2.dp, Color.White, CircleShape),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        if (selected) Icon(Icons.Filled.Check, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimary)
-                    }
+                    SelectMark(selected, Modifier.align(Alignment.BottomStart).padding(10.dp))
                 } else if (draft.photoUris.size > 1) {
                     Row(
                         Modifier
@@ -947,33 +1142,154 @@ private fun NoteCard(
                         overflow = TextOverflow.Ellipsis,
                         modifier = Modifier.weight(1f),
                     )
-                    if (!selecting) Box {
-                        IconButton(onClick = { showMenu = true }, modifier = Modifier.size(36.dp)) {
-                            Icon(Icons.Outlined.MoreHoriz, contentDescription = tr("Note options", "笔记选项"),
-                                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
-                        }
-                        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
-                            DropdownMenuItem(text = { Text(tr("Select", "选择")) }, leadingIcon = { Icon(Icons.Outlined.CheckCircle, null) },
-                                onClick = { showMenu = false; onLongClick() })
-                            DropdownMenuItem(text = { Text(tr("Tags…", "标签…")) }, leadingIcon = { Icon(Icons.Outlined.Label, null) },
-                                onClick = { showMenu = false; onTags() })
-                            DropdownMenuItem(text = { Text(tr("Place…", "地点…")) }, leadingIcon = { Icon(Icons.Outlined.Place, null) },
-                                onClick = { showMenu = false; onPlace() })
-                            DropdownMenuItem(text = { Text(tr("Rate…", "评分…")) }, leadingIcon = { Icon(Icons.Outlined.StarOutline, null) },
-                                onClick = { showMenu = false; onRate() })
-                            HorizontalDivider()
-                            StatusMenuItems { showMenu = false; onStatus(it) }
-                            HorizontalDivider()
-                            DropdownMenuItem(
-                                text = { Text(tr("Delete", "删除"), color = MaterialTheme.colorScheme.error) },
-                                leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                                onClick = { showMenu = false; onDelete() },
-                            )
-                        }
-                    }
+                    if (!selecting) NoteMenuButton(onSelect = onLongClick, onTags, onPlace, onRate, onStatus, onDelete)
                 }
             }
         }
+    }
+}
+
+/** The "…" button on a note and its menu. */
+@Composable
+private fun NoteMenuButton(
+    onSelect: () -> Unit,
+    onTags: () -> Unit,
+    onPlace: () -> Unit,
+    onRate: () -> Unit,
+    onStatus: (NoteStatus) -> Unit,
+    onDelete: () -> Unit,
+) {
+    var showMenu by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { showMenu = true }, modifier = Modifier.size(36.dp)) {
+            Icon(Icons.Outlined.MoreHoriz, contentDescription = tr("Note options", "笔记选项"),
+                tint = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.size(18.dp))
+        }
+        DropdownMenu(expanded = showMenu, onDismissRequest = { showMenu = false }) {
+            DropdownMenuItem(text = { Text(tr("Select", "选择")) }, leadingIcon = { Icon(Icons.Outlined.CheckCircle, null) },
+                onClick = { showMenu = false; onSelect() })
+            DropdownMenuItem(text = { Text(tr("Tags…", "标签…")) }, leadingIcon = { Icon(Icons.Outlined.Label, null) },
+                onClick = { showMenu = false; onTags() })
+            DropdownMenuItem(text = { Text(tr("Place…", "地点…")) }, leadingIcon = { Icon(Icons.Outlined.Place, null) },
+                onClick = { showMenu = false; onPlace() })
+            DropdownMenuItem(text = { Text(tr("Rate…", "评分…")) }, leadingIcon = { Icon(Icons.Outlined.StarOutline, null) },
+                onClick = { showMenu = false; onRate() })
+            HorizontalDivider()
+            StatusMenuItems { showMenu = false; onStatus(it) }
+            HorizontalDivider()
+            DropdownMenuItem(
+                text = { Text(tr("Delete", "删除"), color = MaterialTheme.colorScheme.error) },
+                leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                onClick = { showMenu = false; onDelete() },
+            )
+        }
+    }
+}
+
+/** The tick shown on a cover while selecting notes. */
+@Composable
+private fun SelectMark(selected: Boolean, modifier: Modifier = Modifier) {
+    Box(
+        modifier
+            .size(26.dp)
+            .clip(CircleShape)
+            .background(if (selected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.3f))
+            .border(2.dp, Color.White, CircleShape),
+        contentAlignment = Alignment.Center,
+    ) {
+        if (selected) Icon(Icons.Filled.Check, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.onPrimary)
+    }
+}
+
+/** List layout: small cover on the left, the facts beside it. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun NoteRow(
+    draft: NoteDraft,
+    selecting: Boolean,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+    onTags: () -> Unit,
+    onPlace: () -> Unit,
+    onRate: () -> Unit,
+    onQuickRate: (Int) -> Unit,
+    onStatus: (NoteStatus) -> Unit,
+    onDelete: () -> Unit,
+) {
+    val title = draft.selectedVariant?.title?.takeIf { it.isNotBlank() }
+        ?: draft.foodInfo.dishNames.ifBlank { tr("Untitled", "无标题") }
+    val shape = RoundedCornerShape(10.dp)
+    Row(
+        Modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.small)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick)
+            .padding(vertical = 6.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Box(
+            Modifier
+                .size(72.dp)
+                .clip(shape)
+                .then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, shape) else Modifier),
+        ) {
+            CoverPlaceholder(draft.foodInfo.restaurantName)
+            draft.publishPhotoUris.firstOrNull()?.let {
+                AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+            }
+            if (selecting) SelectMark(selected, Modifier.align(Alignment.Center))
+        }
+        Spacer(Modifier.width(12.dp))
+        Column(Modifier.weight(1f)) {
+            Text(title, style = CardTitleStyle, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(
+                listOf(
+                    draft.foodInfo.restaurantName,
+                    draft.foodInfo.place.localized(LanguageStore.isZh).city.ifBlank { draft.foodInfo.location },
+                    draft.foodInfo.mealDate.take(10),
+                ).filter { it.isNotBlank() }.joinToString(" · "),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                CardStars(rating = draft.rating, onRate = if (selecting) null else onQuickRate, modifier = Modifier.offset(x = (-5).dp))
+                Spacer(Modifier.weight(1f))
+                StatusPill(draft.status)
+            }
+        }
+        if (!selecting) NoteMenuButton(onSelect = onLongClick, onTags, onPlace, onRate, onStatus, onDelete)
+    }
+}
+
+/** Gallery layout: the cover alone, with its status. */
+@OptIn(ExperimentalFoundationApi::class)
+@Composable
+private fun NoteTile(
+    draft: NoteDraft,
+    selecting: Boolean,
+    selected: Boolean,
+    onClick: () -> Unit,
+    onLongClick: () -> Unit,
+) {
+    val arch = remember { ArchShape(10.dp) }
+    Box(
+        Modifier
+            .fillMaxWidth()
+            .aspectRatio(3f / 4f)
+            .clip(arch)
+            .then(if (selected) Modifier.border(3.dp, MaterialTheme.colorScheme.primary, arch) else Modifier)
+            .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+    ) {
+        CoverPlaceholder(draft.foodInfo.restaurantName)
+        draft.publishPhotoUris.firstOrNull()?.let {
+            AsyncImage(model = it, contentDescription = null, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+        }
+        // The arch cuts the top away; marks stay at the bottom.
+        if (selecting) SelectMark(selected, Modifier.align(Alignment.BottomStart).padding(6.dp))
+        else StatusPill(draft.status, Modifier.align(Alignment.BottomStart).padding(6.dp))
     }
 }
 

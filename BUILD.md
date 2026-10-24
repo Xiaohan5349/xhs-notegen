@@ -6,7 +6,7 @@ How to build an APK and get it onto an Android phone.
 
 | Goal | Command (from `android/`) | Output |
 |---|---|---|
-| Quick test build | `gradlew assembleDebug` | `app/build/outputs/apk/debug/app-debug.apk` (~60 MB) |
+| Quick test build | `gradlew assembleDebug` | `app/build/outputs/apk/debug/浮生拾遗-<version>-debug-<MMdd-HHmm>.apk` (~60 MB) |
 | Build to share / keep on your phone | `gradlew assembleRelease` | `app/build/outputs/apk/release/app-release.apk` (~3 MB) |
 | Run unit tests | `gradlew testDebugUnitTest` | `app/build/reports/tests/` |
 
@@ -44,7 +44,7 @@ cd android
 bash gradlew assembleDebug        # Windows: gradlew assembleDebug
 ```
 
-- Output: `android/app/build/outputs/apk/debug/app-debug.apk`
+- Output: `android/app/build/outputs/apk/debug/浮生拾遗-<version>-debug-<MMdd-HHmm>.apk` — the build time is also in the version name, so test builds are easy to tell apart
 - Signed with the machine's auto-generated debug key. Large (no shrinking) but fine for testing.
 
 ## 3. Release build (the one to share)

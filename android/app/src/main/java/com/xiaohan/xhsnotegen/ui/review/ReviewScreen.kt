@@ -8,7 +8,6 @@ import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
@@ -26,8 +25,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -57,6 +59,8 @@ import com.xiaohan.xhsnotegen.ui.components.OrderBadge
 import com.xiaohan.xhsnotegen.ui.components.PhotoNumber
 import com.xiaohan.xhsnotegen.ui.components.PhotoSheet
 import com.xiaohan.xhsnotegen.ui.components.Tile
+import com.xiaohan.xhsnotegen.ui.components.copyToClipboard
+import androidx.compose.foundation.clickable
 import com.xiaohan.xhsnotegen.ui.theme.NumberStyle
 import com.xiaohan.xhsnotegen.ui.theme.app
 import com.xiaohan.xhsnotegen.ui.components.Eyebrow
@@ -214,6 +218,9 @@ fun ReviewScreen(
                     onBody = viewModel::updateBody,
                     onAddTags = viewModel::addHashtags,
                     onRemoveTag = viewModel::removeHashtag,
+                    noteTags = d.tags.mapTo(HashSet()) { it.name },
+                    onToggleTopicTag = viewModel::toggleTopicTag,
+                    onTagAllTopics = viewModel::tagAllTopics,
                 )
 
                 if (v.model.isNotBlank()) {
@@ -430,9 +437,12 @@ private fun PhotoPicker(
 // Rating + place
 // ---------------------------------------------------------------------------
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MealInfoRow(draft: NoteDraft, onRate: (Int) -> Unit, onEditPlace: () -> Unit) {
     val place = draft.foodInfo.place
+    val address = place.fullAddressDisplay.ifBlank { draft.foodInfo.location }
+    val context = LocalContext.current
     val c = MaterialTheme.colorScheme
     val source = when (place.source) {
         PlaceSource.GPS -> tr("From photo location", "来自照片定位")
@@ -453,7 +463,8 @@ private fun MealInfoRow(draft: NoteDraft, onRate: (Int) -> Unit, onEditPlace: ()
             Modifier
                 .fillMaxWidth()
                 .clip(MaterialTheme.shapes.small)
-                .clickable(onClick = onEditPlace)
+                // Tap edits; hold copies the address.
+                .combinedClickable(onClick = onEditPlace, onLongClick = if (address.isBlank()) null else ({ copyToClipboard(context, address) }))
                 .padding(vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -461,7 +472,7 @@ private fun MealInfoRow(draft: NoteDraft, onRate: (Int) -> Unit, onEditPlace: ()
             Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    place.fullAddressDisplay.ifBlank { draft.foodInfo.location.ifBlank { tr("Add a place", "添加地点") } },
+                    address.ifBlank { tr("Add a place", "添加地点") },
                     style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
                 Text(source, style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant)
@@ -521,6 +532,10 @@ private fun NoteEditor(
     onBody: (String) -> Unit,
     onAddTags: (String) -> Unit,
     onRemoveTag: (String) -> Unit,
+    /** Names of this note's tags: topics with the same name are marked. */
+    noteTags: Set<String>,
+    onToggleTopicTag: (String) -> Unit,
+    onTagAllTopics: () -> Unit,
 ) {
     val c = MaterialTheme.colorScheme
     Surface(shape = RoundedCornerShape(22.dp), color = MaterialTheme.app.tile) {
@@ -562,14 +577,21 @@ private fun NoteEditor(
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     variant.hashtags.forEach { tag ->
+                        val tagged = tag in noteTags
                         Row(
                             Modifier
                                 .clip(CircleShape)
-                                .background(MaterialTheme.app.tile2)
+                                .background(if (tagged) c.secondaryContainer else MaterialTheme.app.tile2)
+                                // Tap: also file this note under a tag of the same name (tap again to undo).
+                                .clickable { onToggleTopicTag(tag) }
                                 .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("#$tag", style = MaterialTheme.typography.labelLarge, color = c.onSurface)
+                            if (tagged) {
+                                Icon(Icons.AutoMirrored.Outlined.Label, tr("Also a tag", "已是标签"), Modifier.size(14.dp), tint = c.onSecondaryContainer)
+                                Spacer(Modifier.width(4.dp))
+                            }
+                            Text("#$tag", style = MaterialTheme.typography.labelLarge, color = if (tagged) c.onSecondaryContainer else c.onSurface)
                             Box(
                                 Modifier.padding(start = 2.dp).size(22.dp).clip(CircleShape).clickable { onRemoveTag(tag) },
                                 contentAlignment = Alignment.Center,
@@ -580,6 +602,15 @@ private fun NoteEditor(
                         }
                     }
                     TagInput(onAddTags)
+                }
+                if (variant.hashtags.isNotEmpty()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(tr("Tap a topic to also use it as a tag", "点话题可同时加为标签"), style = MaterialTheme.typography.bodySmall,
+                            color = c.onSurfaceVariant, modifier = Modifier.weight(1f))
+                        if (variant.hashtags.any { it !in noteTags }) {
+                            TextButton(onClick = onTagAllTopics) { Text(tr("Tag all", "全部加为标签")) }
+                        }
+                    }
                 }
             }
             if (busy) {
@@ -608,8 +639,9 @@ private fun TagInput(onAdd: (String) -> Unit) {
     BasicTextField(
         value = text,
         onValueChange = { new ->
-            // A space or comma finishes a tag, like most tag inputs.
-            if (new.endsWith(" ") || new.endsWith(",") || new.endsWith("，")) {
+            // A space or comma finishes a topic, like most tag inputs; "#" starts the next one
+            // (Chinese keyboards use space to pick characters, so it rarely gets here).
+            if (new.endsWith(" ") || new.endsWith(",") || new.endsWith("，") || (new.endsWith("#") && new.length > 1)) {
                 text = new.dropLast(1); commit()
             } else text = new
         },
@@ -618,18 +650,27 @@ private fun TagInput(onAdd: (String) -> Unit) {
         cursorBrush = SolidColor(c.primary),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { commit() }),
-        modifier = Modifier.widthIn(min = 96.dp, max = 180.dp),
+        // Tapping elsewhere keeps what was typed instead of dropping it.
+        modifier = Modifier.widthIn(min = 96.dp, max = 200.dp).onFocusChanged { if (!it.isFocused) commit() },
         decorationBox = { inner ->
             Row(
                 Modifier
                     .clip(CircleShape)
                     .border(1.dp, MaterialTheme.app.line2, CircleShape)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .padding(start = 12.dp, end = if (text.isBlank()) 12.dp else 4.dp, top = 6.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box {
+                Box(Modifier.weight(1f, fill = false)) {
                     if (text.isEmpty()) Text(tr("+ tag", "+ 话题"), style = MaterialTheme.typography.labelLarge, color = c.onSurfaceVariant)
                     inner()
+                }
+                if (text.isNotBlank()) {
+                    Box(
+                        Modifier.padding(start = 4.dp).size(22.dp).clip(CircleShape).background(c.primary).clickable { commit() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Filled.Check, tr("Add", "添加"), Modifier.size(14.dp), tint = c.onPrimary)
+                    }
                 }
             }
         },

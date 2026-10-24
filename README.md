@@ -8,9 +8,10 @@ Standalone Android app that generates Xiaohongshu diary-style notes (food, trave
 - **Writing modes** — Food, Travel, Outfit, Beauty, Home, Fitness, Parenting, Books & Films, or your own; each with its own form, prompt, note language and photo limit
 - **AI generation** — pick Gemini, ChatGPT, Claude, DeepSeek or a custom OpenAI-compatible model; 4 note styles in Chinese (Casual Story, Practical, Punchy, Minimal), written in one request
 - **Sounds like you** — prompts are tuned against typical "AI voice" tells, keep your own words, and learn from notes you've already reviewed or posted
-- **Review & edit** — switch styles, edit title (with the 20-character XHS limit), body and tags, rewrite one style or all four
+- **Review & edit** — switch styles, edit title (with the 20-character XHS limit), body and #topics (tap a topic to also make it a tag), rewrite one style or all four
+- **AI settings** — read each provider's model list, and check your balance for DeepSeek and OpenRouter
 - **Publishing** straight to Xiaohongshu via the Creator API, or a guided manual handoff (text copied, photos saved in order, XHS opened)
-- **Life diary** — photo-feed home with filters (Drafts / Ready / Posted), your own tags, multi-select actions, and grouping by place, tag, rating or writing mode (order set in Settings); import/export JSON backups
+- **Life diary** — photo-feed home in Grid, List or Gallery layout, with filters (Drafts / Ready / Posted), a search that stacks places, tags, modes, ratings and words, multi-select actions, and grouping by place, rating or writing mode (order set in Settings); import/export JSON backups
 - **Organize by place** — each note gets a place from its photo's GPS (with your permission; the Android photo picker otherwise strips it) or from its area / restaurant name
 - **Look** — a seasonal-journal style: serif titles, photo covers in arched frames, a round seal for each note's status, and a home band whose ring shows how many notes are posted and ready
 - **Themes** — two signature themes, Field (cream, forest green and terracotta; the default for new installs) and Glint (water ripples and drifting glints), plus seven classic palettes (Tomato, Matcha, Blueberry, Sakura, Sesame, Latte, Summer Sky), each with System / Light / Dark mode
@@ -42,7 +43,7 @@ macOS / Linux:
 ```bash
 cd android
 bash gradlew assembleDebug testDebugUnitTest
-adb install -r app/build/outputs/apk/debug/app-debug.apk
+adb install -r "$(ls -t app/build/outputs/apk/debug/*-debug-*.apk | head -1)"
 ```
 
 Windows (PowerShell):
@@ -51,7 +52,7 @@ Windows (PowerShell):
 cd android
 $env:JAVA_HOME = "C:\Program Files\Eclipse Adoptium\jdk-17.0.19.10-hotspot"
 .\gradlew.bat assembleDebug testDebugUnitTest
-adb install -r app\build\outputs\apk\debug\app-debug.apk
+adb install -r (Get-ChildItem app\build\outputs\apk\debug\*-debug-*.apk | Sort-Object LastWriteTime | Select-Object -Last 1).FullName
 ```
 
 (CMD: same steps with `set JAVA_HOME=...` and `gradlew.bat`.)
