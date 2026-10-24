@@ -3,16 +3,19 @@ package com.xiaohan.xhsnotegen.ui.review
 import android.content.Intent
 import android.net.Uri
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.background
 import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -22,8 +25,11 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.automirrored.outlined.ArrowForward
+import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.filled.AutoAwesome
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Close
+import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.material.icons.filled.Star
 import androidx.compose.material.icons.outlined.*
 import androidx.compose.material3.*
@@ -45,7 +51,18 @@ import com.xiaohan.xhsnotegen.domain.NoteStatus
 import com.xiaohan.xhsnotegen.domain.NoteStyle
 import com.xiaohan.xhsnotegen.domain.NoteVariant
 import com.xiaohan.xhsnotegen.i18n.tr
+import com.xiaohan.xhsnotegen.ui.components.AppFilterChip
+import com.xiaohan.xhsnotegen.ui.components.ArchShape
+import com.xiaohan.xhsnotegen.ui.components.CoverTag
 import com.xiaohan.xhsnotegen.ui.components.EmptyState
+import com.xiaohan.xhsnotegen.ui.components.OrderBadge
+import com.xiaohan.xhsnotegen.ui.components.PhotoNumber
+import com.xiaohan.xhsnotegen.ui.components.PhotoSheet
+import com.xiaohan.xhsnotegen.ui.components.Tile
+import com.xiaohan.xhsnotegen.ui.components.copyToClipboard
+import androidx.compose.foundation.clickable
+import com.xiaohan.xhsnotegen.ui.theme.NumberStyle
+import com.xiaohan.xhsnotegen.ui.theme.app
 import com.xiaohan.xhsnotegen.ui.components.Eyebrow
 import com.xiaohan.xhsnotegen.ui.components.ModelChip
 import com.xiaohan.xhsnotegen.ui.components.RatingBar
@@ -175,8 +192,8 @@ fun ReviewScreen(
                 .consumeWindowInsets(padding)
                 .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(bottom = 16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp),
+                .padding(start = 20.dp, end = 20.dp, top = 4.dp, bottom = 16.dp),
+            verticalArrangement = Arrangement.spacedBy(12.dp),
         ) {
             PhotoPicker(
                 d,
@@ -191,7 +208,7 @@ fun ReviewScreen(
             StyleTabs(d, onSelect = viewModel::selectVariant)
 
             val v = d.selectedVariant ?: return@Column
-            Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+            Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 AnimatedVisibility(visible = v.warnings.isNotEmpty()) { WarningsCard(v.warnings) }
 
                 NoteEditor(
@@ -201,6 +218,9 @@ fun ReviewScreen(
                     onBody = viewModel::updateBody,
                     onAddTags = viewModel::addHashtags,
                     onRemoveTag = viewModel::removeHashtag,
+                    noteTags = d.tags.mapTo(HashSet()) { it.name },
+                    onToggleTopicTag = viewModel::toggleTopicTag,
+                    onTagAllTopics = viewModel::tagAllTopics,
                 )
 
                 if (v.model.isNotBlank()) {
@@ -216,7 +236,6 @@ fun ReviewScreen(
                     OutlinedButton(
                         onClick = viewModel::rewriteCurrent,
                         enabled = aiTask == AiTask.NONE && !isPublishing,
-                        shape = CircleShape,
                     ) {
                         if (aiTask == AiTask.REWRITE_ONE) {
                             CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
@@ -335,8 +354,9 @@ private fun PhotoPicker(
     onIncludeAll: () -> Unit,
 ) {
     val selected = draft.selectedPublishPhotoUris
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(Modifier.padding(start = 20.dp, end = 8.dp), verticalAlignment = Alignment.CenterVertically) {
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    Tile(Modifier.fillMaxWidth(), contentPadding = PaddingValues(start = 14.dp, end = 4.dp, top = 6.dp, bottom = 12.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Eyebrow(tr("Photos", "照片"))
                 Text(
@@ -352,82 +372,61 @@ private fun PhotoPicker(
                 TextButton(onClick = onIncludeAll) { Text(tr("Include all", "全选")) }
             }
         }
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            itemsIndexed(draft.photoUris, key = { _, uri -> uri }) { _, uri ->
-                val order = selected.indexOf(uri) // -1 when left out
-                val isIn = order >= 0
-                var menu by remember { mutableStateOf(false) }
-                Box {
-                    Box(
-                        Modifier
-                            .size(width = 104.dp, height = 138.dp)
-                            .clip(MaterialTheme.shapes.medium)
-                            .border(
-                                width = if (isIn) 2.dp else 0.dp,
-                                color = if (isIn) MaterialTheme.colorScheme.primary else Color.Transparent,
-                                shape = MaterialTheme.shapes.medium,
-                            )
-                            .combinedClickable(onClick = { onToggle(uri) }, onLongClick = { menu = true }),
-                    ) {
-                        AsyncImage(
-                            model = uri, contentDescription = null, contentScale = ContentScale.Crop,
-                            modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh),
-                        )
-                        if (!isIn) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.45f)))
-                        if (order == 0) {
-                            Text(
-                                tr("Cover", "封面"),
-                                style = MaterialTheme.typography.labelSmall,
-                                color = MaterialTheme.colorScheme.onPrimary,
-                                modifier = Modifier
-                                    .align(Alignment.BottomStart)
-                                    .padding(6.dp)
-                                    .clip(CircleShape)
-                                    .background(MaterialTheme.colorScheme.primary)
-                                    .padding(horizontal = 8.dp, vertical = 2.dp),
-                            )
-                        }
-                        Box(
-                            Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(6.dp)
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .background(if (isIn) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.25f))
-                                .border(1.5.dp, Color.White, CircleShape),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (isIn) {
-                                Text("${order + 1}", style = MaterialTheme.typography.labelMedium,
-                                    color = MaterialTheme.colorScheme.onPrimary)
-                            }
-                        }
-                    }
-                    DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                        if (order != 0) DropdownMenuItem(
-                            text = { Text(tr("Set as cover", "设为封面")) },
-                            leadingIcon = { Icon(Icons.Outlined.Star, null) },
-                            onClick = { menu = false; onSetCover(uri) },
-                        )
-                        if (isIn && order > 0) DropdownMenuItem(
-                            text = { Text(tr("Move earlier", "前移")) },
-                            leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) },
-                            onClick = { menu = false; onMove(uri, -1) },
-                        )
-                        if (isIn && order < selected.lastIndex) DropdownMenuItem(
-                            text = { Text(tr("Move later", "后移")) },
-                            leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowForward, null) },
-                            onClick = { menu = false; onMove(uri, +1) },
-                        )
-                        DropdownMenuItem(
-                            text = { Text(if (isIn) tr("Leave out of post", "不放进笔记") else tr("Include in post", "放进笔记")) },
-                            leadingIcon = { Icon(if (isIn) Icons.Outlined.HideImage else Icons.Outlined.AddPhotoAlternate, null) },
-                            onClick = { menu = false; onToggle(uri) },
-                        )
-                    }
+        Spacer(Modifier.height(8.dp))
+        PhotoSheet(
+            count = draft.photoUris.size,
+            expanded = expanded,
+            onToggleExpanded = { expanded = !expanded },
+            modifier = Modifier.padding(end = 10.dp),
+            footer = tr("${draft.photoUris.size} photos · ${selected.size} in", "${draft.photoUris.size} 张 · 已选 ${selected.size}"),
+            footerEnd = selected.firstOrNull()?.let { tr("cover %02d".format(draft.photoUris.indexOf(it) + 1), "封面 %02d".format(draft.photoUris.indexOf(it) + 1)) },
+        ) { i ->
+            val uri = draft.photoUris[i]
+            val order = selected.indexOf(uri) // -1 when left out
+            val isIn = order >= 0
+            var menu by remember { mutableStateOf(false) }
+            val shape = if (order == 0) ArchShape(10.dp) else RoundedCornerShape(10.dp)
+            Box {
+                Box(
+                    Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(3f / 4f)
+                        .clip(shape)
+                        .then(if (isIn) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape) else Modifier)
+                        .combinedClickable(onClick = { onToggle(uri) }, onLongClick = { menu = true }),
+                ) {
+                    AsyncImage(
+                        model = uri, contentDescription = null, contentScale = ContentScale.Crop,
+                        modifier = Modifier.fillMaxSize().background(MaterialTheme.app.tile2),
+                    )
+                    if (!isIn) Box(Modifier.fillMaxSize().background(Color.Black.copy(alpha = 0.5f)))
+                    // The arched cover's top corners are cut away; keep its marks below the curve.
+                    val top = if (order == 0) 22.dp else 3.dp
+                    PhotoNumber(i + 1, Modifier.align(Alignment.TopStart).padding(start = 3.dp, top = top))
+                    if (isIn) OrderBadge(order + 1, Modifier.align(Alignment.TopEnd).padding(end = 3.dp, top = top))
+                    if (order == 0) CoverTag(Modifier.align(Alignment.BottomStart).padding(3.dp))
+                }
+                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                    if (order != 0) DropdownMenuItem(
+                        text = { Text(tr("Set as cover", "设为封面")) },
+                        leadingIcon = { Icon(Icons.Outlined.Star, null) },
+                        onClick = { menu = false; onSetCover(uri) },
+                    )
+                    if (isIn && order > 0) DropdownMenuItem(
+                        text = { Text(tr("Move earlier", "前移")) },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) },
+                        onClick = { menu = false; onMove(uri, -1) },
+                    )
+                    if (isIn && order < selected.lastIndex) DropdownMenuItem(
+                        text = { Text(tr("Move later", "后移")) },
+                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowForward, null) },
+                        onClick = { menu = false; onMove(uri, +1) },
+                    )
+                    DropdownMenuItem(
+                        text = { Text(if (isIn) tr("Leave out of post", "不放进笔记") else tr("Include in post", "放进笔记")) },
+                        leadingIcon = { Icon(if (isIn) Icons.Outlined.HideImage else Icons.Outlined.AddPhotoAlternate, null) },
+                        onClick = { menu = false; onToggle(uri) },
+                    )
                 }
             }
         }
@@ -438,42 +437,49 @@ private fun PhotoPicker(
 // Rating + place
 // ---------------------------------------------------------------------------
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 private fun MealInfoRow(draft: NoteDraft, onRate: (Int) -> Unit, onEditPlace: () -> Unit) {
     val place = draft.foodInfo.place
-    Column(Modifier.padding(horizontal = 16.dp), verticalArrangement = Arrangement.spacedBy(2.dp)) {
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RatingBar(draft.rating, onRate = onRate, size = 26.dp)
-            Spacer(Modifier.width(6.dp))
-            Text(ratingWords(draft.rating), style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant)
+    val address = place.fullAddressDisplay.ifBlank { draft.foodInfo.location }
+    val context = LocalContext.current
+    val c = MaterialTheme.colorScheme
+    val source = when (place.source) {
+        PlaceSource.GPS -> tr("From photo location", "来自照片定位")
+        PlaceSource.TEXT -> tr("Found from the restaurant / area — tap to correct", "根据店名 / 区域查到 — 点按修改")
+        PlaceSource.MANUAL -> tr("Set by you", "手动设置")
+        null -> tr("Tap to set, or use Organize by place on the home screen", "点按设置，或在首页用“按地点整理”")
+    }
+    Column {
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f)) {
+                RatingBar(draft.rating, onRate = onRate, size = 26.dp)
+                Text(ratingWords(draft.rating), style = MaterialTheme.typography.bodySmall,
+                    color = c.onSurfaceVariant, modifier = Modifier.padding(start = 4.dp))
+            }
         }
+        HorizontalDivider(color = MaterialTheme.app.line2)
         Row(
             Modifier
                 .fillMaxWidth()
                 .clip(MaterialTheme.shapes.small)
-                .clickable(onClick = onEditPlace)
-                .padding(horizontal = 8.dp, vertical = 6.dp),
+                // Tap edits; hold copies the address.
+                .combinedClickable(onClick = onEditPlace, onLongClick = if (address.isBlank()) null else ({ copyToClipboard(context, address) }))
+                .padding(vertical = 12.dp),
             verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
         ) {
-            Icon(Icons.Outlined.Place, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.primary)
+            Icon(Icons.Outlined.Place, null, Modifier.size(18.dp), tint = MaterialTheme.app.accent2)
+            Spacer(Modifier.width(8.dp))
             Column(Modifier.weight(1f)) {
                 Text(
-                    place.fullAddressDisplay.ifBlank { draft.foodInfo.location.ifBlank { tr("Add a place", "添加地点") } },
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface,
+                    address.ifBlank { tr("Add a place", "添加地点") },
+                    style = MaterialTheme.typography.bodyLarge, maxLines = 2, overflow = TextOverflow.Ellipsis,
                 )
-                val source = when (place.source) {
-                    PlaceSource.GPS -> tr("From photo location", "来自照片定位")
-                    PlaceSource.TEXT -> tr("Found from the restaurant / area — tap to correct", "根据店名 / 区域查到 — 点按修改")
-                    PlaceSource.MANUAL -> tr("Set by you", "手动设置")
-                    null -> tr("Tap to set, or use Organize by place on the home screen", "点按设置，或在首页用“按地点整理”")
-                }
-                Text(source, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(source, style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant)
             }
-            Icon(Icons.Outlined.Edit, tr("Edit place", "编辑地点"), Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+            Icon(Icons.Outlined.Edit, tr("Edit place", "编辑地点"), Modifier.size(18.dp), tint = c.onSurfaceVariant)
         }
+        HorizontalDivider(color = MaterialTheme.app.line2)
     }
 }
 
@@ -481,34 +487,16 @@ private fun MealInfoRow(draft: NoteDraft, onRate: (Int) -> Unit, onEditPlace: ()
 // Styles
 // ---------------------------------------------------------------------------
 
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun StyleTabs(draft: NoteDraft, onSelect: (Int) -> Unit) {
     val preferred = draft.preferredStyle
-    LazyRow(
-        contentPadding = PaddingValues(horizontal = 16.dp),
-        horizontalArrangement = Arrangement.spacedBy(8.dp),
-    ) {
-        itemsIndexed(draft.variants) { index, variant ->
-            val style = NoteStyle.fromLabel(variant.styleLabel)
-            val selected = index == draft.selectedVariantIndex
-            FilterChip(
-                selected = selected,
-                onClick = { onSelect(index) },
-                label = { Text(style.displayName) },
-                leadingIcon = if (style == preferred) {
-                    { Icon(Icons.Filled.Star, contentDescription = tr("Your favorite style", "你最喜欢的风格"), Modifier.size(16.dp)) }
-                } else null,
-                shape = CircleShape,
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.onSurface,
-                    selectedLabelColor = MaterialTheme.colorScheme.surface,
-                    selectedLeadingIconColor = MaterialTheme.colorScheme.tertiaryContainer,
-                    iconColor = MaterialTheme.colorScheme.tertiary,
-                ),
-                border = if (selected) null else FilterChipDefaults.filterChipBorder(
-                    enabled = true, selected = false, borderColor = MaterialTheme.colorScheme.outlineVariant,
-                ),
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        itemsIndexed(draft.variants) { i, v ->
+            val style = NoteStyle.fromLabel(v.styleLabel)
+            AppFilterChip(
+                selected = i == draft.selectedVariantIndex,
+                onClick = { onSelect(i) },
+                label = style.displayName + if (style == preferred) " ★" else "",
             )
         }
     }
@@ -516,7 +504,7 @@ private fun StyleTabs(draft: NoteDraft, onSelect: (Int) -> Unit) {
 
 @Composable
 private fun WarningsCard(warnings: List<String>) {
-    Surface(shape = MaterialTheme.shapes.medium, color = MaterialTheme.colorScheme.tertiaryContainer) {
+    Surface(shape = MaterialTheme.shapes.small, color = MaterialTheme.colorScheme.tertiaryContainer) {
         Row(Modifier.fillMaxWidth().padding(14.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             Icon(Icons.Outlined.Info, null, Modifier.size(20.dp), tint = MaterialTheme.colorScheme.onTertiaryContainer)
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
@@ -544,9 +532,13 @@ private fun NoteEditor(
     onBody: (String) -> Unit,
     onAddTags: (String) -> Unit,
     onRemoveTag: (String) -> Unit,
+    /** Names of this note's tags: topics with the same name are marked. */
+    noteTags: Set<String>,
+    onToggleTopicTag: (String) -> Unit,
+    onTagAllTopics: () -> Unit,
 ) {
     val c = MaterialTheme.colorScheme
-    Surface(shape = MaterialTheme.shapes.large, color = c.surfaceContainerLowest) {
+    Surface(shape = RoundedCornerShape(22.dp), color = MaterialTheme.app.tile) {
         Box {
             Column(Modifier.padding(20.dp), verticalArrangement = Arrangement.spacedBy(12.dp)) {
                 val over = variant.title.length > TITLE_LIMIT
@@ -566,11 +558,11 @@ private fun NoteEditor(
                 Text(
                     if (over) tr("${variant.title.length}/$TITLE_LIMIT · XHS allows $TITLE_LIMIT characters", "${variant.title.length}/$TITLE_LIMIT · 小红书标题最多 $TITLE_LIMIT 字")
                     else "${variant.title.length}/$TITLE_LIMIT",
-                    style = MaterialTheme.typography.labelSmall,
+                    style = NumberStyle,
                     color = if (over) c.error else c.onSurfaceVariant,
                     modifier = Modifier.align(Alignment.End),
                 )
-                HorizontalDivider(color = c.outlineVariant)
+                HorizontalDivider(color = MaterialTheme.app.line)
                 BasicTextField(
                     value = variant.body,
                     onValueChange = onBody,
@@ -578,36 +570,52 @@ private fun NoteEditor(
                     cursorBrush = SolidColor(c.primary),
                     modifier = Modifier.fillMaxWidth().heightIn(min = 180.dp),
                 )
-                HorizontalDivider(color = c.outlineVariant)
+                HorizontalDivider(color = MaterialTheme.app.line)
 
                 FlowRow(
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
                     verticalArrangement = Arrangement.spacedBy(8.dp),
                 ) {
                     variant.hashtags.forEach { tag ->
+                        val tagged = tag in noteTags
                         Row(
                             Modifier
                                 .clip(CircleShape)
-                                .background(c.primaryContainer)
+                                .background(if (tagged) c.secondaryContainer else MaterialTheme.app.tile2)
+                                // Tap: also file this note under a tag of the same name (tap again to undo).
+                                .clickable { onToggleTopicTag(tag) }
                                 .padding(start = 12.dp, end = 4.dp, top = 4.dp, bottom = 4.dp),
                             verticalAlignment = Alignment.CenterVertically,
                         ) {
-                            Text("#$tag", style = MaterialTheme.typography.labelLarge, color = c.onPrimaryContainer)
+                            if (tagged) {
+                                Icon(Icons.AutoMirrored.Outlined.Label, tr("Also a tag", "已是标签"), Modifier.size(14.dp), tint = c.onSecondaryContainer)
+                                Spacer(Modifier.width(4.dp))
+                            }
+                            Text("#$tag", style = MaterialTheme.typography.labelLarge, color = if (tagged) c.onSecondaryContainer else c.onSurface)
                             Box(
                                 Modifier.padding(start = 2.dp).size(22.dp).clip(CircleShape).clickable { onRemoveTag(tag) },
                                 contentAlignment = Alignment.Center,
                             ) {
                                 Icon(Icons.Filled.Close, contentDescription = tr("Remove #$tag", "删除 #$tag"),
-                                    Modifier.size(14.dp), tint = c.onPrimaryContainer)
+                                    Modifier.size(14.dp), tint = c.onSurfaceVariant)
                             }
                         }
                     }
                     TagInput(onAddTags)
                 }
+                if (variant.hashtags.isNotEmpty()) {
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(tr("Tap a topic to also use it as a tag", "点话题可同时加为标签"), style = MaterialTheme.typography.bodySmall,
+                            color = c.onSurfaceVariant, modifier = Modifier.weight(1f))
+                        if (variant.hashtags.any { it !in noteTags }) {
+                            TextButton(onClick = onTagAllTopics) { Text(tr("Tag all", "全部加为标签")) }
+                        }
+                    }
+                }
             }
             if (busy) {
                 Box(
-                    Modifier.matchParentSize().clip(MaterialTheme.shapes.large).background(c.surfaceContainerLowest.copy(alpha = 0.75f)),
+                    Modifier.matchParentSize().clip(RoundedCornerShape(22.dp)).background(MaterialTheme.app.tile.copy(alpha = 0.75f)),
                     contentAlignment = Alignment.Center,
                 ) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally, verticalArrangement = Arrangement.spacedBy(10.dp)) {
@@ -631,8 +639,9 @@ private fun TagInput(onAdd: (String) -> Unit) {
     BasicTextField(
         value = text,
         onValueChange = { new ->
-            // A space or comma finishes a tag, like most tag inputs.
-            if (new.endsWith(" ") || new.endsWith(",") || new.endsWith("，")) {
+            // A space or comma finishes a topic, like most tag inputs; "#" starts the next one
+            // (Chinese keyboards use space to pick characters, so it rarely gets here).
+            if (new.endsWith(" ") || new.endsWith(",") || new.endsWith("，") || (new.endsWith("#") && new.length > 1)) {
                 text = new.dropLast(1); commit()
             } else text = new
         },
@@ -641,18 +650,27 @@ private fun TagInput(onAdd: (String) -> Unit) {
         cursorBrush = SolidColor(c.primary),
         keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
         keyboardActions = KeyboardActions(onDone = { commit() }),
-        modifier = Modifier.widthIn(min = 96.dp, max = 180.dp),
+        // Tapping elsewhere keeps what was typed instead of dropping it.
+        modifier = Modifier.widthIn(min = 96.dp, max = 200.dp).onFocusChanged { if (!it.isFocused) commit() },
         decorationBox = { inner ->
             Row(
                 Modifier
                     .clip(CircleShape)
-                    .border(1.dp, c.outlineVariant, CircleShape)
-                    .padding(horizontal = 12.dp, vertical = 6.dp),
+                    .border(1.dp, MaterialTheme.app.line2, CircleShape)
+                    .padding(start = 12.dp, end = if (text.isBlank()) 12.dp else 4.dp, top = 6.dp, bottom = 6.dp),
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Box {
+                Box(Modifier.weight(1f, fill = false)) {
                     if (text.isEmpty()) Text(tr("+ tag", "+ 话题"), style = MaterialTheme.typography.labelLarge, color = c.onSurfaceVariant)
                     inner()
+                }
+                if (text.isNotBlank()) {
+                    Box(
+                        Modifier.padding(start = 4.dp).size(22.dp).clip(CircleShape).background(c.primary).clickable { commit() },
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Filled.Check, tr("Add", "添加"), Modifier.size(14.dp), tint = c.onPrimary)
+                    }
                 }
             }
         },
@@ -671,25 +689,29 @@ private fun PublishBar(
     onPublish: () -> Unit,
 ) {
     val titleTooLong = (draft.selectedVariant?.title?.length ?: 0) > TITLE_LIMIT
-    Surface(color = MaterialTheme.colorScheme.background, shadowElevation = 8.dp) {
+    val a = MaterialTheme.app
+    Surface(color = a.band) {
+      Column {
         Column(
-            Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 20.dp, vertical = 12.dp),
+            Modifier.fillMaxWidth().navigationBarsPadding().padding(horizontal = 14.dp, vertical = 12.dp),
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.spacedBy(6.dp),
         ) {
             if (titleTooLong) {
                 Text(tr("Shorten the title to post", "标题太长，缩短后才能发布"), style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.error)
+                    color = a.onBand)
             }
             Button(
                 onClick = onPublish,
                 enabled = enabled && !isPublishing && !titleTooLong,
-                modifier = Modifier.fillMaxWidth().height(56.dp),
-                shape = CircleShape,
+                modifier = Modifier.fillMaxWidth().height(54.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = a.onBand, contentColor = a.band,
+                    disabledContainerColor = a.onBand.copy(alpha = 0.3f), disabledContentColor = a.onBand.copy(alpha = 0.75f),
+                ),
             ) {
                 if (isPublishing) {
-                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp,
-                        color = MaterialTheme.colorScheme.onPrimary)
+                    CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp, color = a.onBand)
                     Spacer(Modifier.width(12.dp))
                     Text(tr("Posting…", "发布中…"), style = MaterialTheme.typography.titleMedium)
                 } else {
@@ -702,5 +724,6 @@ private fun PublishBar(
                 }
             }
         }
+      }
     }
 }

@@ -10,11 +10,14 @@ import com.xiaohan.xhsnotegen.XhsNoteGenApp
 import com.xiaohan.xhsnotegen.data.json.ExportData
 import com.xiaohan.xhsnotegen.data.json.JsonCodec
 import com.xiaohan.xhsnotegen.domain.NoteDraft
+import com.xiaohan.xhsnotegen.domain.NoteSearch
+import com.xiaohan.xhsnotegen.domain.SearchTerm
 import com.xiaohan.xhsnotegen.domain.NoteStatus
 import com.xiaohan.xhsnotegen.domain.NoteTag
 import com.xiaohan.xhsnotegen.domain.Place
 import com.xiaohan.xhsnotegen.domain.PlaceSource
 import com.xiaohan.xhsnotegen.domain.PlaceCatalog
+import com.xiaohan.xhsnotegen.domain.TagFilter
 import com.xiaohan.xhsnotegen.domain.TagTree
 import com.xiaohan.xhsnotegen.domain.WritingMode
 import com.xiaohan.xhsnotegen.i18n.LanguageStore
@@ -51,13 +54,12 @@ enum class DraftFilter {
 
 /** How the home feed is arranged. */
 enum class GroupBy {
-    NONE, PLACE, TAG, RATING, MODE;
+    NONE, PLACE, RATING, MODE;
 
     val label: String
         get() = when (this) {
             NONE -> tr("None", "不分组")
             PLACE -> tr("Place", "地点")
-            TAG -> tr("Tag", "标签")
             RATING -> tr("Rating", "评分")
             MODE -> tr("Mode", "模式")
         }
@@ -76,12 +78,21 @@ sealed interface FeedItem {
 }
 
 data class DraftListState(
+    /** Every note, before any filter — what search suggestions count over. */
+    val all: List<NoteDraft> = emptyList(),
     val drafts: List<NoteDraft> = emptyList(),
     val feed: List<FeedItem> = emptyList(),
     val counts: Map<DraftFilter, Int> = emptyMap(),
     val filter: DraftFilter = DraftFilter.ALL,
     val tags: List<NoteTag> = emptyList(),
-    val tagFilter: Long? = null,
+    /** Picked tags: same group OR, different groups AND (see [TagFilter]). */
+    val tagFilters: Set<Long> = emptySet(),
+    /** Notes per tag, counting tags below it, over all notes (not just the filtered ones). */
+    val tagCounts: Map<Long, Int> = emptyMap(),
+    /** Search conditions other than tags (see [NoteSearch]). */
+    val search: List<SearchTerm> = emptyList(),
+    /** Mode key → name in the app language. */
+    val modeNames: Map<String, String> = emptyMap(),
     val groupBy: GroupBy = GroupBy.NONE,
     /** The order of the Group buttons (Settings → Home screen). */
     val groupOrder: List<GroupBy> = HomePrefs.DEFAULT_ORDER,
@@ -98,7 +109,8 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
     private val prefs = application.getSharedPreferences("home", 0)
 
     private val _filter = MutableStateFlow(DraftFilter.ALL)
-    private val _tagFilter = MutableStateFlow<Long?>(null)
+    private val _tagFilter = MutableStateFlow<Set<Long>>(emptySet())
+    private val _search = MutableStateFlow<List<SearchTerm>>(emptyList())
     private val _groupBy = MutableStateFlow(
         GroupBy.entries.firstOrNull { it.name == prefs.getString("group_by", null) } ?: GroupBy.NONE
     )
@@ -110,27 +122,29 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
     private val _organizing = MutableStateFlow<OrganizeProgress?>(null)
     val organizing: StateFlow<OrganizeProgress?> = _organizing.asStateFlow()
 
-    private val options = combine(_filter, _tagFilter, _groupBy, _collapsed) { f, t, g, c -> Options(f, t, g, c) }
-    private data class Options(val filter: DraftFilter, val tag: Long?, val groupBy: GroupBy, val collapsed: Set<String>)
+    private val options = combine(_filter, _tagFilter, _search, _groupBy, _collapsed) { f, t, s, g, c -> Options(f, t, s, g, c) }
+    private data class Options(val filter: DraftFilter, val tags: Set<Long>, val search: List<SearchTerm>, val groupBy: GroupBy, val collapsed: Set<String>)
 
     /** Things that change how the feed reads without the notes changing: button order, mode names, app language. */
     private val display = combine(HomePrefs.groupOrder, ModeStore.modes, snapshotFlow { LanguageStore.isZh }) { order, modes, zh -> Display(order, modes, zh) }
     private data class Display(val order: List<GroupBy>, val modes: List<WritingMode>, val zh: Boolean)
 
     val state: StateFlow<DraftListState> = combine(repo.getAllFlow(), repo.allTagsFlow(), options, display) { all, tags, o, d ->
-        // A tag filter pointing at a deleted tag simply stops filtering.
-        val tagFilter = o.tag?.takeIf { id -> tags.any { it.id == id } }
-        // Filtering by a tag includes everything below it.
-        val filterIds = tagFilter?.let { id -> setOf(id) + TagTree.descendants(id, tags) }
-        val visible = all.filter { o.filter.matches(it.status) && (filterIds == null || it.tags.any { t -> t.id in filterIds }) }
+        // Picked tags that were deleted simply stop filtering.
+        val tagFilters = o.tags.filterTo(HashSet()) { id -> tags.any { it.id == id } }
+        val visible = all.filter { o.filter.matches(it.status) && TagFilter.matches(it.tags, tagFilters, tags) && NoteSearch.matches(it, o.search) }
         DraftListState(
+            all = all,
             drafts = visible,
-            feed = buildFeed(visible, o.groupBy, o.collapsed, tags, modeName = { key -> d.modes.firstOrNull { it.key == key }?.name ?: key },
+            feed = buildFeed(visible, o.groupBy, o.collapsed, modeName = { key -> d.modes.firstOrNull { it.key == key }?.name ?: key },
                 modeOrder = d.modes.map { it.key }, zh = d.zh),
             counts = DraftFilter.entries.associateWith { f -> all.count { f.matches(it.status) } },
             filter = o.filter,
             tags = tags,
-            tagFilter = tagFilter,
+            tagFilters = tagFilters,
+            tagCounts = tags.associate { t -> t.id to all.count { TagFilter.matches(it.tags, setOf(t.id), tags) } },
+            search = o.search,
+            modeNames = d.modes.associate { it.key to it.name },
             groupBy = o.groupBy,
             groupOrder = d.order,
             collapsed = o.collapsed,
@@ -146,7 +160,22 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
 
     fun setFilter(filter: DraftFilter) { _filter.value = filter }
 
-    fun setTagFilter(tagId: Long?) { _tagFilter.value = if (_tagFilter.value == tagId) null else tagId }
+    fun toggleTagFilter(tagId: Long) { _tagFilter.value = TagFilter.toggle(_tagFilter.value, tagId, state.value.tags) }
+
+    fun clearTagFilters() { _tagFilter.value = emptySet() }
+
+    /** Adds a search condition; a place, mode or keyword already there isn't added twice. */
+    fun addSearchTerm(term: SearchTerm) {
+        val now = _search.value
+        if (now.any { it == term || (it is SearchTerm.InPlace && term is SearchTerm.InPlace && it.name == term.name) }) return
+        // One rating at a time: picking 3★+ replaces 4★+.
+        _search.value = (if (term is SearchTerm.MinRating) now.filterNot { it is SearchTerm.MinRating } else now) + term
+    }
+
+    fun removeSearchTerm(term: SearchTerm) { _search.value = _search.value - term }
+
+    /** Drops every search condition and picked tag. */
+    fun clearSearch() { _search.value = emptyList(); _tagFilter.value = emptySet() }
 
     /** Tapping the active grouping turns grouping off. */
     fun toggleGroupBy(groupBy: GroupBy) = setGroupBy(if (_groupBy.value == groupBy) GroupBy.NONE else groupBy)
@@ -345,9 +374,7 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
 
     companion object {
         val UNKNOWN_PLACE: String get() = tr("Somewhere", "未知地点")
-        val UNTAGGED: String get() = tr("No tag", "无标签")
         val UNRATED: String get() = tr("Not rated", "未评分")
-        val GENERAL: String get() = tr("General", "其他")
 
         /**
          * Countries grouped Country → State rather than Country → City: in these,
@@ -364,13 +391,10 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
         /**
          * Flattens notes into headers + notes. Place: Country → City (the region
          * is shown next to the city), or Country → State for the US, Canada and
-         * Australia. Tag: the tag tree at any depth — a note sits under the deepest
-         * tags it has, notes with only an upper tag under "General", and a note with
-         * several tags appears under each. Collapsed groups keep their header.
+         * Australia. Collapsed groups keep their header.
          */
         fun buildFeed(
             notes: List<NoteDraft>, groupBy: GroupBy, collapsed: Set<String>,
-            allTags: List<NoteTag> = emptyList(),
             /** Name of a writing mode, in the app language. */
             modeName: (String) -> String = { it },
             modeOrder: List<String> = emptyList(),
@@ -415,41 +439,6 @@ class DraftListViewModel(application: Application) : AndroidViewModel(applicatio
                     val title = if (stars == 0) UNRATED else ratingWords(stars)
                     add(FeedItem.Header(GroupHeader(key, title, 0, inGroup.size, rating = stars)))
                     if (key !in collapsed) inGroup.forEach { add(FeedItem.Note(it, key)) }
-                }
-            }
-            GroupBy.TAG -> buildList {
-                val byId = (allTags + notes.flatMap { it.tags }).associateBy { it.id }
-                val tree = byId.values.toList()
-                // Ids of each note's tags and everything above them.
-                val branchIds = notes.associate { n -> n.id to n.tags.flatMap { t -> TagTree.path(t, byId).map { it.id } }.toSet() }
-                fun inBranch(n: NoteDraft, id: Long) = id in branchIds[n.id].orEmpty()
-                fun order(groups: List<Pair<NoteTag, List<NoteDraft>>>) =
-                    groups.sortedWith(compareByDescending<Pair<NoteTag, List<NoteDraft>>> { it.second.size }.thenBy { it.first.name.lowercase() })
-
-                fun emit(tag: NoteTag, members: List<NoteDraft>, level: Int, key: String, seen: Set<Long>) {
-                    add(FeedItem.Header(GroupHeader(key, tag.name, level, members.size)))
-                    if (key in collapsed) return
-                    val children = order(TagTree.children(tag.id, tree).filter { it.id !in seen }
-                        .map { c -> c to members.filter { inBranch(it, c.id) } }
-                        .filter { it.second.isNotEmpty() })
-                    if (children.isEmpty()) { members.forEach { add(FeedItem.Note(it, key)) }; return }
-                    children.forEach { (c, m) -> emit(c, m, level + 1, "$key/${c.id}", seen + c.id) }
-                    val general = members.filter { n -> children.none { (c, _) -> inBranch(n, c.id) } }
-                    if (general.isNotEmpty()) {
-                        val gKey = "$key/general"
-                        add(FeedItem.Header(GroupHeader(gKey, GENERAL, level + 1, general.size)))
-                        if (gKey !in collapsed) general.forEach { add(FeedItem.Note(it, gKey)) }
-                    }
-                }
-
-                val roots = notes.flatMap { n -> n.tags.map { TagTree.rootOf(it, byId) } }.distinctBy { it.id }
-                order(roots.map { r -> r to notes.filter { inBranch(it, r.id) } })
-                    .forEach { (r, m) -> emit(r, m, 0, "tag:${r.id}", setOf(r.id)) }
-                val untagged = notes.filter { it.tags.isEmpty() }
-                if (untagged.isNotEmpty()) {
-                    val key = "tag:none"
-                    add(FeedItem.Header(GroupHeader(key, UNTAGGED, 0, untagged.size)))
-                    if (key !in collapsed) untagged.forEach { add(FeedItem.Note(it, key)) }
                 }
             }
         }

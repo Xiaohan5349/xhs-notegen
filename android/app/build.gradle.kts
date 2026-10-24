@@ -1,4 +1,8 @@
+import java.text.SimpleDateFormat
+import java.util.Date
 import java.util.Properties
+
+val debugStamp: String = SimpleDateFormat("MMdd-HHmm").format(Date())
 
 plugins {
     alias(libs.plugins.android.application)
@@ -31,8 +35,8 @@ android {
         applicationId = "com.xiaohan.xhsnotegen"
         minSdk = 29
         targetSdk = 35
-        versionCode = 12
-        versionName = "1.10.0"
+        versionCode = 13
+        versionName = "1.11.0"
     }
 
     buildTypes {
@@ -40,7 +44,9 @@ android {
             // Installs next to the release app ("浮生拾遗 Debug") instead of replacing it,
             // so testing never touches the real app's notes.
             applicationIdSuffix = ".debug"
-            versionNameSuffix = "-debug"
+            // Build time (MMdd-HHmm) in the version name and the APK file name, so test
+            // builds can be told apart (Settings → Apps → 浮生拾遗 Debug shows it too).
+            versionNameSuffix = "-debug-$debugStamp"
         }
         release {
             isMinifyEnabled = true
@@ -98,6 +104,12 @@ dependencies {
 }
 base {
     archivesName.set("浮生拾遗-${android.defaultConfig.versionName}")
+}
+// e.g. 浮生拾遗-1.10.0-debug-1023-2345.apk
+android.applicationVariants.all {
+    if (buildType.name == "debug") outputs.all {
+        (this as com.android.build.gradle.internal.api.BaseVariantOutputImpl).outputFileName = "浮生拾遗-$versionName.apk"
+    }
 }
 
 // Release guard: a versionCode LOWER than the last release can't install as an

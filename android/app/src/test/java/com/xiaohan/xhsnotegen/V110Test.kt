@@ -64,8 +64,8 @@ class V110Test {
     @Test
     fun `group button order keeps every group once and adds missing ones`() {
         assertEquals(HomePrefs.DEFAULT_ORDER, HomePrefs.normalize(emptyList()))
-        assertEquals(listOf(GroupBy.RATING, GroupBy.PLACE, GroupBy.TAG, GroupBy.MODE), HomePrefs.normalize(listOf(GroupBy.RATING, GroupBy.NONE, GroupBy.RATING)))
-        assertEquals(listOf(GroupBy.MODE, GroupBy.PLACE, GroupBy.TAG, GroupBy.RATING), HomePrefs.normalize(listOf(GroupBy.MODE)))
+        assertEquals(listOf(GroupBy.RATING, GroupBy.PLACE, GroupBy.MODE), HomePrefs.normalize(listOf(GroupBy.RATING, GroupBy.NONE, GroupBy.RATING)))
+        assertEquals(listOf(GroupBy.MODE, GroupBy.PLACE, GroupBy.RATING), HomePrefs.normalize(listOf(GroupBy.MODE)))
     }
 
     @Test

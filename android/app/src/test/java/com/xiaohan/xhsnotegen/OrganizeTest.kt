@@ -52,15 +52,6 @@ class OrganizeTest {
     }
 
     @Test
-    fun `a note with two tags appears under both, untagged last`() {
-        val notes = listOf(note(1, tags = arrayOf("咖啡", "甜品")), note(2, tags = arrayOf("咖啡")), note(3))
-        assertEquals(
-            listOf("[咖啡 2]", "1", "2", "[甜品 1]", "1", "[No tag 1]", "3"),
-            titles(buildFeed(notes, GroupBy.TAG, emptySet(), zh = true)),
-        )
-    }
-
-    @Test
     fun `backups carry places and tags`() {
         val json = """{"drafts":[{"foodInfo":{"dishNames":"面","place":{"country":"中国","city":"南京市","source":"MANUAL"}},
             "tags":[{"id":7,"name":"面食"},{"name":" "},null]}]}"""

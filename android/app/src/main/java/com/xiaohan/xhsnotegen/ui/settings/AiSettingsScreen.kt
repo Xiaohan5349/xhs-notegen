@@ -1,5 +1,7 @@
 package com.xiaohan.xhsnotegen.ui.settings
 
+import com.xiaohan.xhsnotegen.ui.components.AppFilterChip
+import com.xiaohan.xhsnotegen.ui.theme.app
 import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
@@ -26,6 +28,8 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
+import androidx.compose.material.icons.automirrored.outlined.List
+import com.xiaohan.xhsnotegen.ai.AiBalance
 import com.xiaohan.xhsnotegen.ai.AiConfig
 import com.xiaohan.xhsnotegen.ai.AiException
 import com.xiaohan.xhsnotegen.ai.AiProvider
@@ -97,6 +101,11 @@ fun AiSettingsScreen(onNavigateBack: () -> Unit) {
     var loadingModels by remember { mutableStateOf(false) }
     var modelList by remember { mutableStateOf<List<String>?>(null) }
     var modelsError by remember { mutableStateOf<AiException?>(null) }
+    var cacheTick by remember { mutableIntStateOf(0) }
+
+    var loadingBalance by remember { mutableStateOf(false) }
+    var balance by remember { mutableStateOf<String?>(null) }
+    var balanceError by remember { mutableStateOf<AiException?>(null) }
 
     fun runTest(config: AiConfig) {
         if (testing) return
@@ -159,12 +168,12 @@ fun AiSettingsScreen(onNavigateBack: () -> Unit) {
             ) {
                 FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                     AiProvider.entries.forEach { p ->
-                        FilterChip(selected = p == provider, onClick = { provider = p; result = null }, label = { Text(p.displayName) }, shape = CircleShape)
+                        AppFilterChip(selected = p == provider, onClick = { provider = p; result = null; modelsError = null; balance = null; balanceError = null }, label = p.displayName)
                     }
                 }
 
                 if (provider.models.isNotEmpty()) {
-                    Column(Modifier.clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainer)) {
+                    Column(Modifier.clip(MaterialTheme.shapes.small).background(MaterialTheme.app.inset)) {
                         provider.models.forEach { m ->
                             val selected = m.id == draft.model
                             Row(
@@ -228,23 +237,51 @@ fun AiSettingsScreen(onNavigateBack: () -> Unit) {
                     },
                 )
 
-                if (isCustom) {
-                    OutlinedButton(
-                        onClick = {
-                            loadingModels = true; modelsError = null
-                            scope.launch {
-                                try { modelList = AiWriter.listModels(draft.toConfig()) } catch (e: AiException) { modelsError = e } catch (e: Exception) {
-                                    modelsError = AiException(e.message ?: e.toString(), detail = e.toString())
-                                }
-                                loadingModels = false
+                // Every provider can list its models; the last list is kept so it opens without a request.
+                run {
+                    val config = draft.toConfig()
+                    val cached = remember(provider, config.baseUrl, cacheTick) { AiSettings.cachedModels(context, provider, config.baseUrl) }
+                    val canLoad = !loadingModels && if (isCustom) config.baseUrl.isNotBlank() else config.apiKey.isNotBlank()
+                    fun load() {
+                        loadingModels = true; modelsError = null
+                        scope.launch {
+                            try {
+                                val list = AiWriter.listModels(config)
+                                AiSettings.setCachedModels(context, provider, config.baseUrl, list)
+                                cacheTick++
+                                modelList = list
+                            } catch (e: AiException) { modelsError = e } catch (e: Exception) {
+                                modelsError = AiException(e.message ?: e.toString(), detail = e.toString())
                             }
-                        },
-                        enabled = !loadingModels && draft.baseUrl.isNotBlank(),
-                    ) {
-                        if (loadingModels) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
-                        else Icon(Icons.Outlined.Sync, null, Modifier.size(18.dp))
-                        Spacer(Modifier.width(8.dp))
-                        Text(tr("Load models from this address", "从这个地址读取模型列表"))
+                            loadingModels = false
+                        }
+                    }
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                        if (cached != null) {
+                            OutlinedButton(onClick = { modelList = cached }) {
+                                Icon(Icons.AutoMirrored.Outlined.List, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(tr("Choose from ${cached.size} models", "从 ${cached.size} 个模型中选择"))
+                            }
+                            IconButton(onClick = ::load, enabled = canLoad) {
+                                if (loadingModels) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                                else Icon(Icons.Outlined.Sync, tr("Read the list again", "重新读取列表"))
+                            }
+                        } else {
+                            OutlinedButton(onClick = ::load, enabled = canLoad) {
+                                if (loadingModels) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                                else Icon(Icons.Outlined.Sync, null, Modifier.size(18.dp))
+                                Spacer(Modifier.width(8.dp))
+                                Text(
+                                    if (isCustom) tr("Load models from this address", "从这个地址读取模型列表")
+                                    else tr("Load ${provider.displayName}'s model list", "读取 ${provider.displayName} 模型列表")
+                                )
+                            }
+                        }
+                    }
+                    if (!isCustom && config.apiKey.isBlank()) {
+                        Text(tr("Add the API key below to read the model list.", "填写下面的 API 密钥后即可读取模型列表。"),
+                            style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                     modelsError?.let { e ->
                         Text(e.message.orEmpty(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
@@ -322,13 +359,39 @@ fun AiSettingsScreen(onNavigateBack: () -> Unit) {
                     }
                 }
 
+                // Only DeepSeek and OpenRouter let an API key read the balance.
+                val balanceConfig = draft.toConfig()
+                if (AiBalance.supports(balanceConfig)) {
+                    OutlinedButton(
+                        onClick = {
+                            loadingBalance = true; balance = null; balanceError = null
+                            scope.launch {
+                                try { balance = AiBalance.fetch(balanceConfig) } catch (e: AiException) { balanceError = e } catch (e: Exception) {
+                                    balanceError = AiException(e.message ?: e.toString(), detail = e.toString())
+                                }
+                                loadingBalance = false
+                            }
+                        },
+                        enabled = !loadingBalance && balanceConfig.apiKey.isNotBlank(),
+                    ) {
+                        if (loadingBalance) CircularProgressIndicator(Modifier.size(16.dp), strokeWidth = 2.dp)
+                        else Icon(Icons.Outlined.AccountBalanceWallet, null, Modifier.size(18.dp))
+                        Spacer(Modifier.width(8.dp))
+                        Text(tr("Check balance", "查询余额"))
+                    }
+                    balance?.let { Text(it, style = MaterialTheme.typography.bodyMedium) }
+                    balanceError?.let { e ->
+                        Text(e.message.orEmpty(), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+
                 result?.let { r ->
                     val color = if (r.ok) MaterialTheme.colorScheme.secondary else MaterialTheme.colorScheme.error
                     Column(
                         Modifier
                             .fillMaxWidth()
-                            .clip(MaterialTheme.shapes.medium)
-                            .background(MaterialTheme.colorScheme.surfaceContainer)
+                            .clip(MaterialTheme.shapes.small)
+                            .background(MaterialTheme.app.inset)
                             .padding(14.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp),
                     ) {

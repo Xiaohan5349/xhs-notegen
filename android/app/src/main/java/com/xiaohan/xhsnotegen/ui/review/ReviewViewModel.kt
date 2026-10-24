@@ -122,6 +122,42 @@ class ReviewViewModel(application: Application) : AndroidViewModel(application) 
 
     fun removeHashtag(tag: String) = updateSelectedVariant { v -> v.copy(hashtags = v.hashtags - tag) }
 
+    /**
+     * Gives this note a tag named like the topic, or takes it away if it has one.
+     * Tags are stored apart from the draft, so this writes them directly.
+     */
+    fun toggleTopicTag(topic: String) {
+        val d = _draft.value ?: return
+        val existing = d.tags.firstOrNull { it.name == topic }
+        app.applicationScope.launch {
+            runCatching {
+                if (existing != null) {
+                    repo.removeTag(listOf(d.id), existing.id)
+                    _draft.update { it?.copy(tags = it.tags.filterNot { t -> t.id == existing.id }) }
+                } else {
+                    val tag = repo.getOrCreateTag(topic)
+                    repo.addTag(listOf(d.id), tag.id)
+                    _draft.update { it?.copy(tags = (it.tags + tag).distinctBy { t -> t.id }) }
+                }
+            }.onFailure { _events.trySend(ReviewEvent.Message(tr("Couldn't update tags", "标签没能更新"))) }
+        }
+    }
+
+    /** Every topic of the current version becomes a tag on this note. */
+    fun tagAllTopics() {
+        val d = _draft.value ?: return
+        val missing = d.selectedVariant?.hashtags.orEmpty().filter { h -> d.tags.none { it.name == h } }
+        if (missing.isEmpty()) return
+        app.applicationScope.launch {
+            runCatching {
+                val tags = missing.map { repo.getOrCreateTag(it) }
+                tags.forEach { repo.addTag(listOf(d.id), it.id) }
+                _draft.update { it?.copy(tags = (it.tags + tags).distinctBy { t -> t.id }) }
+                _events.trySend(ReviewEvent.Message(tr("Added ${tags.size} tags", "已添加 ${tags.size} 个标签")))
+            }.onFailure { _events.trySend(ReviewEvent.Message(tr("Couldn't update tags", "标签没能更新"))) }
+        }
+    }
+
     /** Toggles a photo in or out of the post. Selection order = publish order (first is the cover). */
     fun togglePublishPhoto(uri: String) {
         val d = _draft.value ?: return

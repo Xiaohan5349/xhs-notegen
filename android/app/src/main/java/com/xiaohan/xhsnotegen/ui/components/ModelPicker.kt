@@ -1,5 +1,6 @@
 package com.xiaohan.xhsnotegen.ui.components
 
+import com.xiaohan.xhsnotegen.ui.theme.app
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
@@ -85,7 +86,7 @@ private fun ModelPickerSheet(
     onDismiss: () -> Unit,
 ) {
     val context = LocalContext.current
-    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.colorScheme.surfaceContainerLow) {
+    ModalBottomSheet(onDismissRequest = onDismiss, containerColor = MaterialTheme.app.tile) {
         Column(
             Modifier
                 .fillMaxWidth()
@@ -120,7 +121,7 @@ private fun ModelPickerSheet(
                             }
                         }
                     }
-                    Column(Modifier.clip(MaterialTheme.shapes.medium).background(MaterialTheme.colorScheme.surfaceContainer)) {
+                    Column(Modifier.clip(MaterialTheme.shapes.small).background(MaterialTheme.app.inset)) {
                         models.forEach { m ->
                             val selected = current.provider == p && current.model == m.id
                             Row(

@@ -1,5 +1,6 @@
 package com.xiaohan.xhsnotegen.ui.publish
 
+import com.xiaohan.xhsnotegen.ui.theme.app
 import android.annotation.SuppressLint
 import android.content.ContentValues
 import android.content.Context
@@ -104,7 +105,7 @@ fun XhsLoginScreen(
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             Surface(color = if (looksLoggedIn) MaterialTheme.colorScheme.secondaryContainer
-                            else MaterialTheme.colorScheme.surfaceContainer) {
+                            else MaterialTheme.app.inset) {
                 Row(
                     Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 12.dp),
                     verticalAlignment = Alignment.CenterVertically,

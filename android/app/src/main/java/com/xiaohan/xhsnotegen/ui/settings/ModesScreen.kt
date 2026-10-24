@@ -1,5 +1,8 @@
 package com.xiaohan.xhsnotegen.ui.settings
 
+import androidx.compose.foundation.border
+import com.xiaohan.xhsnotegen.ui.components.InsetSegmented
+import com.xiaohan.xhsnotegen.ui.theme.app
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -78,7 +81,8 @@ fun ModesScreen(onNavigateBack: () -> Unit, onEdit: (String) -> Unit) {
                     Modifier
                         .fillMaxWidth()
                         .clip(MaterialTheme.shapes.medium)
-                        .background(MaterialTheme.colorScheme.surfaceContainerLowest)
+                        .background(MaterialTheme.app.tile)
+                        .border(1.dp, MaterialTheme.app.line, MaterialTheme.shapes.medium)
                         .clickable { onEdit(m.key) }
                         .padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
@@ -174,15 +178,12 @@ fun ModeEditorScreen(modeKey: String, onNavigateBack: () -> Unit) {
 
             SectionCard(title = tr("Notes", "笔记"), subtitle = tr("Separate from the app language", "和界面语言分开设置")) {
                 Text(tr("Write notes in", "笔记语言"), style = MaterialTheme.typography.labelLarge)
-                SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth()) {
-                    PromptLanguage.entries.forEachIndexed { i, lang ->
-                        SegmentedButton(
-                            selected = draft.language == lang,
-                            onClick = { update(draft.copy(language = lang)) },
-                            shape = SegmentedButtonDefaults.itemShape(i, PromptLanguage.entries.size),
-                        ) { Text(lang.label) }
-                    }
-                }
+                InsetSegmented(
+                    options = PromptLanguage.entries,
+                    selected = draft.language,
+                    label = { it.label },
+                    onSelect = { update(draft.copy(language = it)) },
+                )
                 Text(
                     tr(
                         "Uses this mode's ${draft.language.label} prompt below. Each language keeps its own prompt.",

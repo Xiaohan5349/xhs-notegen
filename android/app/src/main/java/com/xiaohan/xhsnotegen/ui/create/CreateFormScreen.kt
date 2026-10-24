@@ -5,6 +5,7 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.activity.result.contract.ActivityResultContracts.PickVisualMedia
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
@@ -14,6 +15,8 @@ import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
@@ -41,7 +44,15 @@ import com.xiaohan.xhsnotegen.domain.BuiltInModes
 import com.xiaohan.xhsnotegen.domain.FieldSlot
 import com.xiaohan.xhsnotegen.domain.NoteStyle
 import com.xiaohan.xhsnotegen.domain.WritingMode
+import com.xiaohan.xhsnotegen.ui.components.AppFilterChip
+import com.xiaohan.xhsnotegen.ui.components.CoverTag
 import com.xiaohan.xhsnotegen.ui.components.ModelChip
+import com.xiaohan.xhsnotegen.ui.components.PhotoNumber
+import com.xiaohan.xhsnotegen.ui.components.PhotoSheet
+import com.xiaohan.xhsnotegen.ui.components.ArchShape
+import com.xiaohan.xhsnotegen.ui.theme.CardTitleStyle
+import com.xiaohan.xhsnotegen.ui.theme.NumberStyle
+import com.xiaohan.xhsnotegen.ui.theme.app
 import com.xiaohan.xhsnotegen.ui.components.RatingBar
 import com.xiaohan.xhsnotegen.ui.components.ratingWords
 import com.xiaohan.xhsnotegen.domain.Place
@@ -156,8 +167,7 @@ fun CreateFormScreen(
                             }
                         },
                         enabled = canGenerate,
-                        modifier = Modifier.fillMaxWidth().height(56.dp),
-                        shape = CircleShape,
+                        modifier = Modifier.fillMaxWidth().height(54.dp),
                     ) {
                         if (isSaving) {
                             CircularProgressIndicator(Modifier.size(20.dp), strokeWidth = 2.dp,
@@ -180,7 +190,7 @@ fun CreateFormScreen(
                 .consumeWindowInsets(padding)
                 .imePadding()
                 .verticalScroll(rememberScrollState())
-                .padding(horizontal = 16.dp, vertical = 8.dp),
+                .padding(horizontal = 20.dp, vertical = 8.dp),
             verticalArrangement = Arrangement.spacedBy(16.dp),
         ) {
             // ---- Kind of note ----
@@ -249,7 +259,7 @@ fun CreateFormScreen(
                         }
                     } else if (photos.isNotEmpty()) {
                         Text(tr("${photos.size}/$maxPhotos photos", "${photos.size}/$maxPhotos 张"),
-                            style = MaterialTheme.typography.labelMedium,
+                            style = NumberStyle,
                             color = if (tooMany > 0) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
@@ -409,15 +419,14 @@ private fun BigAddPhotos(maxPhotos: Int, onClick: () -> Unit) {
             .fillMaxWidth()
             .height(160.dp)
             .clip(MaterialTheme.shapes.medium)
-            .background(MaterialTheme.colorScheme.primaryContainer.copy(alpha = 0.35f))
-            .dashedBorder(MaterialTheme.colorScheme.primary.copy(alpha = 0.6f), 16.dp)
+            .dashedBorder(MaterialTheme.app.line2, 18.dp)
             .clickable(onClick = onClick),
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Icon(Icons.Outlined.AddPhotoAlternate, null, Modifier.size(36.dp), tint = MaterialTheme.colorScheme.primary)
+        Icon(Icons.Outlined.AddPhotoAlternate, null, Modifier.size(36.dp), tint = MaterialTheme.app.head)
         Spacer(Modifier.height(8.dp))
-        Text(tr("Add photos", "添加照片"), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.primary)
+        Text(tr("Add photos", "添加照片"), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.app.head)
         Text(tr("Up to $maxPhotos", "最多 $maxPhotos 张"), style = MaterialTheme.typography.bodySmall,
             color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
@@ -436,108 +445,101 @@ private fun PhotoStrip(
     onMakeCover: (Uri) -> Unit,
     onMove: (Uri, Int) -> Unit,
 ) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-        itemsIndexed(photos, key = { _, uri -> uri.toString() }) { index, uri ->
-            var menu by remember { mutableStateOf(false) }
-            val isSelected = uri in selected
-            Box {
-                Box(
-                    Modifier
-                        .size(width = 96.dp, height = 128.dp)
-                        .clip(MaterialTheme.shapes.medium)
-                        .border(
-                            width = if (isSelected) 3.dp else 0.dp,
-                            color = if (isSelected) MaterialTheme.colorScheme.primary else Color.Transparent,
-                            shape = MaterialTheme.shapes.medium,
-                        )
-                        .clickable { if (selecting) onToggleSelect(uri) else menu = true }
-                ) {
-                    AsyncImage(model = uri, contentDescription = null, contentScale = ContentScale.Crop,
-                        modifier = Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surfaceContainerHigh))
-                    if (index == 0) {
-                        Text(
-                            tr("Cover", "封面"),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onPrimary,
-                            modifier = Modifier
-                                .align(Alignment.BottomStart)
-                                .padding(6.dp)
-                                .clip(CircleShape)
-                                .background(MaterialTheme.colorScheme.primary)
-                                .padding(horizontal = 8.dp, vertical = 2.dp),
-                        )
-                    }
-                    if (selecting) {
-                        Box(
-                            Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(6.dp)
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.3f))
-                                .border(1.5.dp, Color.White, CircleShape),
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            if (isSelected) Icon(Icons.Filled.Check, null, Modifier.size(14.dp),
-                                tint = MaterialTheme.colorScheme.onPrimary)
-                        }
-                    } else {
-                        Box(
-                            Modifier
-                                .align(Alignment.TopEnd)
-                                .padding(4.dp)
-                                .size(24.dp)
-                                .clip(CircleShape)
-                                .background(Color.Black.copy(alpha = 0.5f))
-                                .clickable { onRemove(uri) },
-                            contentAlignment = Alignment.Center,
-                        ) {
-                            Icon(Icons.Filled.Close, contentDescription = tr("Remove photo", "删除照片"), tint = Color.White,
-                                modifier = Modifier.size(14.dp))
-                        }
-                    }
-                }
-                DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
-                    if (index != 0) DropdownMenuItem(
-                        text = { Text(tr("Set as cover", "设为封面")) },
-                        leadingIcon = { Icon(Icons.Outlined.Star, null) },
-                        onClick = { menu = false; onMakeCover(uri) },
-                    )
-                    if (index > 0) DropdownMenuItem(
-                        text = { Text(tr("Move left", "左移")) },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) },
-                        onClick = { menu = false; onMove(uri, -1) },
-                    )
-                    if (index < photos.lastIndex) DropdownMenuItem(
-                        text = { Text(tr("Move right", "右移")) },
-                        leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowForward, null) },
-                        onClick = { menu = false; onMove(uri, +1) },
-                    )
-                    DropdownMenuItem(
-                        text = { Text(tr("Remove", "删除"), color = MaterialTheme.colorScheme.error) },
-                        leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = MaterialTheme.colorScheme.error) },
-                        onClick = { menu = false; onRemove(uri) },
-                    )
+    var expanded by rememberSaveable { mutableStateOf(false) }
+    PhotoSheet(
+        count = photos.size,
+        expanded = expanded,
+        onToggleExpanded = { expanded = !expanded },
+        trailingCell = if (importing || canAddMore) ({
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(3f / 4f)
+                    .clip(RoundedCornerShape(10.dp))
+                    .dashedBorder(MaterialTheme.app.line2, 10.dp)
+                    .clickable(enabled = !importing, onClick = onAdd),
+                contentAlignment = Alignment.Center,
+            ) {
+                if (importing) {
+                    CircularProgressIndicator(Modifier.size(22.dp), strokeWidth = 2.dp)
+                } else {
+                    Icon(Icons.Outlined.Add, contentDescription = tr("Add photos", "添加照片"),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-        }
-        if (importing || canAddMore) {
-            item(key = "add") {
-                Box(
-                    Modifier
-                        .size(width = 96.dp, height = 128.dp)
-                        .clip(MaterialTheme.shapes.medium)
-                        .dashedBorder(MaterialTheme.colorScheme.outline, 16.dp)
-                        .clickable(enabled = !importing, onClick = onAdd),
-                    contentAlignment = Alignment.Center,
-                ) {
-                    if (importing) {
-                        CircularProgressIndicator(Modifier.size(24.dp), strokeWidth = 2.dp)
-                    } else {
-                        Icon(Icons.Outlined.Add, contentDescription = tr("Add photos", "添加照片"),
-                            tint = MaterialTheme.colorScheme.onSurfaceVariant)
+        }) else null,
+    ) { index ->
+        val uri = photos[index]
+        var menu by remember { mutableStateOf(false) }
+        val isSelected = uri in selected
+        val shape = if (index == 0) ArchShape(10.dp) else RoundedCornerShape(10.dp)
+        Box {
+            Box(
+                Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(3f / 4f)
+                    .clip(shape)
+                    .then(if (isSelected) Modifier.border(2.dp, MaterialTheme.colorScheme.primary, shape) else Modifier)
+                    .clickable { if (selecting) onToggleSelect(uri) else menu = true }
+            ) {
+                AsyncImage(model = uri, contentDescription = null, contentScale = ContentScale.Crop,
+                    modifier = Modifier.fillMaxSize().background(MaterialTheme.app.tile2))
+                // The arched cover's top corners are cut away; keep its marks below the curve.
+                val top = if (index == 0) 22.dp else 3.dp
+                PhotoNumber(index + 1, Modifier.align(Alignment.TopStart).padding(start = 3.dp, top = top))
+                if (index == 0) CoverTag(Modifier.align(Alignment.BottomStart).padding(3.dp))
+                if (selecting) {
+                    Box(
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(end = 3.dp, top = top)
+                            .size(20.dp)
+                            .clip(CircleShape)
+                            .background(if (isSelected) MaterialTheme.colorScheme.primary else Color.Black.copy(alpha = 0.3f))
+                            .border(1.5.dp, Color.White, CircleShape),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        if (isSelected) Icon(Icons.Filled.Check, null, Modifier.size(12.dp),
+                            tint = MaterialTheme.colorScheme.onPrimary)
+                    }
+                } else {
+                    Box(
+                        Modifier
+                            .align(Alignment.TopEnd)
+                            .padding(top = top - 3.dp)
+                            .size(28.dp)
+                            .clickable { onRemove(uri) }
+                            .padding(3.dp)
+                            .clip(CircleShape)
+                            .background(Color.Black.copy(alpha = 0.55f)),
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(Icons.Filled.Close, contentDescription = tr("Remove photo", "删除照片"), tint = Color.White,
+                            modifier = Modifier.size(13.dp))
                     }
                 }
+            }
+            DropdownMenu(expanded = menu, onDismissRequest = { menu = false }) {
+                if (index != 0) DropdownMenuItem(
+                    text = { Text(tr("Set as cover", "设为封面")) },
+                    leadingIcon = { Icon(Icons.Outlined.Star, null) },
+                    onClick = { menu = false; onMakeCover(uri) },
+                )
+                if (index > 0) DropdownMenuItem(
+                    text = { Text(tr("Move left", "左移")) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowBack, null) },
+                    onClick = { menu = false; onMove(uri, -1) },
+                )
+                if (index < photos.lastIndex) DropdownMenuItem(
+                    text = { Text(tr("Move right", "右移")) },
+                    leadingIcon = { Icon(Icons.AutoMirrored.Outlined.ArrowForward, null) },
+                    onClick = { menu = false; onMove(uri, +1) },
+                )
+                DropdownMenuItem(
+                    text = { Text(tr("Remove", "删除"), color = MaterialTheme.colorScheme.error) },
+                    leadingIcon = { Icon(Icons.Outlined.Delete, null, tint = MaterialTheme.colorScheme.error) },
+                    onClick = { menu = false; onRemove(uri) },
+                )
             }
         }
     }
@@ -555,44 +557,30 @@ private fun StyleOption(
         modifier
             .heightIn(min = 84.dp)
             .clip(MaterialTheme.shapes.medium)
-            .background(if (selected) c.primaryContainer else c.surfaceContainer)
-            .border(
-                width = if (selected) 1.5.dp else 0.dp,
-                color = if (selected) c.primary else Color.Transparent,
-                shape = MaterialTheme.shapes.medium,
-            )
+            .background(if (selected) c.primary else Color.Transparent)
+            .border(1.5.dp, if (selected) c.primary else MaterialTheme.app.line2, MaterialTheme.shapes.medium)
             .clickable(onClick = onClick)
             .padding(14.dp),
     ) {
         Column(verticalArrangement = Arrangement.spacedBy(4.dp), modifier = Modifier.padding(end = 18.dp)) {
-            Text(style.displayName, style = MaterialTheme.typography.titleSmall,
-                color = if (selected) c.onPrimaryContainer else c.onSurface)
+            Text(style.displayName, style = CardTitleStyle,
+                color = if (selected) c.onPrimary else MaterialTheme.app.head)
             Text(style.blurb, style = MaterialTheme.typography.bodySmall,
-                color = if (selected) c.onPrimaryContainer.copy(alpha = 0.8f) else c.onSurfaceVariant)
+                color = if (selected) c.onPrimary else c.onSurfaceVariant)
         }
         if (selected) {
-            Icon(Icons.Filled.CheckCircle, null, tint = c.primary,
+            Icon(Icons.Filled.CheckCircle, null, tint = c.onPrimary,
                 modifier = Modifier.align(Alignment.TopEnd).size(18.dp))
         }
     }
 }
 
 /** Food · Travel · Outfit … as chips; the last chip manages modes. */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 private fun ModePicker(modes: List<WritingMode>, selected: String, onSelect: (String) -> Unit, onManage: () -> Unit) {
-    LazyRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+    LazyRow(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
         items(modes, key = { it.key }) { m ->
-            FilterChip(
-                selected = m.key == selected,
-                onClick = { onSelect(m.key) },
-                label = { Text(m.name) },
-                shape = CircleShape,
-                colors = FilterChipDefaults.filterChipColors(
-                    selectedContainerColor = MaterialTheme.colorScheme.primary,
-                    selectedLabelColor = MaterialTheme.colorScheme.onPrimary,
-                ),
-            )
+            AppFilterChip(selected = m.key == selected, onClick = { onSelect(m.key) }, label = m.name)
         }
         item(key = "manage") {
             AssistChip(
@@ -600,6 +588,7 @@ private fun ModePicker(modes: List<WritingMode>, selected: String, onSelect: (St
                 label = { Text(tr("Modes", "模式")) },
                 leadingIcon = { Icon(Icons.Outlined.Tune, null, Modifier.size(16.dp)) },
                 shape = CircleShape,
+                border = BorderStroke(1.5.dp, MaterialTheme.app.line2),
             )
         }
     }
